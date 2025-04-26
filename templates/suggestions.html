@@ -1,0 +1,168 @@
+{% extends "layout.html" %}
+
+{% block title %}Automation Suggestions{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-4">
+        <h2 class="mb-4">
+            <i class="bi bi-lightbulb me-2"></i>
+            Automation Suggestions
+        </h2>
+        
+        <div class="alert alert-info bg-info bg-opacity-10" role="alert">
+            <div class="d-flex">
+                <div class="me-3">
+                    <i class="bi bi-info-circle-fill fs-4"></i>
+                </div>
+                <div>
+                    <h5 class="alert-heading">How It Works</h5>
+                    <p class="mb-0">
+                        BettermanAI analyzes your behavior patterns and suggests automations that could save you time.
+                        Review the suggestions below and decide which ones to implement.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pending Suggestions -->
+        <h4 class="mt-4 mb-3">
+            <i class="bi bi-hourglass-split me-2 text-warning"></i>
+            Pending Suggestions
+        </h4>
+        
+        {% if pending_suggestions %}
+            <div class="row">
+                {% for suggestion in pending_suggestions %}
+                    <div class="col-lg-6 mb-4">
+                        <div class="card h-100 border-0 shadow-sm card-hover">
+                            <div class="card-header bg-warning bg-opacity-10 border-0">
+                                <h5 class="mb-0">{{ suggestion.title }}</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text">{{ suggestion.description }}</p>
+                                
+                                <div class="mb-3">
+                                    <h6 class="card-subtitle text-muted mb-2">Suggested Steps:</h6>
+                                    <ol class="ps-3">
+                                        {% for step in suggestion.steps|tojson|from_json %}
+                                            <li>{{ step }}</li>
+                                        {% endfor %}
+                                    </ol>
+                                </div>
+                                
+                                <small class="text-muted d-block mb-3">
+                                    <i class="bi bi-clock me-1"></i>
+                                    Suggested on {{ suggestion.creation_time.strftime('%Y-%m-%d') }}
+                                </small>
+                                
+                                <div class="d-flex justify-content-end">
+                                    <button onclick="handleSuggestionAction({{ suggestion.id }}, 'reject')" class="btn btn-outline-secondary me-2">
+                                        <i class="bi bi-x-circle me-1"></i>
+                                        Reject
+                                    </button>
+                                    <button onclick="handleSuggestionAction({{ suggestion.id }}, 'accept')" class="btn btn-primary">
+                                        <i class="bi bi-check-circle me-1"></i>
+                                        Accept & Create
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center p-4 border rounded bg-light">
+                <i class="bi bi-lightbulb fs-1 text-muted mb-2"></i>
+                <p class="text-muted">No pending suggestions at this time.</p>
+                <p class="small text-muted">Continue using your computer normally with monitoring enabled for BettermanAI to identify patterns and suggest automations.</p>
+            </div>
+        {% endif %}
+        
+        <!-- Accepted Suggestions -->
+        <h4 class="mt-5 mb-3">
+            <i class="bi bi-check-circle me-2 text-success"></i>
+            Accepted Suggestions
+        </h4>
+        
+        {% if accepted_suggestions %}
+            <div class="row">
+                {% for suggestion in accepted_suggestions %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-success bg-opacity-10 border-0">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">{{ suggestion.title }}</h5>
+                                    <span class="badge bg-success">Accepted</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text small">{{ suggestion.description }}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        <i class="bi bi-calendar-check me-1"></i>
+                                        Accepted on {{ suggestion.action_time.strftime('%Y-%m-%d') }}
+                                    </small>
+                                    
+                                    {% if suggestion.macro_id %}
+                                        <a href="/macro/{{ suggestion.macro_id }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-play-circle me-1"></i>
+                                            View Macro
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center p-3 border rounded bg-light">
+                <p class="text-muted mb-0">No accepted suggestions yet.</p>
+            </div>
+        {% endif %}
+        
+        <!-- Rejected Suggestions -->
+        <h4 class="mt-5 mb-3">
+            <i class="bi bi-x-circle me-2 text-danger"></i>
+            Rejected Suggestions
+        </h4>
+        
+        {% if rejected_suggestions %}
+            <div class="row">
+                {% for suggestion in rejected_suggestions %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-danger bg-opacity-10 border-0">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">{{ suggestion.title }}</h5>
+                                    <span class="badge bg-danger">Rejected</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text small">{{ suggestion.description }}</p>
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar-x me-1"></i>
+                                    Rejected on {{ suggestion.action_time.strftime('%Y-%m-%d') }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center p-3 border rounded bg-light">
+                <p class="text-muted mb-0">No rejected suggestions.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    setupNotifications();
+});
+</script>
+{% endblock %}

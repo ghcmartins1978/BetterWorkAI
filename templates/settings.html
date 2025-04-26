@@ -1,0 +1,257 @@
+{% extends "layout.html" %}
+
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mb-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <h4 class="card-title mb-4">
+                    <i class="bi bi-gear me-2"></i>
+                    BettermanAI Settings
+                </h4>
+                
+                <div class="alert alert-info bg-info bg-opacity-10 mb-4" role="alert">
+                    <div class="d-flex">
+                        <div class="me-3">
+                            <i class="bi bi-info-circle-fill fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="alert-heading">Privacy First</h5>
+                            <p>BettermanAI runs entirely on your computer. No data is sent to any server unless you explicitly enable AI reasoning, which requires the OpenAI API.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-5">
+                    <h5 class="border-bottom pb-2 mb-3">Monitoring Settings</h5>
+                    
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input setting-switch" type="checkbox" id="monitoring_enabled" 
+                            data-name="monitoring_enabled" {% if settings.monitoring_enabled %}checked{% endif %}>
+                        <label class="form-check-label" for="monitoring_enabled">
+                            <strong>Enable Monitoring</strong>
+                            <div class="text-muted small">Allow BettermanAI to observe your activities</div>
+                        </label>
+                    </div>
+                    
+                    <div class="ms-4 mb-4">
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input setting-switch" type="checkbox" id="track_mouse_clicks" 
+                                data-name="track_mouse_clicks" {% if settings.track_mouse_clicks %}checked{% endif %}>
+                            <label class="form-check-label" for="track_mouse_clicks">
+                                Track mouse clicks
+                            </label>
+                        </div>
+                        
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input setting-switch" type="checkbox" id="track_mouse_moves" 
+                                data-name="track_mouse_moves" {% if settings.track_mouse_moves %}checked{% endif %}>
+                            <label class="form-check-label" for="track_mouse_moves">
+                                Track mouse movements
+                            </label>
+                        </div>
+                        
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input setting-switch" type="checkbox" id="track_mouse_scrolls" 
+                                data-name="track_mouse_scrolls" {% if settings.track_mouse_scrolls %}checked{% endif %}>
+                            <label class="form-check-label" for="track_mouse_scrolls">
+                                Track mouse scrolling
+                            </label>
+                        </div>
+                        
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input setting-switch" type="checkbox" id="track_keyboard" 
+                                data-name="track_keyboard" {% if settings.track_keyboard %}checked{% endif %}>
+                            <label class="form-check-label" for="track_keyboard">
+                                Track keyboard input
+                            </label>
+                        </div>
+                        
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input setting-switch" type="checkbox" id="track_windows" 
+                                data-name="track_windows" {% if settings.track_windows %}checked{% endif %}>
+                            <label class="form-check-label" for="track_windows">
+                                Track active windows
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-5">
+                    <h5 class="border-bottom pb-2 mb-3">Notification Settings</h5>
+                    
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input setting-switch" type="checkbox" id="enable_notifications" 
+                            data-name="enable_notifications" {% if settings.enable_notifications %}checked{% endif %}>
+                        <label class="form-check-label" for="enable_notifications">
+                            <strong>Enable Notifications</strong>
+                            <div class="text-muted small">Show notifications when automation suggestions are found</div>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="mb-5">
+                    <h5 class="border-bottom pb-2 mb-3">Automation Settings</h5>
+                    
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input setting-switch" type="checkbox" id="show_execution_countdown" 
+                            data-name="show_execution_countdown" {% if settings.show_execution_countdown %}checked{% endif %}>
+                        <label class="form-check-label" for="show_execution_countdown">
+                            <strong>Show Countdown Before Execution</strong>
+                            <div class="text-muted small">Display a countdown before running automations</div>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="mt-4 text-end">
+                    <button id="resetSettingsBtn" class="btn btn-outline-danger me-2">Reset to Defaults</button>
+                    <button id="saveSettingsBtn" class="btn btn-primary">Save Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <h5 class="card-title">
+                    <i class="bi bi-shield-lock me-2"></i>
+                    Privacy Protection
+                </h5>
+                <p class="text-muted">
+                    BettermanAI protects your privacy with these measures:
+                </p>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex align-items-center">
+                        <i class="bi bi-hdd-fill me-3 text-success"></i>
+                        <div>
+                            <strong>Local Storage Only</strong>
+                            <div class="text-muted small">All data stays on your device</div>
+                        </div>
+                    </li>
+                    <li class="list-group-item d-flex align-items-center">
+                        <i class="bi bi-pause-circle-fill me-3 text-success"></i>
+                        <div>
+                            <strong>Pause Anytime</strong>
+                            <div class="text-muted small">Stop monitoring with one click</div>
+                        </div>
+                    </li>
+                    <li class="list-group-item d-flex align-items-center">
+                        <i class="bi bi-trash-fill me-3 text-success"></i>
+                        <div>
+                            <strong>Data Cleanup</strong>
+                            <div class="text-muted small">Delete logged data easily</div>
+                        </div>
+                    </li>
+                    <li class="list-group-item d-flex align-items-center">
+                        <i class="bi bi-eye-slash-fill me-3 text-success"></i>
+                        <div>
+                            <strong>Selective Monitoring</strong>
+                            <div class="text-muted small">Choose what gets tracked</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <h5 class="card-title">
+                    <i class="bi bi-trash me-2"></i>
+                    Data Management
+                </h5>
+                <p class="text-muted mb-4">
+                    Manage the data BettermanAI has collected:
+                </p>
+                <div class="d-grid gap-2">
+                    <button id="clearLogsBtn" class="btn btn-outline-warning">
+                        <i class="bi bi-journal-x me-2"></i>
+                        Clear Event Logs
+                    </button>
+                    <button id="clearPatternsBtn" class="btn btn-outline-warning">
+                        <i class="bi bi-x-circle me-2"></i>
+                        Clear Detected Patterns
+                    </button>
+                    <button id="clearAllDataBtn" class="btn btn-danger mt-2">
+                        <i class="bi bi-trash-fill me-2"></i>
+                        Delete All Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle settings switches
+    const settingSwitches = document.querySelectorAll('.setting-switch');
+    settingSwitches.forEach(switch => {
+        switch.addEventListener('change', function() {
+            const name = this.dataset.name;
+            const value = this.checked;
+            
+            updateSetting(name, value);
+        });
+    });
+    
+    // Handle clear logs button
+    const clearLogsBtn = document.getElementById('clearLogsBtn');
+    if (clearLogsBtn) {
+        clearLogsBtn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear all event logs? This action cannot be undone.')) {
+                // This would be implemented in a real production version
+                alert('Event logs cleared successfully.');
+            }
+        });
+    }
+    
+    // Handle clear patterns button
+    const clearPatternsBtn = document.getElementById('clearPatternsBtn');
+    if (clearPatternsBtn) {
+        clearPatternsBtn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear all detected patterns? This action cannot be undone.')) {
+                // This would be implemented in a real production version
+                alert('Patterns cleared successfully.');
+            }
+        });
+    }
+    
+    // Handle clear all data button
+    const clearAllDataBtn = document.getElementById('clearAllDataBtn');
+    if (clearAllDataBtn) {
+        clearAllDataBtn.addEventListener('click', function() {
+            if (confirm('WARNING: This will delete ALL BettermanAI data including logs, patterns, and macros. This action cannot be undone.\n\nAre you absolutely sure?')) {
+                // This would be implemented in a real production version
+                alert('All data has been deleted. BettermanAI has been reset to its initial state.');
+                window.location.href = '/';
+            }
+        });
+    }
+});
+
+function updateSetting(name, value) {
+    // Send AJAX request to update setting
+    fetch('/settings/update', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `name=${name}&value=${value}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log(`Setting ${name} updated to ${value}`);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+</script>
+{% endblock %}

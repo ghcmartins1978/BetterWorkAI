@@ -1,0 +1,135 @@
+{% extends "layout.html" %}
+
+{% block title %}Privacy Policy{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+        <h2 class="mb-4">
+            <i class="bi bi-shield-lock me-2"></i>
+            Privacy Policy
+        </h2>
+        
+        <div class="alert alert-info bg-info bg-opacity-10" role="alert">
+            <div class="d-flex">
+                <div class="me-3">
+                    <i class="bi bi-info-circle-fill fs-4"></i>
+                </div>
+                <div>
+                    <h5 class="alert-heading">Your Privacy Matters</h5>
+                    <p>
+                        BettermanAI is built with privacy as a core principle. All your data stays on your 
+                        computer, and you have full control over monitoring settings.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <h5 class="mt-4 border-bottom pb-2">What Information We Collect</h5>
+        <p>
+            To provide automation capabilities, BettermanAI collects the following categories 
+            of information:
+        </p>
+        <ul>
+            <li>
+                <strong>Mouse & Keyboard Interactions:</strong> Mouse movements, clicks, and keyboard input (not content)
+            </li>
+            <li>
+                <strong>Window Information:</strong> Active window titles and transitions between windows
+            </li>
+            <li>
+                <strong>Application Settings:</strong> Your preferences and settings for the application
+            </li>
+        </ul>
+        
+        <h5 class="mt-4 border-bottom pb-2">How We Use Your Information</h5>
+        <p>The collected information is used exclusively for:</p>
+        <ul>
+            <li>
+                <strong>Pattern Detection:</strong> To identify repetitive workflows and tasks in your behavior
+            </li>
+            <li>
+                <strong>Automation Suggestion:</strong> To suggest and create automations that can save you time
+            </li>
+            <li>
+                <strong>Macro Recording & Playback:</strong> To record your actions and replay them later
+            </li>
+            <li>
+                <strong>Performance Analytics:</strong> Internal usage statistics to improve the application
+            </li>
+        </ul>
+        
+        <h5 class="mt-4 border-bottom pb-2">Data Storage & Security</h5>
+        <p>
+            All collected data is stored only on your local device. BettermanAI does not transmit your 
+            activity data to any external server.
+        </p>
+        
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card bg-light border-0 mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i class="bi bi-database-lock me-2"></i>
+                            Local Storage
+                        </h6>
+                        <p class="card-text small">
+                            All user data, including recorded events, patterns, and automations, 
+                            are stored in a local database on your computer.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card bg-light border-0 mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i class="bi bi-clock-history me-2"></i>
+                            Data Retention
+                        </h6>
+                        <p class="card-text small">
+                            You can control how long your data is kept in the Settings page. 
+                            By default, event data is kept for 30 days.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <h5 class="mt-4 border-bottom pb-2">AI Usage</h5>
+        <p>
+            BettermanAI uses OpenAI's GPT API for intelligent automation suggestions. When this 
+            feature is enabled, only abstract pattern data is sent to the API, not your actual 
+            activity data.
+        </p>
+        <p>
+            You can disable AI-powered suggestions in Settings and use only the local heuristic
+            methods for pattern detection and automation suggestions.
+        </p>
+        
+        <h5 class="mt-4 border-bottom pb-2">Your Privacy Controls</h5>
+        <p>
+            BettermanAI gives you full control over your privacy. You can:
+        </p>
+        <ul>
+            <li>Enable or disable monitoring at any time</li>
+            <li>Control which types of events are recorded (mouse, keyboard, windows)</li>
+            <li>Set automatic data deletion rules</li>
+            <li>Disable AI-powered features</li>
+            <li>Clear all stored data</li>
+        </ul>
+        
+        <div class="d-flex justify-content-between mt-5">
+            <a href="/settings" class="btn btn-primary">
+                <i class="bi bi-sliders me-2"></i>
+                Adjust Privacy Settings
+            </a>
+            <a href="/about" class="btn btn-outline-secondary">
+                <i class="bi bi-info-circle me-2"></i>
+                About BettermanAI
+            </a>
+        </div>
+        
+    </div>
+</div>
+{% endblock %}

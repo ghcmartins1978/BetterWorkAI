@@ -1,0 +1,184 @@
+{% extends "layout.html" %}
+
+{% block title %}Macro Details{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('macros') }}">Macros</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ macro.name }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-primary bg-opacity-10">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="card-title mb-0">
+                        <i class="bi bi-play-circle me-2"></i>
+                        {{ macro.name }}
+                    </h4>
+                    <span class="badge {% if macro.status == 'recording' %}bg-danger{% elif macro.status == 'recorded' %}bg-success{% elif macro.status == 'executing' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                        {{ macro.status.replace('_', ' ').title() }}
+                    </span>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <div class="mb-4">
+                    <h5 class="mb-3">Description</h5>
+                    <p>{{ macro.description }}</p>
+                </div>
+                
+                <div class="mb-4">
+                    <h5 class="mb-3">
+                        <i class="bi bi-list-check me-2"></i>
+                        Macro Steps
+                        <span class="badge bg-secondary">{{ steps|length }}</span>
+                    </h5>
+                    
+                    {% if steps %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Action</th>
+                                        <th>Parameters</th>
+                                        <th>Delay</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for step in steps %}
+                                    <tr>
+                                        <td>{{ step.step_number + 1 }}</td>
+                                        <td>
+                                            <span class="badge {% if step.action_type == 'mouse_click' %}bg-danger{% elif step.action_type == 'key_press' %}bg-primary{% else %}bg-secondary{% endif %}">
+                                                {{ step.action_type.replace('_', ' ').title() }}
+                                            </span>
+                                        </td>
+                                        <td class="code-block">{{ step.parameters }}</td>
+                                        <td>{{ "%.2f"|format(step.delay_before) }}s</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info bg-info bg-opacity-10">
+                            <i class="bi bi-info-circle-fill me-2"></i>
+                            This macro has no steps. Use the Edit button to record actions.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-footer bg-light d-flex justify-content-between">
+                <div>
+                    <a href="{{ url_for('macros') }}" class="btn btn-outline-secondary me-2">
+                        <i class="bi bi-arrow-left me-1"></i>
+                        Back
+                    </a>
+                    <a href="{{ url_for('edit_macro', macro_id=macro.id) }}" class="btn btn-outline-primary">
+                        <i class="bi bi-pencil me-1"></i>
+                        Edit
+                    </a>
+                </div>
+                <div>
+                    <button onclick="executeMacro({{ macro.id }})" class="btn btn-success {% if not steps %}disabled{% endif %}">
+                        <i class="bi bi-play-fill me-1"></i>
+                        Execute Macro
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Macro Info
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>Creation Time</span>
+                        <span>{{ macro.creation_time.strftime('%Y-%m-%d %H:%M') }}</span>
+                    </li>
+                    {% if macro.last_execution_time %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>Last Executed</span>
+                        <span>{{ macro.last_execution_time.strftime('%Y-%m-%d %H:%M') }}</span>
+                    </li>
+                    {% endif %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>Total Steps</span>
+                        <span>{{ steps|length }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>Execution Count</span>
+                        <span>{{ macro.execution_count or 0 }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>Status</span>
+                        <span class="badge {% if macro.status == 'recording' %}bg-danger{% elif macro.status == 'recorded' %}bg-success{% elif macro.status == 'executing' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                            {{ macro.status.replace('_', ' ').title() }}
+                        </span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightning-charge me-2"></i>
+                    Quick Tips
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item bg-transparent">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        Make sure your screen layout matches the recording
+                    </li>
+                    <li class="list-group-item bg-transparent">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        Move mouse to top-left corner to abort execution
+                    </li>
+                    <li class="list-group-item bg-transparent">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        Re-record if window positions have changed
+                    </li>
+                    <li class="list-group-item bg-transparent">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        Save your work before running automations
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Format code blocks with JSON parameters
+    document.querySelectorAll('.code-block').forEach(element => {
+        try {
+            const jsonData = JSON.parse(element.textContent);
+            element.textContent = JSON.stringify(jsonData, null, 2);
+        } catch (e) {
+            // Not valid JSON, leave as is
+        }
+    });
+});
+</script>
+{% endblock %}

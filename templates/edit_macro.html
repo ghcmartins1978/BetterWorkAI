@@ -1,0 +1,182 @@
+{% extends "layout.html" %}
+
+{% block title %}Edit Macro{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('macros') }}">Macros</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('view_macro', macro_id=macro.id) }}">{{ macro.name }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Edit</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-primary bg-opacity-10">
+                <h4 class="card-title mb-0">
+                    <i class="bi bi-pencil-square me-2"></i>
+                    Edit Macro: {{ macro.name }}
+                </h4>
+            </div>
+            <div class="card-body p-4">
+                <form id="macroForm">
+                    <div class="mb-3">
+                        <label for="macroName" class="form-label">Macro Name</label>
+                        <input type="text" class="form-control" id="macroName" value="{{ macro.name }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="macroDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="macroDescription" rows="3">{{ macro.description }}</textarea>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label">Macro Recording</label>
+                        
+                        <div id="recordingContainer" class="d-flex flex-column align-items-center p-4 border rounded bg-light">
+                            <div class="mb-3 text-center">
+                                <i class="bi bi-record-circle fs-1 text-danger"></i>
+                                <h5 class="mt-2">Record Your Automation</h5>
+                                <p class="text-muted">Click the Record button and perform the actions you want to automate.</p>
+                            </div>
+                            
+                            <div class="d-flex flex-column align-items-center">
+                                <!-- Recording not active state -->
+                                <button type="button" id="recordBtn" class="btn btn-danger btn-lg" onclick="startRecording({{ macro.id }})">
+                                    <i class="bi bi-record-circle me-2"></i>
+                                    Start Recording
+                                </button>
+                                
+                                <!-- Recording active state - hidden by default -->
+                                <div id="recordingUI" class="d-none text-center">
+                                    <div class="alert alert-danger mb-3">
+                                        <div class="d-flex align-items-center">
+                                            <div class="recording-indicator"></div>
+                                            <strong>Recording in progress...</strong>
+                                        </div>
+                                        <div class="small mt-1">Perform the actions you want to automate</div>
+                                    </div>
+                                    
+                                    <button type="button" class="btn btn-outline-danger btn-lg" onclick="stopRecording({{ macro.id }})">
+                                        <i class="bi bi-stop-circle me-2"></i>
+                                        Stop Recording
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info bg-info bg-opacity-10">
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <i class="bi bi-info-circle-fill fs-4"></i>
+                            </div>
+                            <div>
+                                <h5 class="alert-heading">Recording Tips</h5>
+                                <ul class="mb-0">
+                                    <li>Make sure all applications are set up before starting recording</li>
+                                    <li>Perform actions at a moderate pace</li>
+                                    <li>Move the mouse to the top-left corner at any time to abort</li>
+                                    <li>Click "Stop Recording" when finished</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer bg-light d-flex justify-content-between">
+                <a href="{{ url_for('view_macro', macro_id=macro.id) }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>
+                    Cancel
+                </a>
+                <button type="submit" form="macroForm" class="btn btn-primary">
+                    <i class="bi bi-save me-1"></i>
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Recording Process
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <h6>Click "Start Recording"</h6>
+                        <p class="text-muted small">BettermanAI will begin monitoring your actions</p>
+                    </div>
+                    <div class="timeline-item">
+                        <h6>Perform Your Task</h6>
+                        <p class="text-muted small">Complete the sequence of actions you want to automate</p>
+                    </div>
+                    <div class="timeline-item">
+                        <h6>Click "Stop Recording"</h6>
+                        <p class="text-muted small">BettermanAI will save your recorded actions</p>
+                    </div>
+                    <div class="timeline-item">
+                        <h6>Execute Anytime</h6>
+                        <p class="text-muted small">Run your automation whenever you need to repeat the task</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-shield-check me-2"></i>
+                    Safety Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning bg-warning bg-opacity-10">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>Important:</strong> Save any unsaved work before executing automations.
+                </div>
+                <p class="text-muted small">
+                    Automations interact with your computer exactly as you recorded them.
+                    Make sure windows and applications are set up the same way as when recording.
+                </p>
+                <p class="text-muted small">
+                    <strong>Emergency stop:</strong> Move your mouse to the top-left corner of the screen 
+                    to abort any running automation.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle form submission
+    const macroForm = document.getElementById('macroForm');
+    macroForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // In a full implementation, this would save the macro name and description
+        // For this demo, we'll just redirect back to the macro view
+        window.location.href = '{{ url_for("view_macro", macro_id=macro.id) }}';
+    });
+    
+    // Check if recording status is active
+    {% if macro.status == 'recording' %}
+        // Show recording UI
+        document.getElementById('recordingUI').classList.remove('d-none');
+        document.getElementById('recordBtn').classList.add('d-none');
+    {% endif %}
+});
+</script>
+{% endblock %}

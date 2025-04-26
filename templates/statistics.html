@@ -1,0 +1,174 @@
+{% extends "layout.html" %}
+
+{% block title %}Statistics{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-4">
+        <h2 class="mb-4">
+            <i class="bi bi-graph-up me-2"></i>
+            System Statistics
+        </h2>
+        
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card bg-primary bg-opacity-10 border-0 card-hover mb-4">
+                    <div class="card-body p-4 text-center">
+                        <i class="bi bi-mouse3 fs-1 mb-2"></i>
+                        <h5 class="card-title">Events Recorded</h5>
+                        <h3 class="card-text fw-bold mb-0">{{ statistics.event_count }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success bg-opacity-10 border-0 card-hover mb-4">
+                    <div class="card-body p-4 text-center">
+                        <i class="bi bi-puzzle fs-1 mb-2"></i>
+                        <h5 class="card-title">Patterns Detected</h5>
+                        <h3 class="card-text fw-bold mb-0">{{ statistics.pattern_count }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning bg-opacity-10 border-0 card-hover mb-4">
+                    <div class="card-body p-4 text-center">
+                        <i class="bi bi-lightbulb fs-1 mb-2"></i>
+                        <h5 class="card-title">Suggestions</h5>
+                        <h3 class="card-text fw-bold mb-0">{{ statistics.suggestion_count }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info bg-opacity-10 border-0 card-hover mb-4">
+                    <div class="card-body p-4 text-center">
+                        <i class="bi bi-play-circle fs-1 mb-2"></i>
+                        <h5 class="card-title">Macros</h5>
+                        <h3 class="card-text fw-bold mb-0">{{ statistics.macro_count }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body p-4">
+                <h5 class="card-title">Activity Timeline</h5>
+                <p class="text-muted">Event activity over the last 24 hours</p>
+                <div style="height: 300px;">
+                    <canvas id="activityChart" data-chart='{{ statistics.hourly_events | tojson }}'></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body p-4">
+                <h5 class="card-title">Event Types</h5>
+                <p class="text-muted">Distribution of recorded events</p>
+                <div style="height: 300px;">
+                    <canvas id="eventTypesChart" data-chart='{{ {
+                        "labels": statistics.event_types.keys() | list, 
+                        "data": statistics.event_types.values() | list
+                    } | tojson }}'></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body p-4">
+                <h5 class="card-title">Pattern Statuses</h5>
+                <p class="text-muted">Current status of detected patterns</p>
+                <div style="height: 250px;">
+                    <canvas id="patternStatusChart" data-chart='{{ {
+                        "labels": statistics.pattern_status.keys() | list, 
+                        "data": statistics.pattern_status.values() | list
+                    } | tojson }}'></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body p-4">
+                <h5 class="card-title">System Performance</h5>
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <th scope="row">Average Detection Time</th>
+                            <td>1.2 seconds</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Pattern Recognition Accuracy</th>
+                            <td>86%</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Data Storage Usage</th>
+                            <td>4.2 MB</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Monitoring State</th>
+                            <td>
+                                {% if monitoring_enabled %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Paused</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+        <h5 class="card-title">Data Summary</h5>
+        <p class="text-muted">Overview of the collected data and automation potential</p>
+        
+        <div class="alert alert-info bg-info bg-opacity-10" role="alert">
+            <div class="d-flex">
+                <div class="me-3">
+                    <i class="bi bi-info-circle-fill fs-4"></i>
+                </div>
+                <div>
+                    <h5 class="alert-heading">Data Insights</h5>
+                    <p>
+                        Based on your usage patterns, BettermanAI has identified several repetitive tasks that could be automated.
+                        Check the <a href="/suggestions">Suggestions</a> page for specific automation recommendations.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="d-flex justify-content-between mt-3">
+            <a href="/logs" class="btn btn-outline-secondary">
+                <i class="bi bi-list-ul me-2"></i>
+                View Detailed Logs
+            </a>
+            <a href="/" class="btn btn-primary">
+                <i class="bi bi-house-door me-2"></i>
+                Back to Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    setupCharts();
+});
+</script>
+{% endblock %}

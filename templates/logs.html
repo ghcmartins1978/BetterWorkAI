@@ -1,0 +1,126 @@
+{% extends "layout.html" %}
+
+{% block title %}Event Logs{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="bi bi-list-ul me-2"></i>
+                Event Logs
+            </h2>
+            
+            <div>
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="logFilterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-funnel me-1"></i>
+                        Filter
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="logFilterDropdown">
+                        <li><a class="dropdown-item" href="#">All Events</a></li>
+                        <li><a class="dropdown-item" href="#">Mouse Events</a></li>
+                        <li><a class="dropdown-item" href="#">Keyboard Events</a></li>
+                        <li><a class="dropdown-item" href="#">Window Events</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#">Today Only</a></li>
+                        <li><a class="dropdown-item" href="#">Last 24 Hours</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Type</th>
+                        <th>Window</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if logs %}
+                        {% for log in logs %}
+                            <tr>
+                                <td class="text-nowrap">{{ log.timestamp }}</td>
+                                <td>
+                                    <span class="badge 
+                                        {% if log.type == 'mouse_click' %}bg-primary
+                                        {% elif log.type == 'key_press' or log.type == 'key_release' %}bg-info
+                                        {% elif log.type == 'window_change' %}bg-success
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ log.type }}
+                                    </span>
+                                </td>
+                                <td>{{ log.window }}</td>
+                                <td>
+                                    {% if log.type == 'mouse_click' %}
+                                        <span class="text-muted">x: {{ log.x }}, y: {{ log.y }}, button: {{ log.button }}</span>
+                                    {% elif log.type == 'mouse_move' %}
+                                        <span class="text-muted">x: {{ log.x }}, y: {{ log.y }}</span>
+                                    {% elif log.type == 'mouse_scroll' %}
+                                        <span class="text-muted">x: {{ log.x }}, y: {{ log.y }}, dx: {{ log.dx }}, dy: {{ log.dy }}</span>
+                                    {% elif log.type in ['key_press', 'key_release'] %}
+                                        <span class="text-muted">key: {{ log.key }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4">
+                                <i class="bi bi-inbox fs-3 d-block mb-2 text-muted"></i>
+                                <p class="text-muted">No logs available</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="d-flex justify-content-between mt-4">
+            <div>
+                <span class="text-muted">Showing recent events only. Total recorded events: {{ logs|length }}</span>
+            </div>
+            <div>
+                <a href="#" class="btn btn-primary btn-sm disabled">
+                    <i class="bi bi-download me-1"></i>
+                    Export Logs
+                </a>
+            </div>
+        </div>
+        
+        {% if error %}
+            <div class="alert alert-danger mt-4" role="alert">
+                <div class="d-flex">
+                    <div class="me-3">
+                        <i class="bi bi-exclamation-triangle-fill fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="alert-heading">Error Loading Logs</h5>
+                        <p class="mb-0">{{ error }}</p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        
+        <div class="alert alert-secondary bg-secondary bg-opacity-10 mt-4" role="alert">
+            <div class="d-flex">
+                <div class="me-3">
+                    <i class="bi bi-info-circle-fill fs-4"></i>
+                </div>
+                <div>
+                    <h5 class="alert-heading">About Event Logging</h5>
+                    <p class="mb-0">
+                        BettermanAI logs your activity to detect patterns and create automations.
+                        Event data is kept according to your retention settings (default: 30 days).
+                        All data is stored locally and never leaves your computer.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

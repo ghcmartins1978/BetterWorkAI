@@ -1,0 +1,192 @@
+{% extends "layout.html" %}
+
+{% block title %}Suggestion Details{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('suggestions') }}">Suggestions</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Suggestion Details</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-primary bg-opacity-10">
+                <h4 class="card-title mb-0">
+                    <i class="bi bi-lightbulb me-2"></i>
+                    {{ suggestion.title }}
+                </h4>
+            </div>
+            <div class="card-body p-4">
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5>Description</h5>
+                        <span class="badge {% if suggestion.status == 'pending' %}bg-warning text-dark{% elif suggestion.status == 'accepted' %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ suggestion.status.title() }}
+                        </span>
+                    </div>
+                    <p>{{ suggestion.description }}</p>
+                </div>
+                
+                <div class="mb-4">
+                    <h5 class="mb-3">Suggested Automation Steps</h5>
+                    {% if steps %}
+                        <ol class="list-group list-group-numbered">
+                            {% for step in steps %}
+                            <li class="list-group-item d-flex align-items-center">
+                                <div>{{ step }}</div>
+                            </li>
+                            {% endfor %}
+                        </ol>
+                    {% else %}
+                        <p class="text-muted">No detailed steps available for this suggestion.</p>
+                    {% endif %}
+                </div>
+                
+                {% if pattern %}
+                <div class="mb-4">
+                    <h5 class="mb-3">Pattern Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <tr>
+                                <th style="width: 150px;">Pattern Name:</th>
+                                <td>{{ pattern.name }}</td>
+                            </tr>
+                            <tr>
+                                <th>Description:</th>
+                                <td>{{ pattern.description }}</td>
+                            </tr>
+                            <tr>
+                                <th>Detection Time:</th>
+                                <td>{{ pattern.detection_time.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            </tr>
+                            <tr>
+                                <th>Score:</th>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar" role="progressbar" 
+                                             style="width: {{ (pattern.score * 100)|int }}%;" 
+                                             aria-valuenow="{{ (pattern.score * 100)|int }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100">
+                                            {{ "%.2f"|format(pattern.score) }}
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="mt-2">
+                        <a href="{{ url_for('view_pattern', pattern_id=pattern.id) }}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-graph-up me-1"></i>
+                            View Pattern Details
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            {% if suggestion.status == 'pending' %}
+            <div class="card-footer bg-light d-flex justify-content-between">
+                <div>
+                    <button onclick="handleSuggestionAction({{ suggestion.id }}, 'reject')" 
+                            class="btn btn-outline-danger me-2">
+                        <i class="bi bi-x-circle me-1"></i>
+                        Reject Suggestion
+                    </button>
+                </div>
+                <div>
+                    <button onclick="handleSuggestionAction({{ suggestion.id }}, 'accept')" 
+                            class="btn btn-success">
+                        <i class="bi bi-check-circle me-1"></i>
+                        Accept & Create Automation
+                    </button>
+                </div>
+            </div>
+            {% elif suggestion.macro_id %}
+            <div class="card-footer bg-light">
+                <a href="{{ url_for('view_macro', macro_id=suggestion.macro_id) }}" class="btn btn-primary">
+                    <i class="bi bi-play-circle me-1"></i>
+                    View Automation
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Suggestion Info
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>Creation Time</span>
+                        <span>{{ suggestion.creation_time.strftime('%Y-%m-%d %H:%M') }}</span>
+                    </li>
+                    {% if suggestion.notification_time %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>Notification Time</span>
+                        <span>{{ suggestion.notification_time.strftime('%Y-%m-%d %H:%M') }}</span>
+                    </li>
+                    {% endif %}
+                    {% if suggestion.action_time %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>Action Time</span>
+                        <span>{{ suggestion.action_time.strftime('%Y-%m-%d %H:%M') }}</span>
+                    </li>
+                    {% endif %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>Status</span>
+                        <span class="badge {% if suggestion.status == 'pending' %}bg-warning text-dark{% elif suggestion.status == 'accepted' %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ suggestion.status.title() }}
+                        </span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-journals me-2"></i>
+                    Related Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('suggestions') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>
+                        Back to Suggestions
+                    </a>
+                    
+                    {% if suggestion.status == 'accepted' and suggestion.macro_id %}
+                        <a href="{{ url_for('view_macro', macro_id=suggestion.macro_id) }}" class="btn btn-outline-primary">
+                            <i class="bi bi-play-circle me-1"></i>
+                            View Automation
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Additional script logic if needed
+});
+</script>
+{% endblock %}

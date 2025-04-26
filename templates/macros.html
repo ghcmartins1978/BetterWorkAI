@@ -1,0 +1,179 @@
+{% extends "layout.html" %}
+
+{% block title %}Macros{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="card-title mb-0">
+                        <i class="bi bi-play-circle me-2"></i>
+                        Automation Macros
+                    </h4>
+                    <a href="/macro/new" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-1"></i>
+                        Create New Macro
+                    </a>
+                </div>
+                
+                <p class="text-muted">
+                    Macros are recorded sequences of actions that can be executed to automate repetitive tasks.
+                    Create, manage, and run your automations here.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-0">
+                {% if macros %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Description</th>
+                                    <th>Steps</th>
+                                    <th>Created</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for macro in macros %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url_for('view_macro', macro_id=macro.id) }}" class="text-decoration-none">
+                                            {{ macro.name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ macro.description }}</td>
+                                    <td>{{ macro.step_count }}</td>
+                                    <td>{{ macro.creation_time.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        <span class="badge {% if macro.status == 'recording' %}bg-danger{% elif macro.status == 'recorded' %}bg-success{% elif macro.status == 'executing' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                            {{ macro.status.replace('_', ' ').title() }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('view_macro', macro_id=macro.id) }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-info-circle"></i>
+                                            </a>
+                                            <a href="{{ url_for('edit_macro', macro_id=macro.id) }}" class="btn btn-sm btn-outline-secondary">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <button onclick="executeMacro({{ macro.id }})" class="btn btn-sm btn-outline-success">
+                                                <i class="bi bi-play-fill"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center p-5">
+                        <div class="mb-3">
+                            <i class="bi bi-robot text-muted" style="font-size: 3rem;"></i>
+                        </div>
+                        <h5>No Macros Yet</h5>
+                        <p class="text-muted">Create your first automation macro to get started.</p>
+                        <a href="/macro/new" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-1"></i>
+                            Create New Macro
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <h5 class="card-title mb-3">
+                    <i class="bi bi-info-circle me-2"></i>
+                    How Macros Work
+                </h5>
+                <div class="row">
+                    <div class="col-2 text-center">
+                        <i class="bi bi-record-circle fs-2 text-danger"></i>
+                    </div>
+                    <div class="col-10">
+                        <h6>1. Record</h6>
+                        <p class="text-muted small">Click "Record" and perform the actions you want to automate</p>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-2 text-center">
+                        <i class="bi bi-save fs-2 text-primary"></i>
+                    </div>
+                    <div class="col-10">
+                        <h6>2. Save</h6>
+                        <p class="text-muted small">Click "Stop Recording" when you're done</p>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-2 text-center">
+                        <i class="bi bi-play-circle fs-2 text-success"></i>
+                    </div>
+                    <div class="col-10">
+                        <h6>3. Execute</h6>
+                        <p class="text-muted small">Run your automation whenever needed</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mt-4 mt-md-0">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <h5 class="card-title mb-3">
+                    <i class="bi bi-shield-check me-2"></i>
+                    Safety Tips
+                </h5>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item bg-transparent">
+                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                        Save your work before running automations
+                    </li>
+                    <li class="list-group-item bg-transparent">
+                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                        Test macros on non-critical tasks first
+                    </li>
+                    <li class="list-group-item bg-transparent">
+                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                        Be ready to move the mouse to the top-left corner to abort
+                    </li>
+                    <li class="list-group-item bg-transparent">
+                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                        Make sure windows are positioned as they were during recording
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Check URL parameters for 'record=true'
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('record') === 'true') {
+        window.location.href = '/macro/new';
+    }
+});
+</script>
+{% endblock %}

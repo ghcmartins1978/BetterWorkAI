@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BettermanAI Notification</title>
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    <style>
+        body {
+            background-color: transparent;
+            overflow: hidden;
+        }
+        .notification {
+            width: 350px;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            animation: slide-in 0.3s ease-out;
+        }
+        @keyframes slide-in {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .notification-header {
+            display: flex;
+            align-items: center;
+        }
+        .notification-icon {
+            font-size: 1.5rem;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="notification card shadow">
+        <div class="card-header bg-primary bg-opacity-10 notification-header">
+            <i class="bi bi-lightning-charge-fill text-primary notification-icon"></i>
+            <strong>BettermanAI</strong>
+            <button type="button" class="btn-close ms-auto" id="closeBtn"></button>
+        </div>
+        <div class="card-body">
+            <h5 class="card-title" id="notificationTitle">{{ title }}</h5>
+            <p class="card-text" id="notificationMessage">{{ message }}</p>
+            {% if action_url %}
+            <a href="{{ action_url }}" class="btn btn-primary btn-sm">View Details</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-close notification after 10 seconds
+            setTimeout(function() {
+                window.close();
+            }, 10000);
+            
+            // Close button handler
+            document.getElementById('closeBtn').addEventListener('click', function() {
+                window.close();
+            });
+        });
+    </script>
+</body>
+</html>

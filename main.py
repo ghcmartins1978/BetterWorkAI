@@ -766,25 +766,49 @@ def settings_page():
     """Settings page"""
     all_settings = db_session.query(Setting).all()
     
-    # Group settings by category
-    general_settings = []
-    privacy_settings = []
-    automation_settings = []
-    
+    # Convert settings to a dictionary for the template
+    settings_dict = {}
     for setting in all_settings:
-        if setting.name.startswith('general_'):
-            general_settings.append(setting)
-        elif setting.name.startswith('privacy_'):
-            privacy_settings.append(setting)
-        elif setting.name.startswith('automation_'):
-            automation_settings.append(setting)
+        if setting.value_type == 'boolean':
+            settings_dict[setting.name] = setting.value.lower() == 'true'
+        elif setting.value_type == 'number':
+            settings_dict[setting.name] = float(setting.value)
+            if settings_dict[setting.name].is_integer():
+                settings_dict[setting.name] = int(settings_dict[setting.name])
         else:
-            general_settings.append(setting)
+            settings_dict[setting.name] = setting.value
+    
+    # Add special settings
+    settings_dict['automation_server_url'] = os.environ.get('AUTOMATION_SERVER_URL', '')
+    
+    # Check connection status
+    import requests
+    from requests.exceptions import RequestException
+    
+    connection_status = {
+        'connected': False,
+        'screen_size': {'width': 0, 'height': 0},
+        'monitoring': False
+    }
+    
+    server_url = settings_dict.get('automation_server_url')
+    if server_url:
+        try:
+            response = requests.get(f"{server_url}/api/status", timeout=3)
+            if response.status_code == 200:
+                status_data = response.json()
+                connection_status = {
+                    'connected': True,
+                    'screen_size': status_data.get('screen_size', {'width': 1920, 'height': 1080}),
+                    'monitoring': status_data.get('monitoring', False)
+                }
+        except Exception:
+            # Connection failed
+            pass
     
     return render_template('settings.html', 
-                          general_settings=general_settings,
-                          privacy_settings=privacy_settings,
-                          automation_settings=automation_settings)
+                          settings=settings_dict,
+                          connection_status=connection_status)
 
 @app.route('/settings/update', methods=['POST'])
 def update_settings():
@@ -798,6 +822,27 @@ def update_settings():
     success = settings.set_setting(setting_name, setting_value)
     
     return jsonify({'success': success})
+
+@app.route('/api/update_settings', methods=['POST'])
+def update_settings_api():
+    """Update multiple settings at once via AJAX"""
+    data = request.json
+    section = data.get('section', 'general')
+    settings_data = data.get('settings', {})
+    
+    results = {}
+    for name, value in settings_data.items():
+        # Special case for automation_server_url - store in environment variable
+        if name == 'automation_server_url' and value:
+            os.environ['AUTOMATION_SERVER_URL'] = value
+            results[name] = True
+        else:
+            results[name] = settings.set_setting(name, value)
+    
+    return jsonify({
+        'success': all(results.values()),
+        'results': results
+    })
 
 @app.route('/about')
 def about():
@@ -824,6 +869,40 @@ def api_stats():
         'macro_count': macro_count,
         'monitoring_enabled': settings.get_setting('monitoring_enabled', default=True)
     })
+
+@app.route('/api/test_connection', methods=['POST'])
+def test_connection():
+    """Test connection to the local automation server"""
+    import requests
+    from requests.exceptions import RequestException
+
+    data = request.json
+    server_url = data.get('server_url', os.environ.get('AUTOMATION_SERVER_URL', ''))
+    
+    if not server_url:
+        return jsonify({'success': False, 'error': 'No server URL provided'})
+    
+    try:
+        # Try to get the status of the server
+        response = requests.get(f"{server_url}/api/status", timeout=5)
+        
+        if response.status_code == 200:
+            status_data = response.json()
+            
+            # Update the settings with the new URL if successful
+            settings.set_setting('automation_server_url', server_url)
+            
+            return jsonify({
+                'success': True,
+                'screen_size': status_data.get('screen_size', {'width': 1920, 'height': 1080}),
+                'monitoring': status_data.get('monitoring', False)
+            })
+        else:
+            return jsonify({'success': False, 'error': f"Server returned status code {response.status_code}"})
+    except RequestException as e:
+        return jsonify({'success': False, 'error': f"Connection error: {str(e)}"})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 # Handle graceful shutdown
 def signal_handler(sig, frame):

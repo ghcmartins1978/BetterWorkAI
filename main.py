@@ -903,6 +903,70 @@ def test_connection():
         return jsonify({'success': False, 'error': f"Connection error: {str(e)}"})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+        
+@app.route('/monitor')
+def monitor_dashboard():
+    """Real-time monitoring dashboard"""
+    from monitor_controller import MonitorController
+    
+    # Create controller
+    controller = MonitorController()
+    
+    # Get server URL
+    server_url = os.environ.get('AUTOMATION_SERVER_URL', '')
+    
+    # Check connection status
+    connection_status = {
+        'connected': False,
+        'screen_size': {'width': 0, 'height': 0},
+        'monitoring': False
+    }
+    
+    if controller.is_connected():
+        status = controller.get_status()
+        connection_status = {
+            'connected': True,
+            'screen_size': status.get('screen_size', {'width': 1920, 'height': 1080}),
+            'monitoring': status.get('monitoring', False)
+        }
+    
+    return render_template('monitor_dashboard.html',
+                          server_url=server_url,
+                          connection_status=connection_status,
+                          monitoring_active=connection_status.get('monitoring', False))
+                          
+@app.route('/api/monitoring/start', methods=['POST'])
+def start_monitoring():
+    """Start monitoring on the local server"""
+    from monitor_controller import MonitorController
+    
+    controller = MonitorController()
+    result = controller.start_monitoring()
+    
+    return jsonify(result)
+    
+@app.route('/api/monitoring/stop', methods=['POST'])
+def stop_monitoring():
+    """Stop monitoring on the local server"""
+    from monitor_controller import MonitorController
+    
+    controller = MonitorController()
+    result = controller.stop_monitoring()
+    
+    return jsonify(result)
+    
+@app.route('/api/events')
+def get_events():
+    """Get events from the local server"""
+    from monitor_controller import MonitorController
+    
+    controller = MonitorController()
+    count = request.args.get('count', default=100, type=int)
+    event_type = request.args.get('type')
+    
+    events = controller.get_events(count=count, event_type=event_type)
+    
+    return jsonify({'events': events})
 
 # Handle graceful shutdown
 def signal_handler(sig, frame):

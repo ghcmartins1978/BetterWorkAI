@@ -1,0 +1,105 @@
+# BettermanAI Copilot
+
+> **Your Personal Workflow Optimizer — Automate What You Do, by Just Doing It.**
+
+BettermanAI is a lightweight, local-first AI agent that observes your daily tasks, learns your patterns, asks smart questions, and helps you automate repetitive work. Built for efficiency and designed with privacy in mind.
+
+---
+
+## 🚀 **Project Overview**
+BettermanAI watches how you interact with your computer (mouse, keyboard, active window) and intelligently detects workflows that could be automated. It suggests optimizations, asks for your approval, and records macros to run those tasks for you in the future.
+
+The development approach is **batch-based**, with small, focused feature deliveries. This makes it easier to validate each step and ensures a stable, user-friendly product.
+
+---
+
+## 🧩 **System Components**
+
+| Component               | Description                                |
+|-------------------------|--------------------------------------------|
+| Event Listener          | Tracks mouse, keyboard, and active window  |
+| Context Analyzer        | Classifies tasks and sequences            |
+| Pattern Detector        | Identifies repetitive behaviors           |
+| Reasoning Engine (LLM)  | Generates questions & suggestions (OpenAI API for MVP) |
+| Macro Recorder          | Records actions into scripts (PyAutoGUI)  |
+| Automation Executor     | Executes recorded macros safely           |
+| UX Layer (Frontend)     | User notifications and approvals (Tauri)  |
+| Privacy & Settings      | Configure what is tracked and when        |
+
+---
+
+## ⚙️ **Current Development Phases & Milestones**
+
+### **Phase 1 — Passive Observer Core**
+- [ ] Mouse/keyboard/window listener module (using `pynput`, `pygetwindow`, etc.)
+- [ ] JSON event log
+
+### **Phase 2 — Pattern Learning & Data Store**
+- [ ] SQLite database for event storage
+- [ ] Sequence detection logic (heuristic + ML clustering TBD)
+
+### **Phase 3 — AI Reasoning & Question Layer**
+- [ ] GPT-4-turbo-based prompt design
+- [ ] Question generation and first interaction flow
+
+### **Phase 4 — Macro Recorder & Executor**
+- [ ] PyAutoGUI-based macro recorder prototype
+- [ ] Automation executor module (with preview and safety guardrails)
+
+### **Phase 5 — Frontend UI & Settings**
+- [ ] Tauri-based desktop UI (lightweight notifications, settings page)
+- [ ] Privacy opt-in/out controls
+
+---
+
+## 🛡️ **Design Decisions & Justifications**
+- **OpenAI API first** (reliable, fast to iterate). Plan to make reasoning engine pluggable for future Ollama or GPT4All fallback.
+- **PyAutoGUI as macro engine MVP** (simple, local, cross-platform). Consider upgrade to TagUI if task complexity increases.
+- **Tauri chosen over Electron** (minimal RAM footprint, fast startup).
+- **Event-driven polling, not constant CPU loops** (to minimize resource use).
+
+---
+
+## 🎯 **Feature Batches for Replit Agents (Example Tickets)**
+
+| Ticket # | Feature                                 | Priority   |
+|----------|-----------------------------------------|------------|
+| 1        | Mouse/keyboard/window listener module   | Must Have  |
+| 2        | SQLite event logger                     | Must Have  |
+| 3        | Pattern grouping logic                  | Must Have  |
+| 4        | GPT-4 question engine + prompt design   | Must Have  |
+| 5        | First notification / ask user flow      | Must Have  |
+| 6        | Macro recorder prototype (PyAutoGUI)    | Must Have  |
+| 7        | Executor & safety checks                | Must Have  |
+| 8        | Tauri UI notifications + settings page  | Must Have  |
+| 9        | Privacy control module                  | Must Have  |
+
+---
+
+## 💬 **Contact & Contribution Guidelines**
+This project is built in collaboration with Replit.ai Agents. Each batch will be self-contained, reviewed, and integrated incrementally.
+
+If you're contributing to this project via Replit:
+- Focus on one ticket at a time.
+- Keep modules loosely coupled.
+- Always prioritize resource efficiency and privacy.
+
+---
+
+## 🏆 **Vision for BettermanAI**
+We believe automation should feel personal, intuitive, and respectful of your work. BettermanAI isn’t just another bot — it’s your observant intern, ready to learn by watching you work and always asking before acting.
+
+> "Don’t explain the workflow. Just do it — BettermanAI will learn."
+
+---
+
+## ✅ **Next Steps**
+- Complete Phase 1 and validate passive logging.
+- Implement daily pattern extraction.
+- Integrate first AI-based questions.
+- Launch the first closed beta for feedback on usefulness and intrusiveness.
+
+---
+
+⚡ **Built for efficiency. Designed for humans. Powered by BettermanAI.**
+

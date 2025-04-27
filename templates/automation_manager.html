@@ -105,6 +105,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/dry-run-overlay.js') }}"></script>
 <script>
     // Global variables
     let currentMacroId = null;
@@ -311,6 +312,29 @@
             return;
         }
         
+        // If this is a dry run, show the overlay instead of using the normal execution monitoring
+        if (mode === 'dry-run') {
+            // Get the current macro data including steps
+            $.ajax({
+                url: `/api/automation/macros/${currentMacroId}`,
+                method: 'GET',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Start the dry run overlay
+                        window.dryRunOverlay.start(currentMacroId, response.macro.steps);
+                    } else {
+                        showAlert('Error', response.message || 'Failed to load macro details');
+                    }
+                },
+                error: function(xhr) {
+                    showAlert('Error', 'Failed to load macro details');
+                    console.error('Error loading macro details', xhr);
+                }
+            });
+            return;
+        }
+        
+        // Normal execution
         $.ajax({
             url: `/api/automation/macros/${currentMacroId}/execute`,
             method: 'POST',

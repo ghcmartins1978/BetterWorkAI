@@ -92,9 +92,32 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch(`/api/macros/${macroId}/stop`, {
             method: 'POST'
         })
-        .then(response => response.json())
-        .then(data => {
-            updateStatus(data);
+        .then(response => {
+            // Check if the response is JSON
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return response.json().then(data => ({
+                    data: data,
+                    isJson: true
+                }));
+            } else {
+                // If not JSON, get the text and create an error object
+                return response.text().then(text => ({
+                    data: {
+                        status: 'error',
+                        message: 'Received non-JSON response from server when stopping macro.',
+                        html_response: text.slice(0, 200) + (text.length > 200 ? '...' : '') // Include preview of the HTML
+                    },
+                    isJson: false
+                }));
+            }
+        })
+        .then(result => {
+            if (!result.isJson) {
+                console.error('Received non-JSON response when stopping macro:', result.data.html_response);
+            }
+            
+            updateStatus(result.data);
             if (statusCheckInterval) {
                 clearInterval(statusCheckInterval);
                 statusCheckInterval = null;
@@ -120,10 +143,33 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             body: JSON.stringify({ mode: mode })
         })
-        .then(response => response.json())
-        .then(data => {
-            updateStatus(data);
-            if (data.status === 'running') {
+        .then(response => {
+            // Check if the response is JSON
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return response.json().then(data => ({
+                    data: data,
+                    isJson: true
+                }));
+            } else {
+                // If not JSON, get the text and create an error object
+                return response.text().then(text => ({
+                    data: {
+                        status: 'error',
+                        message: 'Received non-JSON response from server. This typically indicates a server error.',
+                        html_response: text.slice(0, 200) + (text.length > 200 ? '...' : '') // Include preview of the HTML
+                    },
+                    isJson: false
+                }));
+            }
+        })
+        .then(result => {
+            if (!result.isJson) {
+                console.error('Received non-JSON response:', result.data.html_response);
+            }
+            
+            updateStatus(result.data);
+            if (result.data.status === 'running') {
                 // Start polling for status updates
                 if (statusCheckInterval) {
                     clearInterval(statusCheckInterval);
@@ -141,8 +187,36 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to check the macro execution status
     function checkStatus() {
         fetch(`/api/macros/${macroId}/status`)
-        .then(response => response.json())
-        .then(data => {
+        .then(response => {
+            // Check if the response is JSON
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return response.json().then(data => ({
+                    data: data,
+                    isJson: true
+                }));
+            } else {
+                // If not JSON, get the text and create an error object
+                return response.text().then(text => ({
+                    data: {
+                        status: 'error',
+                        message: 'Received non-JSON response from server during status check.',
+                        html_response: text.slice(0, 200) + (text.length > 200 ? '...' : '') // Include preview of the HTML
+                    },
+                    isJson: false
+                }));
+            }
+        })
+        .then(result => {
+            if (!result.isJson) {
+                console.error('Received non-JSON response in status check:', result.data.html_response);
+                // Stop polling if we get a non-JSON response
+                clearInterval(statusCheckInterval);
+                statusCheckInterval = null;
+            }
+            
+            const data = result.data;
+            
             updateStatus(data);
             if (data.status !== 'running') {
                 clearInterval(statusCheckInterval);

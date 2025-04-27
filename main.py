@@ -1815,9 +1815,18 @@ def api_execute_macro(macro_id):
         return jsonify(result)
     except Exception as e:
         logger.error(f"Error executing macro {macro_id}: {e}")
+        # Include the stack trace in the response for debugging
+        import traceback
+        stack_trace = traceback.format_exc()
+        logger.error(f"Stack trace: {stack_trace}")
+        
         return jsonify({
             'status': 'error',
-            'message': str(e)
+            'message': str(e),
+            'details': stack_trace,
+            'server_diagnostics': {
+                'automation_server_url': os.environ.get('AUTOMATION_SERVER_URL', 'Not set')
+            }
         })
 
 @app.route('/api/automation/macros/<macro_id>/status', methods=['GET'])
@@ -1828,9 +1837,18 @@ def api_get_macro_status(macro_id):
         return jsonify(result)
     except Exception as e:
         logger.error(f"Error getting status for macro {macro_id}: {e}")
+        # Include the stack trace in the response for debugging
+        import traceback
+        stack_trace = traceback.format_exc()
+        logger.error(f"Stack trace: {stack_trace}")
+        
         return jsonify({
             'status': 'error',
-            'message': str(e)
+            'message': str(e),
+            'details': stack_trace,
+            'server_diagnostics': {
+                'automation_server_url': os.environ.get('AUTOMATION_SERVER_URL', 'Not set')
+            }
         })
 
 @app.route('/api/automation/macros/<macro_id>/stop', methods=['POST'])
@@ -1841,9 +1859,18 @@ def api_stop_macro(macro_id):
         return jsonify(result)
     except Exception as e:
         logger.error(f"Error stopping macro {macro_id}: {e}")
+        # Include the stack trace in the response for debugging
+        import traceback
+        stack_trace = traceback.format_exc()
+        logger.error(f"Stack trace: {stack_trace}")
+        
         return jsonify({
             'status': 'error',
-            'message': str(e)
+            'message': str(e),
+            'details': stack_trace,
+            'server_diagnostics': {
+                'automation_server_url': os.environ.get('AUTOMATION_SERVER_URL', 'Not set')
+            }
         })
 
 @app.route('/api/automation/logs/<path:log_path>', methods=['GET'])

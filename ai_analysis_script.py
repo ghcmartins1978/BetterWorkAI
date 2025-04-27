@@ -198,16 +198,26 @@ def main():
     """Main function to analyze patterns and store results."""
     try:
         # Get all patterns
-        patterns = db_session.execute(text("SELECT * FROM patterns")).fetchall()
-        logger.info(f"Found {len(patterns)} patterns to analyze")
+        pattern_rows = db_session.execute(text("SELECT * FROM patterns")).fetchall()
+        logger.info(f"Found {len(pattern_rows)} patterns to analyze")
         
-        for pattern in patterns:
-            pattern_dict = dict(pattern)
+        for pattern_row in pattern_rows:
+            # Convert row to dict properly
+            pattern_dict = {}
+            for column, value in pattern_row._mapping.items():
+                pattern_dict[column] = value
+                
             pattern_id = pattern_dict['id']
+            logger.info(f"Processing pattern {pattern_id}: {pattern_dict['name']}")
             
             # Get the sequences for this pattern
-            sequence_ids = json.loads(pattern_dict.get('sequence_ids', '[]'))
-            
+            try:
+                sequence_ids = json.loads(pattern_dict.get('sequence_ids', '[]'))
+            except json.JSONDecodeError as e:
+                logger.error(f"Error decoding sequence_ids for pattern {pattern_id}: {e}")
+                logger.info(f"Raw sequence_ids value: {pattern_dict.get('sequence_ids')}")
+                continue
+                
             if not sequence_ids:
                 logger.warning(f"Pattern {pattern_id} has no sequences")
                 continue
@@ -216,18 +226,23 @@ def main():
             seq_id_list = ', '.join(str(seq_id) for seq_id in sequence_ids)
             
             # Get the sequences
-            sequences = db_session.execute(
+            sequence_rows = db_session.execute(
                 text(f"SELECT * FROM event_sequences WHERE id IN ({seq_id_list})")
             ).fetchall()
             
-            if not sequences:
+            if not sequence_rows:
                 logger.warning(f"No sequences found for pattern {pattern_id}")
                 continue
             
-            logger.info(f"Analyzing pattern {pattern_id} with {len(sequences)} sequences")
+            logger.info(f"Analyzing pattern {pattern_id} with {len(sequence_rows)} sequences")
             
-            # Convert sequences to dictionaries
-            sequence_dicts = [dict(seq) for seq in sequences]
+            # Convert sequences to dictionaries properly
+            sequence_dicts = []
+            for seq_row in sequence_rows:
+                seq_dict = {}
+                for column, value in seq_row._mapping.items():
+                    seq_dict[column] = value
+                sequence_dicts.append(seq_dict)
             
             # Analyze the pattern
             analysis_data = analyze_pattern_with_openai(pattern_dict, sequence_dicts)

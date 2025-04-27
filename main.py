@@ -4,7 +4,7 @@ import json
 import threading
 import logging
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, abort
 import signal
 import sys
 import random
@@ -925,7 +925,11 @@ def ai_reports():
 def view_ai_report(report_id):
     """View a specific AI analysis report"""
     # Get the report
-    report = db_session.query(AIAnalysisReport).filter(AIAnalysisReport.id == report_id).first_or_404()
+    report = db_session.query(AIAnalysisReport).filter(AIAnalysisReport.id == report_id).first()
+    
+    # Return 404 if report not found
+    if not report:
+        abort(404)
     
     # Parse the analysis data JSON
     analysis = {}

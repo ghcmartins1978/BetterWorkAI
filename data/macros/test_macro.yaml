@@ -5,23 +5,28 @@ metadata:
   tags:
     - test
     - demo
-  created_at: 1682345678
-  updated_at: 1682345678
+  created_at: 1619544000
+  updated_at: 1619544000
 
 variables:
   text_to_type: Hello from BettermanAI!
   wait_time: 1
 
 steps:
-  - action: focus
-    window: Notepad
-  - action: wait
-    seconds: 1
-  - action: click
-    target: 100,100
-    button: left
-  - action: type
-    target: page
-    value: ${text_to_type}
-  - action: keyboard
-    keys: enter
+  - type: mouse_move
+    params:
+      x: 100
+      y: 100
+  - type: mouse_click
+    params:
+      button: left
+      clicks: 1
+  - type: keyboard_type
+    params:
+      text: Hello, world!
+  - type: keyboard_press
+    params:
+      key: enter
+  - type: wait
+    params:
+      seconds: 2

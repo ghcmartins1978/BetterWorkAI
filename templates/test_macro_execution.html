@@ -66,7 +66,10 @@ Test Macro Execution
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const macroId = document.getElementById('macro-id').textContent;
+    // Get the macro ID and trim any whitespace
+    const macroId = document.getElementById('macro-id').textContent.trim();
+    console.log(`Using macro ID: ${macroId}`);
+    
     const executeNormalBtn = document.getElementById('execute-normal');
     const executeDryRunBtn = document.getElementById('execute-dry-run');
     const stopExecutionBtn = document.getElementById('stop-execution');

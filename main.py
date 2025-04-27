@@ -1641,88 +1641,102 @@ def dry_run_overlay():
 @app.route('/test-macro-execution')
 def test_macro_execution():
     """Test page for macro execution"""
-    # Load the sample macro from the test file
+    # Load the sample macro from the test file and create a database record
     try:
-        from automation_macros import AutomationMacro
         import yaml
         
         # Ensure the data directories exist
         os.makedirs("data/macros", exist_ok=True)
-        os.makedirs("logs", exist_ok=True)
+        os.makedirs("logs/macros", exist_ok=True)
         
-        # Check if the test macro exists
-        test_macro_path = "data/macros/test_macro.yaml"
-        if not os.path.exists(test_macro_path):
-            # Create the test macro if it doesn't exist
-            test_macro = {
-                "metadata": {
-                    "name": "Test Macro",
-                    "description": "A simple test macro for validating the execution process",
-                    "id": "test_macro",
-                    "tags": ["test", "demo"],
-                    "created_at": int(time.time()),
-                    "updated_at": int(time.time()),
-                },
-                "variables": {
-                    "text_to_type": "Hello from BettermanAI!",
-                    "wait_time": 1,
-                },
-                "steps": [
+        # Check if we already have a test macro in the database
+        existing_macro = db_session.query(Macro).filter_by(name="Test Macro").first()
+        
+        if existing_macro:
+            # Use the existing macro
+            macro_id = existing_macro.id
+            macro = existing_macro
+        else:
+            # Create a new macro in the database
+            # First, check if the test macro YAML exists
+            test_macro_path = "data/macros/test_macro.yaml"
+            if os.path.exists(test_macro_path):
+                # Load the YAML file
+                with open(test_macro_path, 'r') as f:
+                    yaml_content = f.read()
+                
+                # Parse the YAML content
+                macro_data = yaml.safe_load(yaml_content)
+                
+                # Extract steps
+                steps = []
+                for step in macro_data.get('steps', []):
+                    steps.append({
+                        'type': step.get('type'),
+                        'params': step.get('params', {})
+                    })
+                
+                # Create the macro in the database
+                macro = Macro(
+                    name=macro_data['metadata']['name'],
+                    description=macro_data['metadata']['description'],
+                    steps=json.dumps(steps),
+                    status='recorded',
+                    step_count=len(steps),
+                    execution_count=0
+                )
+                
+                db_session.add(macro)
+                db_session.commit()
+                macro_id = macro.id
+            else:
+                # Create a default test macro if no YAML exists
+                sample_steps = [
                     {
-                        "action": "focus",
-                        "window": "Notepad",
+                        "type": "mouse_move",
+                        "params": {"x": 100, "y": 100}
                     },
                     {
-                        "action": "wait",
-                        "seconds": 1,
+                        "type": "mouse_click",
+                        "params": {"button": "left", "clicks": 1}
                     },
                     {
-                        "action": "click",
-                        "target": "100,100",
-                        "button": "left",
+                        "type": "keyboard_type",
+                        "params": {"text": "Hello, world!"}
                     },
                     {
-                        "action": "type",
-                        "target": "page",
-                        "value": "${text_to_type}",
+                        "type": "keyboard_press",
+                        "params": {"key": "enter"}
                     },
                     {
-                        "action": "keyboard",
-                        "keys": "enter",
-                    },
-                ],
-            }
-            
-            with open(test_macro_path, "w") as f:
-                yaml.dump(test_macro, f, default_flow_style=False)
+                        "type": "wait",
+                        "params": {"seconds": 2}
+                    }
+                ]
+                
+                macro = Macro(
+                    name="Test Macro",
+                    description="A simple test macro for validating the execution process",
+                    steps=json.dumps(sample_steps),
+                    status='recorded',
+                    step_count=len(sample_steps),
+                    execution_count=0
+                )
+                
+                db_session.add(macro)
+                db_session.commit()
+                macro_id = macro.id
         
-        # Load the test macro
-        with open(test_macro_path, "r") as f:
-            yaml_data = yaml.safe_load(f)
-            
-        # Create an AutomationMacro object
-        metadata = yaml_data.get("metadata", {})
-        steps = []
+        # Convert to dict for template
+        macro_dict = {
+            'macro_id': macro.id,  # Use the database ID
+            'name': macro.name,
+            'description': macro.description,
+            'steps': json.loads(macro.steps) if isinstance(macro.steps, str) else macro.steps
+        }
         
-        # Convert the steps to the internal format
-        for step in yaml_data.get("steps", []):
-            if "action" in step:
-                action_type = step["action"]
-                params = {k: v for k, v in step.items() if k != "action"}
-                steps.append({"type": action_type, "params": params})
-        
-        macro = AutomationMacro(
-            name=metadata.get("name", "Unnamed Macro"),
-            description=metadata.get("description", ""),
-            steps=steps,
-            macro_id=metadata.get("id"),
-            variables=yaml_data.get("variables", {}),
-            tags=metadata.get("tags", []),
-            created_at=metadata.get("created_at"),
-            updated_at=metadata.get("updated_at"),
-        )
-        
-        return render_template("test_macro_execution.html", macro=macro.to_dict())
+        # Return the test macro execution page with the macro data
+        return render_template("test_macro_execution.html", macro=macro_dict)
     except Exception as e:
         logger.error(f"Error loading test macro: {e}")
         flash(f"Error loading test macro: {e}", "danger")
@@ -1964,7 +1978,6 @@ def api_execute_macro(macro_id):
             }
         })
 
-@app.route('/api/automation/macros/<macro_id>/status', methods=['GET'])
 def get_macro_status(macro_id):
     """
     Get the status of a running macro
@@ -1975,6 +1988,14 @@ def get_macro_status(macro_id):
     Returns:
         Dictionary with status information
     """
+    # Check if the macro ID is numeric (from database)
+    try:
+        # Try to convert to int if it's a string representing a number
+        if isinstance(macro_id, str) and macro_id.isdigit():
+            macro_id = int(macro_id)
+    except (ValueError, TypeError):
+        pass  # Keep as is if not convertible
+    
     macro = db_session.query(Macro).get(macro_id)
     if not macro:
         return {'status': 'error', 'message': 'Macro not found'}
@@ -2034,14 +2055,22 @@ def stop_macro(macro_id):
     Stop a running macro
     
     Args:
-        macro_id: ID of the macro to stop
+        macro_id: ID of the macro to stop (can be an integer or string)
         
     Returns:
         Dictionary with result status
     """
+    # Check if the macro ID is numeric (from database)
+    try:
+        # Try to convert to int if it's a string representing a number
+        if isinstance(macro_id, str) and macro_id.isdigit():
+            macro_id = int(macro_id)
+    except (ValueError, TypeError):
+        pass  # Keep as is if not convertible
+    
     macro = db_session.query(Macro).get(macro_id)
     if not macro:
-        return {'status': 'error', 'message': 'Macro not found'}
+        return {'status': 'error', 'message': f'Macro not found with ID {macro_id}'}
     
     # In a real implementation, this would send a stop signal to the automation server
     # Here we just update the status

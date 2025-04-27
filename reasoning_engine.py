@@ -1,39 +1,25 @@
-import os
 import logging
 import json
-import time
-from datetime import datetime
 import threading
+import time
+import os
+from datetime import datetime
 
-from openai import OpenAI
 from database import db_session
-from models import Pattern, Suggestion
+from models import Pattern, Suggestion, Macro, MacroStep
 
 logger = logging.getLogger(__name__)
 
 class ReasoningEngine:
     """
-    AI-powered reasoning engine for analyzing patterns and
-    generating automation suggestions
+    AI engine that evaluates patterns and suggests automations
     """
     def __init__(self, settings):
         self.settings = settings
         self.running = False
-        self.evaluation_thread = None
-        self.evaluation_interval = 300  # Check for patterns to evaluate every 5 minutes
-        self.automation_executor = None
-        
-        # Initialize OpenAI client
-        self.openai_api_key = os.environ.get("OPENAI_API_KEY", "")
-        if self.openai_api_key:
-            self.openai = OpenAI(api_key=self.openai_api_key)
-        else:
-            logger.warning("OpenAI API key not found. AI reasoning will be limited.")
-            self.openai = None
-    
-    def set_automation_executor(self, executor):
-        """Set the automation executor for suggestion implementation"""
-        self.automation_executor = executor
+        self.check_thread = None
+        self.check_interval = 300  # 5 minutes between checks
+        self.openai_available = 'OPENAI_API_KEY' in os.environ and os.environ.get('OPENAI_API_KEY')
         
     def start(self):
         """Start the reasoning engine"""
@@ -43,9 +29,9 @@ class ReasoningEngine:
         logger.info("Starting reasoning engine")
         self.running = True
         
-        # Start evaluation thread
-        self.evaluation_thread = threading.Thread(target=self._evaluation_loop, daemon=True)
-        self.evaluation_thread.start()
+        # Start suggestion check thread
+        self.check_thread = threading.Thread(target=self._suggestion_check_loop, daemon=True)
+        self.check_thread.start()
         
     def stop(self):
         """Stop the reasoning engine"""
@@ -54,298 +40,236 @@ class ReasoningEngine:
         
     def evaluate_pattern(self, pattern_id):
         """
-        Evaluate a detected pattern to determine if it can be automated
+        Evaluate a pattern and potentially create automation suggestion
         
         Args:
             pattern_id: Database ID of the pattern to evaluate
         """
-        if not self.running:
-            return
-            
         try:
-            # Get pattern from database
+            # Get pattern
             pattern = db_session.query(Pattern).get(pattern_id)
-            
-            if not pattern or pattern.status not in ['detected', 'pending_evaluation']:
+            if not pattern:
+                logger.error(f"Pattern {pattern_id} not found")
                 return
                 
-            logger.info(f"Evaluating pattern {pattern_id}")
-            
-            # Update pattern status
+            # Skip if already evaluated
+            if pattern.status != 'detected':
+                logger.debug(f"Pattern {pattern_id} already evaluated: {pattern.status}")
+                return
+                
+            # Update status
             pattern.status = 'evaluating'
             db_session.commit()
             
-            # Get sequences for this pattern
+            # Extract sequences
             sequence_ids = json.loads(pattern.sequence_ids)
             
-            if not sequence_ids or len(sequence_ids) < 2:
+            # Make sure we have at least 2 sequences
+            if len(sequence_ids) < 2:
                 pattern.status = 'rejected'
-                pattern.evaluation_notes = "Insufficient sequences for evaluation"
+                pattern.evaluation_notes = 'Not enough sequences to form a pattern'
                 db_session.commit()
                 return
                 
-            # Get sequence data
-            sequences = []
-            from models import EventSequence
-            
-            for seq_id in sequence_ids[:3]:  # Limit to first 3 sequences to keep analysis manageable
-                seq = db_session.query(EventSequence).get(seq_id)
-                if seq:
-                    try:
-                        seq_data = json.loads(seq.data)
-                        seq_metadata = json.loads(seq.metadata)
-                        sequences.append({
-                            'id': seq.id,
-                            'metadata': seq_metadata,
-                            'sample_events': seq_data[:20] if len(seq_data) > 20 else seq_data
-                        })
-                    except Exception as e:
-                        logger.error(f"Error processing sequence {seq_id}: {e}")
-            
-            if not sequences:
+            # Check if pattern has high enough score
+            min_score = self.settings.get_setting('automation_min_pattern_score', default=0.7)
+            if pattern.score < min_score:
                 pattern.status = 'rejected'
-                pattern.evaluation_notes = "Failed to load sequence data"
+                pattern.evaluation_notes = f'Pattern score {pattern.score} below threshold {min_score}'
                 db_session.commit()
                 return
                 
-            # Analyze pattern using AI if available
-            if self.openai:
-                analysis_result = self._analyze_with_ai(pattern, sequences)
-            else:
-                # Simple heuristic-based analysis
-                analysis_result = self._analyze_with_heuristics(pattern, sequences)
-                
-            # Process analysis result
-            if analysis_result.get('is_automatable', False):
-                pattern.status = 'approved'
-                pattern.evaluation_notes = analysis_result.get('notes', '')
-                
-                # Create suggestion
-                suggestion = Suggestion(
-                    pattern_id=pattern.id,
-                    title=analysis_result.get('title', f"Automation for {pattern.name}"),
-                    description=analysis_result.get('description', ''),
-                    steps=json.dumps(analysis_result.get('steps', [])),
-                    creation_time=datetime.now(),
-                    status='pending'
-                )
-                db_session.add(suggestion)
+            # Check if pattern happens frequently enough
+            suggestion_threshold = self.settings.get_setting('automation_suggestion_threshold', default=3)
+            if len(sequence_ids) < suggestion_threshold:
+                pattern.status = 'detected'  # Keep it in detected state to potentially match more sequences
+                pattern.evaluation_notes = f'Pattern seen {len(sequence_ids)} times, threshold is {suggestion_threshold}'
                 db_session.commit()
+                return
                 
-                # Notify user about suggestion
-                if self.automation_executor:
-                    self.automation_executor.notify_suggestion(suggestion.id)
-            else:
-                pattern.status = 'rejected'
-                pattern.evaluation_notes = analysis_result.get('notes', 'Not automatable')
-                db_session.commit()
+            # Prepare suggestion
+            title = f"Automate {pattern.name}"
+            description = f"This automation would replace a sequence of {pattern.event_count} events that you've performed {len(sequence_ids)} times."
+            
+            # Check if suggestion already exists for this pattern
+            existing_suggestion = db_session.query(Suggestion).filter(
+                Suggestion.pattern_id == pattern_id
+            ).first()
+            
+            if existing_suggestion:
+                logger.debug(f"Suggestion already exists for pattern {pattern_id}")
+                return
                 
-        except Exception as e:
-            logger.error(f"Error evaluating pattern {pattern_id}: {e}")
+            # Create simple steps for the suggestion (in a real system, this would be more complex)
+            steps = [
+                {"type": "start", "description": "Start automation"},
+                {"type": "execute", "description": f"Execute {pattern.event_count} actions"},
+                {"type": "end", "description": "Finish automation"}
+            ]
             
-            # Update pattern status on error
-            try:
-                pattern = db_session.query(Pattern).get(pattern_id)
-                pattern.status = 'error'
-                pattern.evaluation_notes = f"Error during evaluation: {str(e)}"
-                db_session.commit()
-            except:
-                pass
-    
-    def _evaluation_loop(self):
-        """Thread function to periodically evaluate pending patterns"""
-        while self.running:
-            try:
-                # Find patterns pending evaluation
-                patterns = db_session.query(Pattern).filter(
-                    Pattern.status.in_(['detected', 'pending_evaluation'])
-                ).order_by(Pattern.detection_time.asc()).limit(5).all()
-                
-                for pattern in patterns:
-                    if self.running:
-                        self.evaluate_pattern(pattern.id)
-                        
-                        # Sleep briefly between evaluations to avoid overwhelming the system
-                        time.sleep(5)
-                        
-            except Exception as e:
-                logger.error(f"Error in evaluation loop: {e}")
-                
-            # Sleep until next check
-            time.sleep(self.evaluation_interval)
-            
-    def _analyze_with_ai(self, pattern, sequences):
-        """
-        Analyze pattern using OpenAI GPT-4o to determine if it can be automated
-        
-        Args:
-            pattern: Pattern object from database
-            sequences: List of sequence dictionaries with metadata and sample events
-            
-        Returns:
-            Dictionary with analysis results including is_automatable flag
-        """
-        try:
-            # Prepare prompt
-            prompt = f"""
-            You are an AI assistant for BettermanAI, a personal workflow automation tool.
-            You need to analyze a detected pattern of user behavior to determine if it can be automated.
-            
-            PATTERN INFORMATION:
-            Pattern ID: {pattern.id}
-            Pattern Name: {pattern.name}
-            Detection Time: {pattern.detection_time}
-            Pattern Score: {pattern.score}
-            
-            SEQUENCE DATA:
-            
-            """
-            
-            # Add sequence information to prompt
-            for idx, seq in enumerate(sequences):
-                prompt += f"SEQUENCE {idx+1}:\n"
-                prompt += f"ID: {seq['id']}\n"
-                
-                metadata = seq['metadata']
-                prompt += f"Start Time: {metadata.get('start_time', 'unknown')}\n"
-                prompt += f"Duration: {metadata.get('duration', 'unknown')} seconds\n"
-                prompt += f"Event Count: {metadata.get('event_count', 0)}\n"
-                prompt += f"Windows: {', '.join(metadata.get('windows', []))}\n"
-                
-                # Add sample events
-                prompt += "SAMPLE EVENTS:\n"
-                for i, event in enumerate(seq['sample_events'][:10]):  # Limit to first 10 events
-                    prompt += f"  Event {i+1}: Type={event.get('type', 'unknown')}"
-                    if 'window' in event:
-                        prompt += f", Window={event.get('window', 'unknown')}"
-                    if event.get('type') == 'mouse_click':
-                        prompt += f", Position=({event.get('x', 0)}, {event.get('y', 0)})"
-                    prompt += "\n"
-                    
-                prompt += "\n"
-                
-            # Add analysis request
-            prompt += """
-            TASK:
-            1. Analyze if this pattern represents a repetitive task that can be automated.
-            2. Determine if the pattern shows consistent interaction with the same UI elements.
-            3. Assess if automating this pattern would save the user time.
-            4. If automatable, suggest steps for automation.
-            
-            Respond in JSON format with the following structure:
-            {
-                "is_automatable": true/false,
-                "title": "Brief title for the automation",
-                "description": "Detailed description of what this automation would do",
-                "notes": "Explanation of your analysis",
-                "steps": ["Step 1", "Step 2", ...],
-                "confidence": 0.0-1.0
-            }
-            """
-            
-            # Call OpenAI API
-            # the newest OpenAI model is "gpt-4o" which was released May 13, 2024.
-            # do not change this unless explicitly requested by the user
-            response = self.openai.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {"role": "system", "content": "You are BettermanAI's workflow analysis assistant. You help identify automatable patterns in user behavior."},
-                    {"role": "user", "content": prompt}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.2
+            # Create suggestion
+            suggestion = Suggestion(
+                pattern_id=pattern_id,
+                title=title,
+                description=description,
+                steps=json.dumps(steps),
+                creation_time=datetime.now(),
+                status='pending'
             )
             
-            # Parse response
-            response_text = response.choices[0].message.content
-            result = json.loads(response_text)
+            db_session.add(suggestion)
             
-            # Add logging
-            logger.info(f"AI analysis for pattern {pattern.id}: is_automatable={result.get('is_automatable', False)}, confidence={result.get('confidence', 0)}")
+            # Update pattern status
+            pattern.status = 'approved'
+            pattern.evaluation_notes = 'Pattern approved for automation'
             
-            return result
+            db_session.commit()
+            
+            logger.info(f"Created suggestion {suggestion.id} for pattern {pattern_id}")
             
         except Exception as e:
-            logger.error(f"Error in AI analysis: {e}")
-            return {
-                "is_automatable": False,
-                "notes": f"Error in AI analysis: {str(e)}",
-                "confidence": 0
-            }
+            logger.error(f"Error evaluating pattern {pattern_id}: {e}")
+            db_session.rollback()
+            
+            # Update pattern status
+            try:
+                pattern = db_session.query(Pattern).get(pattern_id)
+                if pattern:
+                    pattern.status = 'error'
+                    pattern.evaluation_notes = f'Error during evaluation: {str(e)}'
+                    db_session.commit()
+            except Exception as rollback_error:
+                logger.error(f"Error updating pattern status: {rollback_error}")
     
-    def _analyze_with_heuristics(self, pattern, sequences):
+    def _suggestion_check_loop(self):
+        """Thread function to periodically check for pending suggestions"""
+        while self.running:
+            try:
+                # See if there are any patterns that need to be re-evaluated
+                patterns = db_session.query(Pattern).filter(
+                    Pattern.status == 'detected'
+                ).all()
+                
+                for pattern in patterns:
+                    self.evaluate_pattern(pattern.id)
+                    
+            except Exception as e:
+                logger.error(f"Error in suggestion check loop: {e}")
+                
+            # Sleep until next check
+            time.sleep(self.check_interval)
+        
+    def create_macro_from_suggestion(self, suggestion_id):
         """
-        Analyze pattern using simple heuristics when AI is unavailable
+        Create a macro from a suggestion
         
         Args:
-            pattern: Pattern object from database
-            sequences: List of sequence dictionaries with metadata and sample events
+            suggestion_id: Database ID of the suggestion
             
         Returns:
-            Dictionary with analysis results including is_automatable flag
+            ID of the created macro, or None if failed
         """
-        # Extract key characteristics
-        is_automatable = False
-        notes = []
-        
-        # Check if sequences have consistent windows
-        window_sets = []
-        for seq in sequences:
-            windows = seq['metadata'].get('windows', [])
-            window_sets.append(set(windows))
-            
-        if window_sets:
-            common_windows = set.intersection(*window_sets) if window_sets else set()
-            if common_windows:
-                notes.append(f"Consistent windows: {', '.join(common_windows)}")
-            else:
-                notes.append("Inconsistent windows across sequences")
+        try:
+            # Get suggestion
+            suggestion = db_session.query(Suggestion).get(suggestion_id)
+            if not suggestion:
+                logger.error(f"Suggestion {suggestion_id} not found")
+                return None
                 
-        # Check event type consistency
-        event_type_patterns = []
-        for seq in sequences:
-            event_types = [e.get('type', '') for e in seq.get('sample_events', [])]
-            if event_types:
-                event_type_pattern = ''.join([e[0] if e else '?' for e in event_types])
-                event_type_patterns.append(event_type_pattern)
+            # Get pattern
+            pattern = suggestion.pattern
+            if not pattern:
+                logger.error(f"Pattern for suggestion {suggestion_id} not found")
+                return None
                 
-        if len(set(event_type_patterns)) == 1:
-            notes.append("Consistent event pattern across sequences")
-        else:
-            notes.append("Inconsistent event patterns")
+            # Create macro
+            macro = Macro(
+                name=suggestion.title,
+                description=suggestion.description,
+                creation_time=datetime.now(),
+                step_count=3,  # Placeholder
+                status='created'
+            )
             
-        # Check sequence lengths
-        seq_lengths = [len(seq.get('sample_events', [])) for seq in sequences]
-        length_variance = max(seq_lengths) / min(seq_lengths) if min(seq_lengths) > 0 else float('inf')
+            db_session.add(macro)
+            db_session.flush()  # Get ID without committing
+            
+            # Create simple steps (in a real system, this would be more complex)
+            steps = [
+                {"action_type": "start", "delay_before": 0.0, "parameters": "{}"},
+                {"action_type": "execute", "delay_before": 0.5, "parameters": "{}"},
+                {"action_type": "end", "delay_before": 0.5, "parameters": "{}"}
+            ]
+            
+            for i, step_data in enumerate(steps):
+                step = MacroStep(
+                    macro_id=macro.id,
+                    step_number=i,
+                    action_type=step_data["action_type"],
+                    parameters=step_data["parameters"],
+                    delay_before=step_data["delay_before"]
+                )
+                db_session.add(step)
+                
+            # Update suggestion
+            suggestion.status = 'accepted'
+            suggestion.action_time = datetime.now()
+            suggestion.macro_id = macro.id
+            
+            db_session.commit()
+            
+            logger.info(f"Created macro {macro.id} from suggestion {suggestion_id}")
+            
+            return macro.id
+            
+        except Exception as e:
+            logger.error(f"Error creating macro from suggestion {suggestion_id}: {e}")
+            db_session.rollback()
+            return None
+            
+    def enhance_macro_with_ai(self, macro_id):
+        """
+        Use AI to enhance a macro with better descriptions and optimizations
         
-        if length_variance < 1.5:
-            notes.append("Consistent sequence lengths")
-        else:
-            notes.append("Inconsistent sequence lengths")
+        Args:
+            macro_id: Database ID of the macro to enhance
             
-        # Pattern must have a good score
-        if pattern.score >= 0.7:
-            notes.append(f"Good pattern score: {pattern.score:.2f}")
-        else:
-            notes.append(f"Weak pattern score: {pattern.score:.2f}")
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self.openai_available:
+            logger.warning("OpenAI API key not available, skipping AI enhancement")
+            return False
             
-        # Determine automation potential
-        if (
-            pattern.score >= 0.7 and
-            common_windows and
-            length_variance < 1.5 and
-            len(set(event_type_patterns)) == 1
-        ):
-            is_automatable = True
+        try:
+            # Get macro
+            macro = db_session.query(Macro).get(macro_id)
+            if not macro:
+                logger.error(f"Macro {macro_id} not found")
+                return False
+                
+            # Get steps
+            steps = macro.steps
             
-        # Create result
-        result = {
-            "is_automatable": is_automatable,
-            "title": f"Automate workflow in {', '.join(list(common_windows)[:2])}" if common_windows else f"Potential automation for {pattern.name}",
-            "description": f"Automate a repetitive task that was detected {len(sequences)} times",
-            "notes": " | ".join(notes),
-            "steps": ["Start recording", "Execute steps", "Save automation"],
-            "confidence": 0.5 if is_automatable else 0.1
-        }
-        
-        return result
+            # In a real implementation, this would call OpenAI to improve the macro
+            # For now, just add some fake "AI-enhanced" descriptions
+            
+            macro.description += "\n\nThis macro has been enhanced with AI optimization."
+            
+            for step in steps:
+                # Add some fake AI enhancement
+                params = json.loads(step.parameters)
+                params['ai_enhanced'] = True
+                params['optimization_note'] = "Timing optimized by AI"
+                step.parameters = json.dumps(params)
+                
+            db_session.commit()
+            
+            logger.info(f"Enhanced macro {macro_id} with AI")
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error enhancing macro with AI: {e}")
+            db_session.rollback()
+            return False

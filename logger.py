@@ -1,19 +1,27 @@
 import os
-import logging
 import json
+import logging
 from datetime import datetime
 
-# Configure standard Python logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# Configure logging
+logging.basicConfig(level=logging.INFO, 
+                   format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Create logs directory if it doesn't exist
-os.makedirs('logs', exist_ok=True)
+# In-memory event cache for fast access to recent events
+recent_events = []
+MAX_RECENT_EVENTS = 1000
 
 def get_log_file_path():
     """Get the path for the current log file (based on date)"""
-    today = datetime.now().strftime('%Y%m%d')
-    return os.path.join('logs', f'events_{today}.json')
+    today = datetime.now().strftime('%Y-%m-%d')
+    log_dir = os.path.join(os.getcwd(), 'logs')
+    
+    # Create logs directory if it doesn't exist
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+        
+    return os.path.join(log_dir, f'events_{today}.json')
 
 def log_event(event_data):
     """
@@ -23,15 +31,43 @@ def log_event(event_data):
         event_data: Dictionary with event data
     """
     try:
+        # Add timestamp if not present
+        if 'timestamp' not in event_data:
+            event_data['timestamp'] = datetime.now().isoformat()
+            
+        # Add to in-memory cache
+        recent_events.append(event_data)
+        
+        # Trim cache if needed
+        if len(recent_events) > MAX_RECENT_EVENTS:
+            del recent_events[0]
+            
+        # Get log file path
         log_file = get_log_file_path()
         
-        # Write event data to log file
-        with open(log_file, 'a') as f:
-            f.write(json.dumps(event_data) + '\n')
+        # Check if file exists
+        if os.path.exists(log_file):
+            try:
+                # Read existing events
+                with open(log_file, 'r') as f:
+                    events = json.load(f)
+            except json.JSONDecodeError:
+                # File exists but is invalid JSON
+                events = []
+        else:
+            # Create new file
+            events = []
+            
+        # Add event to list
+        events.append(event_data)
+        
+        # Write back to file
+        with open(log_file, 'w') as f:
+            json.dump(events, f, indent=2)
             
     except Exception as e:
-        logger.error(f"Error writing to event log: {e}")
-
+        logger.error(f"Error logging event: {e}")
+        
 def get_recent_events(max_count=100):
     """
     Get the most recent events from the log
@@ -42,24 +78,6 @@ def get_recent_events(max_count=100):
     Returns:
         List of event dictionaries, most recent first
     """
-    events = []
-    
-    try:
-        log_file = get_log_file_path()
-        
-        if os.path.exists(log_file):
-            with open(log_file, 'r') as f:
-                lines = f.readlines()
-                
-                # Parse the most recent events (at the end of the file)
-                for line in reversed(lines[-max_count:]):
-                    try:
-                        event = json.loads(line.strip())
-                        events.append(event)
-                    except json.JSONDecodeError:
-                        logger.error(f"Error parsing event log line: {line}")
-                        
-    except Exception as e:
-        logger.error(f"Error reading event log: {e}")
-        
-    return events
+    events = list(recent_events)
+    events.reverse()  # Most recent first
+    return events[:max_count]

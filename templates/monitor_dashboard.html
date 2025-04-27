@@ -261,15 +261,29 @@ function fetchEvents() {
     }
     
     fetch('/api/events?count=20')
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok: ' + response.status);
+        }
+        return response.json();
+    })
     .then(data => {
+        console.log('Received events data:', data);
+        
         if (data.events && data.events.length > 0) {
             updateEventTable(data.events);
             updateEventCounts(data.events);
             
             // Show load more button if we have events
             document.getElementById('loadMoreContainer').style.display = 'block';
-            document.getElementById('noEventsMessage').parentElement.parentElement.style.display = 'none';
+            
+            // Hide the no events message
+            const noEventsRow = document.querySelector('#eventsTableBody tr td[colspan="4"]');
+            if (noEventsRow) {
+                noEventsRow.parentElement.style.display = 'none';
+            }
+        } else {
+            console.log('No events found in response');
         }
     })
     .catch(error => {

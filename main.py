@@ -959,14 +959,25 @@ def stop_monitoring():
 def get_events():
     """Get events from the local server"""
     from monitor_controller import MonitorController
+    import logging
     
     controller = MonitorController()
     count = request.args.get('count', default=100, type=int)
+    offset = request.args.get('offset', default=0, type=int)
     event_type = request.args.get('type')
     
-    events = controller.get_events(count=count, event_type=event_type)
-    
-    return jsonify({'events': events})
+    try:
+        events = controller.get_events(count=count, event_type=event_type)
+        logging.info(f"Retrieved {len(events)} events from automation server")
+        
+        # Apply offset if provided
+        if offset > 0 and offset < len(events):
+            events = events[offset:]
+            
+        return jsonify({'events': events})
+    except Exception as e:
+        logging.error(f"Error getting events: {e}")
+        return jsonify({'events': [], 'error': str(e)})
 
 # Handle graceful shutdown
 def signal_handler(sig, frame):
@@ -1008,6 +1019,49 @@ def init_default_settings():
     
     db_session.commit()
 
+def start_monitoring_components():
+    """Initialize and start the monitoring components"""
+    from settings import Settings
+    from event_listener import EventListener
+    from context_analyzer import ContextAnalyzer
+    from pattern_detector import PatternDetector
+    from reasoning_engine import ReasoningEngine
+    
+    try:
+        # Initialize components
+        settings = Settings()
+        event_listener = EventListener(settings)
+        context_analyzer = ContextAnalyzer(settings)
+        pattern_detector = PatternDetector(settings)
+        reasoning_engine = ReasoningEngine(settings)
+        
+        # Connect components
+        event_listener.set_analyzer(context_analyzer)
+        context_analyzer.set_pattern_detector(pattern_detector)
+        pattern_detector.set_reasoning_engine(reasoning_engine)
+        
+        # Start components in reverse order
+        reasoning_engine.start()
+        pattern_detector.start()
+        context_analyzer.start()
+        event_listener.start()
+        
+        logger.info("All monitoring components started successfully")
+        
+        # Store components for future reference
+        return {
+            'event_listener': event_listener,
+            'context_analyzer': context_analyzer,
+            'pattern_detector': pattern_detector,
+            'reasoning_engine': reasoning_engine
+        }
+    except Exception as e:
+        logger.error(f"Error starting monitoring components: {e}")
+        return {}
+
+# Initialize components dict
+monitoring_components = {}
+
 if __name__ == '__main__':
     try:
         # Initialize default settings
@@ -1016,9 +1070,18 @@ if __name__ == '__main__':
         # Seed demo data
         seed_demo_data()
         
+        # Start monitoring components if enabled
+        if os.environ.get('AUTOMATION_SERVER_URL') and settings.get_setting('monitoring_enabled', default=True):
+            monitoring_components = start_monitoring_components()
+        
         # Start Flask app
         app.run(host='0.0.0.0', port=5000, debug=True)
     except Exception as e:
         logger.error(f"Error starting BettermanAI: {e}")
     finally:
+        # Stop monitoring components
+        for component in monitoring_components.values():
+            if hasattr(component, 'stop'):
+                component.stop()
+                
         db_session.remove()

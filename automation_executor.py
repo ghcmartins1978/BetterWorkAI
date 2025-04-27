@@ -6,6 +6,8 @@ from datetime import datetime
 import pyautogui
 import webbrowser
 import re
+import tkinter as tk
+from tkinter import simpledialog
 
 from database import db_session
 from models import Macro, MacroStep, Suggestion, MacroVariable
@@ -318,16 +320,94 @@ class AutomationExecutor:
             
             # Create a dictionary of variable values
             variable_values = {}
+            missing_required_vars = []
+            
             for var in variables:
                 # Use current value if available, otherwise default value
                 value = var.current_value or var.default_value or ""
+                
+                # Check if this is a required variable with no value
+                if var.is_required and not value:
+                    missing_required_vars.append(var.name)
+                
+                # Convert value to appropriate type
+                if var.variable_type == 'number':
+                    try:
+                        if '.' in value:
+                            value = float(value)
+                        else:
+                            value = int(value)
+                    except (ValueError, TypeError):
+                        # Keep as string if conversion fails
+                        pass
+                elif var.variable_type == 'boolean':
+                    value = value.lower() in ('true', 'yes', '1', 'y')
+                
                 variable_values[var.name] = value
+            
+            # If there are required variables with no values, prompt the user
+            if missing_required_vars and self.settings.get_setting('prompt_for_required_variables', default=True):
+                self._prompt_for_variables(macro_id, missing_required_vars)
+                # Recursively call to get updated values
+                return self._get_variable_values(macro_id)
                 
             return variable_values
             
         except Exception as e:
             logger.error(f"Error getting variable values for macro {macro_id}: {e}")
             return {}
+            
+    def _prompt_for_variables(self, macro_id, variable_names):
+        """
+        Prompt the user to enter values for required variables.
+        
+        Args:
+            macro_id: ID of the macro
+            variable_names: List of variable names to prompt for
+        """
+        logger.info(f"Prompting for variables: {variable_names}")
+        
+        try:
+            # Get the macro name for the dialog
+            macro = db_session.query(Macro).get(macro_id)
+            if not macro:
+                return
+                
+            macro_name = macro.name
+            
+            # Get the variables
+            variables = db_session.query(MacroVariable).filter(
+                MacroVariable.macro_id == macro_id,
+                MacroVariable.name.in_(variable_names)
+            ).all()
+            
+            if not variables:
+                return
+                
+            # Show a dialog for each variable
+            for var in variables:
+                description = var.description or f"Enter value for {var.name}"
+                prompt_text = f"Macro '{macro_name}' requires a value for '{var.name}':\n{description}"
+                
+                # Use PyAutoGUI prompt or OS-specific dialog
+                value = pyautogui.prompt(
+                    text=prompt_text,
+                    title="Variable Required",
+                    default=var.default_value or ""
+                )
+                
+                # Update the variable if a value was provided
+                if value is not None:  # None means the user clicked Cancel
+                    var.current_value = value
+                    db_session.commit()
+                else:
+                    # User cancelled, abort execution
+                    self.abort_requested = True
+                    logger.info("Variable prompt cancelled by user, aborting execution")
+                    break
+                    
+        except Exception as e:
+            logger.error(f"Error prompting for variables: {e}")
             
     def _replace_variables_in_params(self, params, variable_values):
         """
@@ -346,11 +426,99 @@ class AutomationExecutor:
             if isinstance(value, str):
                 # Replace all variables in the string
                 new_value = value
+                
+                # First check for complex expressions with formatting like {{variable:format}}
+                formatted_matches = re.finditer(r'{{(\w+):(.*?)}}', new_value)
+                for match in formatted_matches:
+                    full_placeholder = match.group(0)
+                    var_name = match.group(1)
+                    format_spec = match.group(2)
+                    
+                    if var_name in variable_values:
+                        var_value = variable_values[var_name]
+                        
+                        try:
+                            # Handle different format types
+                            if format_spec == 'upper':
+                                replacement = str(var_value).upper()
+                            elif format_spec == 'lower':
+                                replacement = str(var_value).lower()
+                            elif format_spec == 'title':
+                                replacement = str(var_value).title()
+                            elif format_spec.startswith('pad'):
+                                # Padding format: pad:10:0 (pad to 10 characters with 0)
+                                parts = format_spec.split(':')
+                                if len(parts) >= 3:
+                                    width = int(parts[1])
+                                    char = parts[2]
+                                    replacement = str(var_value).rjust(width, char)
+                                else:
+                                    replacement = str(var_value)
+                            elif format_spec.startswith('calc'):
+                                # Calculate with expression: calc:+10 or calc:*2
+                                parts = format_spec.split(':')
+                                if len(parts) >= 2:
+                                    operator = parts[1][0]  # First character is the operator
+                                    operand = float(parts[1][1:])
+                                    
+                                    # Convert var_value to number if needed
+                                    if isinstance(var_value, str):
+                                        if var_value.isdigit():
+                                            var_value = int(var_value)
+                                        elif self._is_float(var_value):
+                                            var_value = float(var_value)
+                                    
+                                    if operator == '+':
+                                        replacement = str(var_value + operand)
+                                    elif operator == '-':
+                                        replacement = str(var_value - operand)
+                                    elif operator == '*':
+                                        replacement = str(var_value * operand)
+                                    elif operator == '/':
+                                        replacement = str(var_value / operand)
+                                    else:
+                                        replacement = str(var_value)
+                                else:
+                                    replacement = str(var_value)
+                            else:
+                                # Try to use as Python format specifier
+                                try:
+                                    replacement = format(var_value, format_spec)
+                                except (ValueError, TypeError):
+                                    replacement = str(var_value)
+                        except Exception as e:
+                            logger.error(f"Error formatting variable {var_name}: {e}")
+                            replacement = str(var_value)
+                            
+                        logger.info(f"Replacing {full_placeholder} with {replacement}")
+                        new_value = new_value.replace(full_placeholder, replacement)
+                
+                # Now handle simple variable replacements {{variable}}
                 for var_name, var_value in variable_values.items():
                     placeholder = f"{{{{{var_name}}}}}"
                     if placeholder in new_value:
                         logger.info(f"Replacing {placeholder} with {var_value}")
                         new_value = new_value.replace(placeholder, str(var_value))
+                
+                # Handle conditional expressions {{if:variable:then:else}}
+                conditional_matches = re.finditer(r'{{if:(\w+):([^:]*):([^}]*)}}', new_value)
+                for match in conditional_matches:
+                    full_placeholder = match.group(0)
+                    var_name = match.group(1)
+                    then_value = match.group(2)
+                    else_value = match.group(3)
+                    
+                    if var_name in variable_values:
+                        var_value = variable_values[var_name]
+                        # Convert to boolean for condition check
+                        if isinstance(var_value, str):
+                            var_value = var_value.lower() in ('true', 'yes', '1', 'y', 't')
+                        elif isinstance(var_value, (int, float)):
+                            var_value = var_value != 0
+                            
+                        replacement = then_value if var_value else else_value
+                        logger.info(f"Conditional {full_placeholder} evaluates to {replacement}")
+                        new_value = new_value.replace(full_placeholder, replacement)
                 
                 # Try to convert to number if it looks like one
                 if new_value.isdigit():

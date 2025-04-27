@@ -1,7 +1,7 @@
 metadata:
   name: Test Macro
   description: A simple test macro for validating the execution process
-  id: test_macro_123
+  id: test_macro
   tags:
     - test
     - demo

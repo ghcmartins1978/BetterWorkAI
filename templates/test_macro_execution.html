@@ -1,0 +1,196 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Test Macro Execution
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Test Macro Execution</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <p>This page tests the execution of the sample macro to verify that the fixes for the macro execution process are working correctly.</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5>Macro Information</h5>
+                        <dl class="row">
+                            <dt class="col-sm-3">Macro ID:</dt>
+                            <dd class="col-sm-9" id="macro-id">{{ macro.macro_id }}</dd>
+                            
+                            <dt class="col-sm-3">Name:</dt>
+                            <dd class="col-sm-9">{{ macro.name }}</dd>
+                            
+                            <dt class="col-sm-3">Description:</dt>
+                            <dd class="col-sm-9">{{ macro.description }}</dd>
+                            
+                            <dt class="col-sm-3">Number of Steps:</dt>
+                            <dd class="col-sm-9">{{ macro.steps|length }}</dd>
+                        </dl>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5>Execution Controls</h5>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-success" id="execute-normal">Execute Normally</button>
+                            <button type="button" class="btn btn-info" id="execute-dry-run">Execute Dry Run</button>
+                            <button type="button" class="btn btn-danger" id="stop-execution">Stop Execution</button>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5>Execution Status</h5>
+                        <div class="alert alert-secondary" id="status-display">
+                            <pre id="status-text" class="mb-0">Waiting for execution...</pre>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5>Log Output</h5>
+                        <div class="card">
+                            <div class="card-body bg-dark text-light">
+                                <pre id="log-output" class="mb-0" style="max-height: 300px; overflow-y: auto;">No logs available yet...</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const macroId = document.getElementById('macro-id').textContent;
+    const executeNormalBtn = document.getElementById('execute-normal');
+    const executeDryRunBtn = document.getElementById('execute-dry-run');
+    const stopExecutionBtn = document.getElementById('stop-execution');
+    const statusText = document.getElementById('status-text');
+    const statusDisplay = document.getElementById('status-display');
+    const logOutput = document.getElementById('log-output');
+    
+    let statusCheckInterval;
+    let currentLogPath = null;
+    
+    // Execute the macro in normal mode
+    executeNormalBtn.addEventListener('click', function() {
+        executeMacro('normal');
+    });
+    
+    // Execute the macro in dry-run mode
+    executeDryRunBtn.addEventListener('click', function() {
+        executeMacro('dry-run');
+    });
+    
+    // Stop the macro execution
+    stopExecutionBtn.addEventListener('click', function() {
+        fetch(`/api/macros/${macroId}/stop`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            updateStatus(data);
+            if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+                statusCheckInterval = null;
+            }
+        })
+        .catch(error => {
+            console.error('Error stopping macro:', error);
+            statusText.textContent = 'Error stopping macro: ' + error.message;
+            statusDisplay.className = 'alert alert-danger';
+        });
+    });
+    
+    // Function to execute the macro
+    function executeMacro(mode) {
+        statusText.textContent = 'Starting execution...';
+        statusDisplay.className = 'alert alert-info';
+        logOutput.textContent = 'Waiting for logs...';
+        
+        fetch(`/api/macros/${macroId}/execute`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ mode: mode })
+        })
+        .then(response => response.json())
+        .then(data => {
+            updateStatus(data);
+            if (data.status === 'running') {
+                // Start polling for status updates
+                if (statusCheckInterval) {
+                    clearInterval(statusCheckInterval);
+                }
+                statusCheckInterval = setInterval(checkStatus, 1000);
+            }
+        })
+        .catch(error => {
+            console.error('Error executing macro:', error);
+            statusText.textContent = 'Error executing macro: ' + error.message;
+            statusDisplay.className = 'alert alert-danger';
+        });
+    }
+    
+    // Function to check the macro execution status
+    function checkStatus() {
+        fetch(`/api/macros/${macroId}/status`)
+        .then(response => response.json())
+        .then(data => {
+            updateStatus(data);
+            if (data.status !== 'running') {
+                clearInterval(statusCheckInterval);
+                statusCheckInterval = null;
+            }
+            
+            // Update logs if we have a log path
+            if (data.log_path) {
+                currentLogPath = data.log_path;
+                updateLogs();
+            }
+        })
+        .catch(error => {
+            console.error('Error checking status:', error);
+        });
+    }
+    
+    // Function to update the status display
+    function updateStatus(data) {
+        statusText.textContent = JSON.stringify(data, null, 2);
+        
+        if (data.status === 'running') {
+            statusDisplay.className = 'alert alert-info';
+        } else if (data.status === 'completed') {
+            statusDisplay.className = 'alert alert-success';
+        } else if (data.status === 'failed') {
+            statusDisplay.className = 'alert alert-danger';
+        } else if (data.status === 'error') {
+            statusDisplay.className = 'alert alert-danger';
+        } else {
+            statusDisplay.className = 'alert alert-secondary';
+        }
+    }
+    
+    // Function to update the log output
+    function updateLogs() {
+        if (!currentLogPath) return;
+        
+        fetch(`/api/logs?path=${encodeURIComponent(currentLogPath)}`)
+        .then(response => response.text())
+        .then(data => {
+            logOutput.textContent = data || 'No log content available';
+        })
+        .catch(error => {
+            console.error('Error fetching logs:', error);
+            logOutput.textContent = 'Error fetching logs: ' + error.message;
+        });
+    }
+});
+</script>
+{% endblock %}

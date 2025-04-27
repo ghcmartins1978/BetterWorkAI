@@ -15,7 +15,7 @@ def test_macro_execution():
     os.makedirs("logs", exist_ok=True)
     
     # Macro ID from the test YAML file
-    macro_id = "test_macro_123"
+    macro_id = "test_macro"  # This should match the file name in data/macros/
     
     # Execute the macro in dry-run mode
     print(f"Executing macro {macro_id} in dry-run mode...")

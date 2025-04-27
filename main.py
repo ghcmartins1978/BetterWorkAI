@@ -642,6 +642,11 @@ def macros():
     all_macros = db_session.query(Macro).all()
     return render_template('macros.html', macros=all_macros)
 
+@app.route('/macro-library')
+def macro_library():
+    """Modern macro library UI"""
+    return render_template('macro_library.html')
+
 @app.route('/macro/<int:macro_id>')
 def view_macro(macro_id):
     """View a specific macro"""

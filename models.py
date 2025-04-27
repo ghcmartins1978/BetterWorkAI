@@ -89,6 +89,26 @@ class Suggestion(Base):
     pattern = relationship('Pattern', back_populates='suggestions')
     macro = relationship('Macro', back_populates='suggestion')
 
+class MacroVariable(Base):
+    """
+    Represents a variable that can be used in macro steps
+    """
+    __tablename__ = 'macro_variables'
+    
+    id = Column(Integer, primary_key=True)
+    macro_id = Column(Integer, ForeignKey('macros.id'), nullable=False)
+    name = Column(String(50), nullable=False)
+    description = Column(Text)
+    default_value = Column(Text)
+    current_value = Column(Text)
+    variable_type = Column(String(20), default='string')  # string, number, boolean, list, etc.
+    is_required = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    
+    # Relationship to macro
+    macro = relationship('Macro', back_populates='variables')
+
 class Macro(Base):
     """
     Represents a recorded macro for automation
@@ -103,10 +123,14 @@ class Macro(Base):
     execution_count = Column(Integer, default=0)
     step_count = Column(Integer, default=0)
     status = Column(String(20), default='created')  # created, recording, recorded, executing, verified, empty
+    tags = Column(Text)  # Comma-separated tags or JSON array
+    color = Column(String(20), default='secondary')  # Bootstrap color class
+    icon = Column(String(20))  # Bootstrap icon name
     
     # Relationships
     steps = relationship('MacroStep', back_populates='macro', cascade='all, delete-orphan')
     suggestion = relationship('Suggestion', back_populates='macro')
+    variables = relationship('MacroVariable', back_populates='macro', cascade='all, delete-orphan')
 
 class MacroStep(Base):
     """

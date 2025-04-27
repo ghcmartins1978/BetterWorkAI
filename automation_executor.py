@@ -5,9 +5,11 @@ import threading
 from datetime import datetime
 import pyautogui
 import webbrowser
+import re
 
 from database import db_session
-from models import Macro, MacroStep, Suggestion
+from models import Macro, MacroStep, Suggestion, MacroVariable
+import variable_detector
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +90,10 @@ class AutomationExecutor:
                 macro.status = 'recorded'  # Reset status
                 db_session.commit()
                 return False
+            
+            # Get variables for this macro
+            variable_values = self._get_variable_values(macro_id)
+            logger.info(f"Using variables: {json.dumps(variable_values)}")
                 
             # Show countdown if configured
             if self.settings.get_setting('show_execution_countdown'):
@@ -107,8 +113,11 @@ class AutomationExecutor:
                 # Parse parameters
                 params = json.loads(step.parameters)
                 
+                # Replace variables in parameters
+                params_with_vars = self._replace_variables_in_params(params, variable_values)
+                
                 # Execute step based on type
-                success = self._execute_step(step.action_type, params)
+                success = self._execute_step(step.action_type, params_with_vars)
                 
                 if not success:
                     logger.error(f"Failed to execute step {step.step_number} of macro {macro_id}")
@@ -289,3 +298,77 @@ class AutomationExecutor:
             
         except Exception as e:
             logger.error(f"Error showing notification: {e}")
+            
+    def _get_variable_values(self, macro_id):
+        """
+        Get the current values of all variables for a macro.
+        
+        Args:
+            macro_id: ID of the macro
+            
+        Returns:
+            Dictionary mapping variable names to their values
+        """
+        try:
+            # First, make sure all variables are registered
+            variable_detector.register_variables_for_macro(macro_id)
+            
+            # Get all variables for this macro
+            variables = db_session.query(MacroVariable).filter_by(macro_id=macro_id).all()
+            
+            # Create a dictionary of variable values
+            variable_values = {}
+            for var in variables:
+                # Use current value if available, otherwise default value
+                value = var.current_value or var.default_value or ""
+                variable_values[var.name] = value
+                
+            return variable_values
+            
+        except Exception as e:
+            logger.error(f"Error getting variable values for macro {macro_id}: {e}")
+            return {}
+            
+    def _replace_variables_in_params(self, params, variable_values):
+        """
+        Replace variable placeholders in parameters with their values.
+        
+        Args:
+            params: Dictionary of parameters
+            variable_values: Dictionary mapping variable names to their values
+            
+        Returns:
+            Dictionary with variables replaced by their values
+        """
+        result = {}
+        
+        for key, value in params.items():
+            if isinstance(value, str):
+                # Replace all variables in the string
+                new_value = value
+                for var_name, var_value in variable_values.items():
+                    placeholder = f"{{{{{var_name}}}}}"
+                    if placeholder in new_value:
+                        logger.info(f"Replacing {placeholder} with {var_value}")
+                        new_value = new_value.replace(placeholder, str(var_value))
+                
+                # Try to convert to number if it looks like one
+                if new_value.isdigit():
+                    new_value = int(new_value)
+                elif self._is_float(new_value):
+                    new_value = float(new_value)
+                    
+                result[key] = new_value
+            else:
+                # Non-string values don't contain variables
+                result[key] = value
+        
+        return result
+        
+    def _is_float(self, value):
+        """Check if a string can be converted to a float."""
+        try:
+            float(value)
+            return True
+        except (ValueError, TypeError):
+            return False

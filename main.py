@@ -1939,7 +1939,7 @@ def execute_macro(macro_id, mode='normal'):
         # In a real implementation, this would execute the macro
         # Here we just update the execution count and time
         macro.status = 'running'
-        macro.last_execution = datetime.now()
+        macro.last_execution_time = datetime.now()  # Use last_execution_time instead of last_execution
         macro.execution_count += 1
         db_session.commit()
         
@@ -1950,7 +1950,7 @@ def execute_macro(macro_id, mode='normal'):
             'mode': mode,
             'name': macro.name,
             'description': macro.description,
-            'started_at': macro.last_execution.isoformat() if macro.last_execution else None,
+            'started_at': macro.last_execution_time.isoformat() if hasattr(macro, 'last_execution_time') and macro.last_execution_time else None,
         }
         
         # For normal execution, connect to the local automation server
@@ -2079,7 +2079,7 @@ def get_macro_status(macro_id):
         'name': macro.name,
         'description': macro.description,
         'execution_count': macro.execution_count,
-        'last_execution': macro.last_execution.isoformat() if macro.last_execution else None,
+        'last_execution': macro.last_execution_time.isoformat() if hasattr(macro, 'last_execution_time') and macro.last_execution_time else None,
         'log_path': log_path
     }
 

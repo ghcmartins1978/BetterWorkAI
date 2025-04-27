@@ -1,0 +1,123 @@
+{% extends "layout.html" %}
+
+{% block title %}Variable Input{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card shadow-sm border-0 my-4">
+        <div class="card-body p-4">
+            <h2 class="mb-4 d-flex align-items-center">
+                <i class="bi bi-tag-fill me-2 text-primary"></i>
+                <span>Variable Input Required</span>
+            </h2>
+            
+            <div class="mb-4">
+                <p class="lead">
+                    The macro "{{ macro.name }}" requires input for the following variables:
+                </p>
+                
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    The macro will continue after you fill in these values, or after {{ timeout }} seconds.
+                </div>
+            </div>
+            
+            <form id="variableForm" method="post" action="{{ url_for('submit_variable_values', macro_id=macro.id) }}">
+                <div class="row">
+                    {% for var in variables %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ var.name }}</h5>
+                                <p class="card-text text-muted small">{{ var.description }}</p>
+                                
+                                {% if var.type == 'string' %}
+                                <input type="text" class="form-control" name="var_{{ var.id }}" 
+                                       value="{{ var.current_value }}" placeholder="{{ var.default_value }}">
+                                
+                                {% elif var.type == 'number' %}
+                                <input type="number" class="form-control" name="var_{{ var.id }}" 
+                                       value="{{ var.current_value }}" placeholder="{{ var.default_value }}">
+                                
+                                {% elif var.type == 'boolean' %}
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="var_{{ var.id }}" 
+                                           id="var_{{ var.id }}" {% if var.current_value == 'true' %}checked{% endif %}>
+                                    <label class="form-check-label" for="var_{{ var.id }}">Enabled</label>
+                                </div>
+                                
+                                {% elif var.type == 'choice' %}
+                                <select class="form-select" name="var_{{ var.id }}">
+                                    {% if var.name == 'button' %}
+                                    <option value="left" {% if var.current_value == 'left' %}selected{% endif %}>Left</option>
+                                    <option value="right" {% if var.current_value == 'right' %}selected{% endif %}>Right</option>
+                                    <option value="middle" {% if var.current_value == 'middle' %}selected{% endif %}>Middle</option>
+                                    {% else %}
+                                    <option value="">Please select...</option>
+                                    <option value="{{ var.current_value }}" {% if var.current_value %}selected{% endif %}>
+                                        {{ var.current_value }}
+                                    </option>
+                                    {% endif %}
+                                </select>
+                                
+                                {% else %}
+                                <input type="text" class="form-control" name="var_{{ var.id }}" 
+                                       value="{{ var.current_value }}" placeholder="{{ var.default_value }}">
+                                {% endif %}
+                                
+                                <small class="form-text text-muted">
+                                    {% if var.is_required %}
+                                    <i class="bi bi-asterisk text-danger small"></i> Required
+                                    {% else %}
+                                    Optional
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline-secondary" id="cancelButton">
+                        <i class="bi bi-x-circle me-1"></i> Skip
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-1"></i> Continue with these values
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set up the countdown timer
+    let remainingSeconds = {{ timeout }};
+    const countdownElement = document.querySelector('.alert-info');
+    
+    const countdownInterval = setInterval(function() {
+        remainingSeconds--;
+        
+        if (remainingSeconds <= 0) {
+            clearInterval(countdownInterval);
+            document.getElementById('variableForm').submit();
+        } else {
+            countdownElement.innerHTML = `
+                <i class="bi bi-info-circle-fill me-2"></i>
+                The macro will continue after you fill in these values, or after ${remainingSeconds} seconds.
+            `;
+        }
+    }, 1000);
+    
+    // Handle cancel button
+    document.getElementById('cancelButton').addEventListener('click', function() {
+        clearInterval(countdownInterval);
+        document.getElementById('variableForm').submit();
+    });
+});
+</script>
+{% endblock %}

@@ -360,6 +360,7 @@ class AutomationExecutor:
     def _prompt_for_variables(self, macro_id, variable_names):
         """
         Prompt the user to enter values for required variables.
+        Uses a web-based form instead of a dialog for better user experience.
         
         Args:
             macro_id: ID of the macro
@@ -373,8 +374,6 @@ class AutomationExecutor:
             if not macro:
                 return
                 
-            macro_name = macro.name
-            
             # Get the variables
             variables = db_session.query(MacroVariable).filter(
                 MacroVariable.macro_id == macro_id,
@@ -384,37 +383,131 @@ class AutomationExecutor:
             if not variables:
                 return
                 
-            # Show a dialog for each variable
-            for var in variables:
-                description = var.description or f"Enter value for {var.name}"
-                prompt_text = f"Macro '{macro_name}' requires a value for '{var.name}':\n{description}"
+            # Check if web-based prompting is enabled
+            use_web_prompt = self.settings.get_setting('prompt_required_variables', default=True)
+            prompt_timeout = int(self.settings.get_setting('variable_prompt_timeout', default=30))
                 
-                # Use tkinter dialog for better cross-platform compatibility
-                root = tk.Tk()
-                root.withdraw()  # Hide the main window
+            if use_web_prompt:
+                # Get the variable data for the template
+                variable_data = []
+                for var in variables:
+                    variable_data.append({
+                        'id': var.id,
+                        'name': var.name,
+                        'description': var.description or f"Variable for {var.name}",
+                        'type': var.variable_type or 'string',
+                        'default_value': var.default_value or '',
+                        'current_value': var.current_value or var.default_value or '',
+                        'is_required': var.is_required == 1
+                    })
                 
-                # Make sure it appears on top
-                root.attributes("-topmost", True)
+                # Open a web page with a form for all variables
+                # We'll store the variable data in a session or temporary file
+                import json
+                import os
+                import webbrowser
+                from tempfile import gettempdir
+                import time
                 
-                # Show the dialog
-                value = simpledialog.askstring(
-                    title="Variable Required",
-                    prompt=prompt_text,
-                    initialvalue=var.default_value or ""
-                )
+                # Create a temporary file to store the variable data
+                temp_dir = gettempdir()
+                temp_file = os.path.join(temp_dir, f"betterman_vars_{macro_id}.json")
                 
-                # Clean up
-                root.destroy()
+                with open(temp_file, 'w') as f:
+                    json.dump({
+                        'macro_id': macro_id,
+                        'macro_name': macro.name,
+                        'variables': variable_data,
+                        'timeout': prompt_timeout
+                    }, f)
                 
-                # Update the variable if a value was provided
-                if value is not None:  # None means the user clicked Cancel
-                    var.current_value = value
-                    db_session.commit()
-                else:
-                    # User cancelled, abort execution
-                    self.abort_requested = True
-                    logger.info("Variable prompt cancelled by user, aborting execution")
-                    break
+                # Open the variable prompt in the default browser
+                # In a real implementation, we would have a proper endpoint for this
+                # For now, we'll simulate with a basic HTML form
+                import urllib.parse
+                query_params = urllib.parse.urlencode({
+                    'macro_id': macro_id,
+                    'temp_file': temp_file,
+                    't': int(time.time())  # Cache buster
+                })
+                webbrowser.open(f"http://localhost:5000/variable_prompt?{query_params}")
+                
+                # Wait for user input with timeout
+                start_time = time.time()
+                while True:
+                    # Check if the temporary file has been updated with user input
+                    if os.path.exists(temp_file + '.response'):
+                        # Load the response
+                        try:
+                            with open(temp_file + '.response', 'r') as f:
+                                response = json.load(f)
+                                
+                            # Update the variables with the user's values
+                            for var_id, value in response.items():
+                                # Find the variable by ID
+                                var = next((v for v in variables if str(v.id) == var_id), None)
+                                if var:
+                                    var.current_value = value
+                            
+                            # Commit the changes
+                            db_session.commit()
+                            
+                            # Clean up
+                            try:
+                                os.remove(temp_file + '.response')
+                            except:
+                                pass
+                                
+                            break
+                        except Exception as e:
+                            logger.error(f"Error loading variable response: {e}")
+                            break
+                    
+                    # Check if we've timed out
+                    if time.time() - start_time > prompt_timeout:
+                        logger.info(f"Variable prompt timed out after {prompt_timeout} seconds")
+                        break
+                        
+                    # Sleep a bit to avoid hammering the CPU
+                    time.sleep(0.5)
+                
+                # Clean up the temporary file
+                try:
+                    os.remove(temp_file)
+                except:
+                    pass
+            else:
+                # Fall back to the old tkinter dialog for each variable
+                for var in variables:
+                    description = var.description or f"Enter value for {var.name}"
+                    prompt_text = f"Macro '{macro.name}' requires a value for '{var.name}':\n{description}"
+                    
+                    # Use tkinter dialog for better cross-platform compatibility
+                    root = tk.Tk()
+                    root.withdraw()  # Hide the main window
+                    
+                    # Make sure it appears on top
+                    root.attributes("-topmost", True)
+                    
+                    # Show the dialog
+                    value = simpledialog.askstring(
+                        title="Variable Required",
+                        prompt=prompt_text,
+                        initialvalue=var.default_value or ""
+                    )
+                    
+                    # Clean up
+                    root.destroy()
+                    
+                    # Update the variable if a value was provided
+                    if value is not None:  # None means the user clicked Cancel
+                        var.current_value = value
+                        db_session.commit()
+                    else:
+                        # User cancelled, abort execution
+                        self.abort_requested = True
+                        logger.info("Variable prompt cancelled by user, aborting execution")
+                        break
                     
         except Exception as e:
             logger.error(f"Error prompting for variables: {e}")
@@ -422,6 +515,7 @@ class AutomationExecutor:
     def _replace_variables_in_params(self, params, variable_values):
         """
         Replace variable placeholders in parameters with their values.
+        Uses the enhanced variable_detector module for more advanced variable handling.
         
         Args:
             params: Dictionary of parameters
@@ -430,6 +524,25 @@ class AutomationExecutor:
         Returns:
             Dictionary with variables replaced by their values
         """
+        # Get variable handling settings
+        allow_formatting = self.settings.get_setting('allow_variable_formatting', 'true') == 'true'
+        allow_conditionals = self.settings.get_setting('allow_conditional_variables', 'true') == 'true'
+        
+        # Pass settings to the variable detector
+        settings = {
+            'allow_variable_formatting': allow_formatting,
+            'allow_conditional_variables': allow_conditionals
+        }
+        
+        # Use the enhanced variable_detector module
+        try:
+            result = variable_detector.replace_variables_in_params(params, variable_values, settings)
+            return result
+        except Exception as e:
+            logger.error(f"Error replacing variables: {e}")
+            # Fall back to the basic replacement method below
+        
+        # Basic replacement fallback
         result = {}
         
         for key, value in params.items():

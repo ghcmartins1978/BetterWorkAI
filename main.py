@@ -896,6 +896,85 @@ def update_settings():
     
     return jsonify({'success': success})
 
+@app.route('/scheduled_jobs')
+def scheduled_jobs():
+    """View and manage scheduled jobs"""
+    from models import ScheduledJob
+    
+    # Get all jobs
+    jobs = db_session.query(ScheduledJob).order_by(ScheduledJob.job_type).all()
+    
+    # Get settings for the template
+    all_settings = {}
+    for setting in db_session.query(Setting).all():
+        if setting.name.startswith('jobs_') or setting.name.startswith('rolling_') or setting.name.startswith('nightly_'):
+            if setting.value_type == 'boolean':
+                all_settings[setting.name] = setting.value.lower() == 'true'
+            elif setting.value_type == 'number':
+                all_settings[setting.name] = float(setting.value)
+                if all_settings[setting.name].is_integer():
+                    all_settings[setting.name] = int(all_settings[setting.name])
+            else:
+                all_settings[setting.name] = setting.value
+    
+    return render_template('scheduled_jobs.html', jobs=jobs, settings=all_settings)
+
+@app.route('/api/jobs/<int:job_id>/result')
+def get_job_result(job_id):
+    """Get the result of a scheduled job"""
+    from models import ScheduledJob
+    
+    job = db_session.query(ScheduledJob).get(job_id)
+    if not job:
+        return jsonify({'success': False, 'error': 'Job not found'})
+    
+    try:
+        result = json.loads(job.result) if job.result else {}
+    except Exception:
+        result = {'error': 'Invalid result data'}
+    
+    return jsonify({'success': True, 'result': result})
+
+@app.route('/api/jobs/<int:job_id>/toggle', methods=['POST'])
+def toggle_job_status(job_id):
+    """Toggle a job's enabled status"""
+    from models import ScheduledJob
+    
+    data = request.json
+    if not data:
+        return jsonify({'success': False, 'error': 'Invalid request'})
+    
+    job = db_session.query(ScheduledJob).get(job_id)
+    if not job:
+        return jsonify({'success': False, 'error': 'Job not found'})
+    
+    try:
+        job.enabled = 1 if data.get('enabled', False) else 0
+        db_session.commit()
+        return jsonify({'success': True, 'enabled': job.enabled == 1})
+    except Exception as e:
+        db_session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/jobs/<int:job_id>/run-now', methods=['POST'])
+def run_job_now(job_id):
+    """Run a job immediately"""
+    from models import ScheduledJob
+    
+    job = db_session.query(ScheduledJob).get(job_id)
+    if not job:
+        return jsonify({'success': False, 'error': 'Job not found'})
+    
+    try:
+        # Update job to run immediately
+        job.next_run_time = datetime.now()
+        job.status = 'scheduled'
+        db_session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db_session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
+
 @app.route('/api/update_settings', methods=['POST'])
 def update_settings_api():
     """Update multiple settings at once via AJAX"""

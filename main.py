@@ -1803,15 +1803,66 @@ def execute_macro(macro_id, mode='normal'):
     Execute a macro
     
     Args:
-        macro_id: ID of the macro to execute
+        macro_id: ID of the macro to execute (can be an integer or string)
         mode: Execution mode ('normal' or 'dry-run')
         
     Returns:
         Dictionary with execution result
     """
+    # Check if the macro_id is 'test_macro' which is a special case for the test page
+    if macro_id == 'test_macro':
+        # Try to load the YAML file and create a temporary macro object for execution
+        try:
+            from automation_macros import AutomationMacro
+            import yaml
+            
+            # Ensure the data directories exist
+            os.makedirs("data/macros", exist_ok=True)
+            os.makedirs("logs", exist_ok=True)
+            
+            # Check if the test macro exists
+            test_macro_path = "data/macros/test_macro.yaml"
+            if os.path.exists(test_macro_path):
+                with open(test_macro_path, 'r') as f:
+                    yaml_content = f.read()
+                
+                # Parse the YAML content
+                macro_data = yaml.safe_load(yaml_content)
+                
+                # Create a temporary DB record for this test macro
+                macro = Macro(
+                    name=macro_data['metadata']['name'],
+                    description=macro_data['metadata']['description'],
+                    steps=json.dumps(macro_data['steps']),
+                    status='recorded',
+                    step_count=len(macro_data['steps']),
+                    execution_count=0
+                )
+                db_session.add(macro)
+                db_session.commit()
+                
+                # Override macro_id with the newly created database ID
+                macro_id = macro.id
+                
+                logger.info(f"Created temporary macro with ID {macro_id} for test execution")
+            else:
+                return {'status': 'error', 'message': 'Test macro file not found'}
+        except Exception as e:
+            logger.error(f"Error loading test macro: {e}")
+            return {'status': 'error', 'message': f'Error loading test macro: {e}'}
+    
+    # Check if the macro ID is numeric (from database)
+    try:
+        # Try to convert to int if it's a string representing a number
+        if isinstance(macro_id, str) and macro_id.isdigit():
+            macro_id = int(macro_id)
+    except (ValueError, TypeError):
+        pass  # Keep as is if not convertible
+    
+    # Now get the macro from the database
     macro = db_session.query(Macro).get(macro_id)
     if not macro:
-        return {'status': 'error', 'message': 'Macro not found'}
+        return {'status': 'error', 'message': f'Macro not found with ID {macro_id}'}
     
     # Log the execution attempt
     logger.info(f"Executing macro {macro_id} in {mode} mode")

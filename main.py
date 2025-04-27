@@ -10,7 +10,7 @@ import sys
 import random
 
 from database import init_db, db_session
-from models import Event, EventSequence, Pattern, Suggestion, Macro, MacroStep, Setting
+from models import Event, EventSequence, Pattern, Suggestion, Macro, MacroStep, Setting, AIAnalysisReport
 from settings import Settings
 
 # Configure logging
@@ -847,6 +847,34 @@ def update_settings_api():
         'success': all(results.values()),
         'results': results
     })
+
+@app.route('/ai_reports')
+def ai_reports():
+    """View AI analysis reports"""
+    # Get all AI analysis reports, ordered by timestamp (newest first)
+    reports = db_session.query(AIAnalysisReport).order_by(AIAnalysisReport.timestamp.desc()).all()
+    return render_template('ai_reports.html', reports=reports)
+
+@app.route('/ai_report/<int:report_id>')
+def view_ai_report(report_id):
+    """View a specific AI analysis report"""
+    # Get the report
+    report = db_session.query(AIAnalysisReport).filter(AIAnalysisReport.id == report_id).first_or_404()
+    
+    # Parse the analysis data JSON
+    analysis = {}
+    if report.analysis_data:
+        try:
+            analysis = json.loads(report.analysis_data)
+        except:
+            analysis = {"error": "Could not parse analysis data"}
+    
+    # Get associated event if this is a screenshot report
+    event = None
+    if report.report_type == 'screenshot' and report.source_id:
+        event = db_session.query(Event).filter(Event.id == report.source_id).first()
+    
+    return render_template('view_ai_report.html', report=report, analysis=analysis, event=event)
 
 @app.route('/about')
 def about():

@@ -425,45 +425,68 @@ class AutomationMacroManager:
             # Compile the YAML to TagUI script
             try:
                 # Create a temporary directory for the compiled TagUI script
-                with tempfile.TemporaryDirectory() as temp_dir:
-                    # Compile the YAML to TagUI script
-                    tagui_script_path = os.path.join(temp_dir, f"{macro_id}.tag")
-                    compile_yaml_to_tagui(yaml_file_path, tagui_script_path)
+                # NOTE: We're not using a context manager here, as it would delete
+                # the directory before the subprocess has a chance to run
+                temp_dir = tempfile.mkdtemp()
+                
+                # Compile the YAML to TagUI script
+                tagui_script_path = os.path.join(temp_dir, f"{macro_id}.tag")
+                compile_yaml_to_tagui(yaml_file_path, tagui_script_path)
+                
+                # Ensure the TagUI script exists
+                if not os.path.isfile(tagui_script_path):
+                    logger.error(f"TagUI script was not created at {tagui_script_path}")
+                    return {"status": "error", "message": "Failed to create TagUI script"}
+                
+                # Prepare the command
+                cmd = [tagui_binary, tagui_script_path]
+                if mode.lower() == "dry-run":
+                    cmd.append("-n")
+                cmd.append("--nobrowser")  # For safety
+                
+                # Execute the command
+                with open(log_path, "w") as log_file:
+                    log_file.write(f"Executing macro: {macro.name}\n")
+                    log_file.write(f"Mode: {mode}\n")
+                    log_file.write(f"Compiled using YAML DSL Compiler\n")
+                    log_file.write(f"Script path: {tagui_script_path}\n")
+                    log_file.write("-" * 50 + "\n\n")
                     
-                    # Prepare the command
-                    cmd = [tagui_binary, tagui_script_path]
+                    # Debug info
+                    log_file.write(f"TagUI Runner (Mock)\n")
+                    log_file.write(f"Running script: {tagui_script_path}\n")
+                    log_file.write(f"Arguments: {' '.join(cmd)}\n")
+                    
                     if mode.lower() == "dry-run":
-                        cmd.append("-n")
-                    cmd.append("--nobrowser")  # For safety
+                        log_file.write("Running in dry-run mode - no actions will be taken\n")
                     
-                    # Execute the command
-                    with open(log_path, "w") as log_file:
-                        log_file.write(f"Executing macro: {macro.name}\n")
-                        log_file.write(f"Mode: {mode}\n")
-                        log_file.write(f"Compiled using YAML DSL Compiler\n")
-                        log_file.write("-" * 50 + "\n\n")
-                        
-                        process = subprocess.Popen(
-                            cmd,
-                            stdout=log_file,
-                            stderr=subprocess.STDOUT,
-                            text=True,
-                            bufsize=1,
-                        )
+                    if not os.path.isfile(tagui_script_path):
+                        log_file.write(f"Error: Script file not found: {tagui_script_path}\n")
+                        return {"status": "error", "message": f"Script file not found: {tagui_script_path}"}
                     
-                    # Store the process and log info
-                    self.running_processes[macro_id] = {
-                        "process": process,
-                        "log_path": log_path,
-                        "start_time": time.time(),
-                    }
-                    
-                    return {
-                        "status": "running",
-                        "macro_id": macro_id,
-                        "pid": process.pid,
-                        "log_path": log_path,
-                    }
+                    process = subprocess.Popen(
+                        cmd,
+                        stdout=log_file,
+                        stderr=subprocess.STDOUT,
+                        text=True,
+                        bufsize=1,
+                        cwd=os.path.dirname(tagui_binary),  # Run from the TagUI directory
+                    )
+                
+                # Store the process and log info
+                self.running_processes[macro_id] = {
+                    "process": process,
+                    "log_path": log_path,
+                    "start_time": time.time(),
+                    "temp_dir": temp_dir,  # Store the temp dir to clean up later
+                }
+                
+                return {
+                    "status": "running",
+                    "macro_id": macro_id,
+                    "pid": process.pid,
+                    "log_path": log_path,
+                }
             except Exception as e:
                 logger.error(f"Error compiling or executing TagUI script: {e}")
                 with open(log_path, "w") as log_file:
@@ -520,7 +543,16 @@ class AutomationMacroManager:
             exit_code = process.returncode
             status = "completed" if exit_code == 0 else "failed"
 
-            # Clean up
+            # Clean up the temporary directory if it exists
+            if "temp_dir" in process_info:
+                try:
+                    import shutil
+                    shutil.rmtree(process_info["temp_dir"], ignore_errors=True)
+                    logger.info(f"Cleaned up temporary directory for macro {macro_id}")
+                except Exception as e:
+                    logger.warning(f"Error cleaning up temporary directory: {e}")
+
+            # Clean up process info
             del self.running_processes[macro_id]
 
             # When the process is finished, we assume all steps are complete
@@ -569,7 +601,16 @@ class AutomationMacroManager:
             if process.poll() is None:
                 process.kill()
 
-            # Clean up
+            # Clean up the temporary directory if it exists
+            if "temp_dir" in process_info:
+                try:
+                    import shutil
+                    shutil.rmtree(process_info["temp_dir"], ignore_errors=True)
+                    logger.info(f"Cleaned up temporary directory for stopped macro {macro_id}")
+                except Exception as e:
+                    logger.warning(f"Error cleaning up temporary directory: {e}")
+            
+            # Clean up process tracking
             del self.running_processes[macro_id]
 
             return {

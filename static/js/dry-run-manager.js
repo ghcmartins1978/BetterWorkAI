@@ -7,9 +7,33 @@
 
 class DryRunManager {
     constructor() {
-        // Create a DryRunOverlay instance
-        this.overlay = new DryRunOverlay();
         this.running = false;
+        this.overlay = null;
+        
+        // Defer overlay creation until needed to ensure DOM is ready
+        this._initializeOverlay();
+    }
+    
+    /**
+     * Initialize the overlay when needed
+     * This helps avoid DOM-related errors during page load
+     */
+    _initializeOverlay() {
+        if (!this.overlay) {
+            try {
+                this.overlay = new DryRunOverlay();
+                console.log('Dry run overlay initialized successfully');
+            } catch (error) {
+                console.error('Failed to initialize dry run overlay:', error);
+                // Try again when document is fully loaded
+                if (document.readyState !== 'complete') {
+                    window.addEventListener('load', () => {
+                        this._initializeOverlay();
+                    });
+                }
+            }
+        }
+        return this.overlay;
     }
     
     /**
@@ -20,6 +44,15 @@ class DryRunManager {
     start(macroId, steps = null) {
         if (this.running) {
             console.warn('A dry run is already in progress');
+            return;
+        }
+        
+        // Make sure overlay is initialized
+        this._initializeOverlay();
+        
+        // Check if overlay initialization failed
+        if (!this.overlay) {
+            console.error('Cannot start dry run: overlay not initialized');
             return;
         }
         
@@ -53,7 +86,13 @@ class DryRunManager {
     stop() {
         if (!this.running) return;
         
-        this.overlay.stop();
+        // Check if overlay exists before trying to stop it
+        if (this.overlay) {
+            this.overlay.stop();
+        } else {
+            console.warn('Tried to stop dry run but overlay is not initialized');
+        }
+        
         this.running = false;
     }
     

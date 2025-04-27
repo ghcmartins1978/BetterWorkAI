@@ -27,22 +27,54 @@ class DryRunOverlay {
      * Initialize the overlay
      */
     initialize() {
-        // Create the container if it doesn't exist
-        if (!document.getElementById(this.options.containerId)) {
-            const container = document.createElement('div');
-            container.id = this.options.containerId;
-            container.style.position = 'fixed';
-            container.style.top = '0';
-            container.style.left = '0';
-            container.style.width = '100%';
-            container.style.height = '100%';
-            container.style.pointerEvents = 'none'; // Allow clicks to pass through
-            container.style.zIndex = this.options.zIndex;
-            container.style.overflow = 'hidden';
-            document.body.appendChild(container);
-        }
+        // Use a safer initialization approach that waits for the DOM to be ready
+        const initContainer = () => {
+            // Create the container if it doesn't exist
+            if (!document.getElementById(this.options.containerId)) {
+                const container = document.createElement('div');
+                container.id = this.options.containerId;
+                container.style.position = 'fixed';
+                container.style.top = '0';
+                container.style.left = '0';
+                container.style.width = '100%';
+                container.style.height = '100%';
+                container.style.pointerEvents = 'none'; // Allow clicks to pass through
+                container.style.zIndex = this.options.zIndex;
+                container.style.overflow = 'hidden';
+                container.style.display = 'none'; // Initially hidden
+                
+                // Only append to body if it exists
+                if (document.body) {
+                    document.body.appendChild(container);
+                } else {
+                    console.error('Document body not available for dry-run overlay initialization');
+                    // Try again when DOM is ready
+                    window.addEventListener('DOMContentLoaded', () => {
+                        if (document.body) {
+                            document.body.appendChild(container);
+                            this._setupOverlayElements();
+                        }
+                    });
+                    return false;
+                }
+            }
+            
+            this.container = document.getElementById(this.options.containerId);
+            return true;
+        };
         
-        this.container = document.getElementById(this.options.containerId);
+        // If container initialization is successful, setup the overlay elements
+        if (initContainer()) {
+            this._setupOverlayElements();
+        }
+    }
+    
+    /**
+     * Set up the overlay elements inside the container
+     * Private method called by initialize
+     */
+    _setupOverlayElements() {
+        if (!this.container) return;
         
         // Create the mouse indicator
         this.mouseIndicator = document.createElement('div');

@@ -546,4 +546,171 @@
 </div>
 {% endblock %}
 
-{% block scripts %}\n<script src="{{ url_for('static', filename='js/settings.js') }}"></script>\n{% endblock %}
+{% block scripts %}
+<script>
+// Show/hide monitoring hours based on monitoring mode
+document.getElementById('monitoringMode').addEventListener('change', function() {
+    const scheduledHoursDiv = document.getElementById('scheduledHoursDiv');
+    scheduledHoursDiv.style.display = this.value === 'scheduled' ? 'block' : 'none';
+});
+
+// Show/hide AI engine settings based on selected engine
+document.getElementById('aiEngine').addEventListener('change', function() {
+    const openaiSettingsDiv = document.getElementById('openaiSettingsDiv');
+    const localLlmSettingsDiv = document.getElementById('localLlmSettingsDiv');
+    
+    openaiSettingsDiv.style.display = this.value === 'openai' ? 'block' : 'none';
+    localLlmSettingsDiv.style.display = this.value === 'local' ? 'block' : 'none';
+});
+
+// Test connection to automation server
+document.getElementById('testConnection').addEventListener('click', function() {
+    const connectionStatusDiv = document.getElementById('connectionStatus');
+    const serverUrl = document.getElementById('automationServerUrl').value;
+    
+    if (!serverUrl) {
+        connectionStatusDiv.innerHTML = `
+            <div class="alert alert-warning d-flex align-items-center" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <div>Please enter an Automation Server URL first</div>
+            </div>
+        `;
+        connectionStatusDiv.style.display = 'block';
+        return;
+    }
+    
+    // Display loading state
+    connectionStatusDiv.innerHTML = `
+        <div class="alert alert-info d-flex align-items-center" role="alert">
+            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+            <div>Testing connection to ${serverUrl}...</div>
+        </div>
+    `;
+    connectionStatusDiv.style.display = 'block';
+    
+    // Make AJAX request to test connection
+    fetch('/api/test_connection', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ server_url: serverUrl })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            connectionStatusDiv.innerHTML = `
+                <div class="alert alert-success d-flex align-items-center" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    <div>
+                        Connected successfully!
+                        <small class="d-block">Screen size: ${data.screen_size.width}x${data.screen_size.height}</small>
+                    </div>
+                </div>
+            `;
+        } else {
+            connectionStatusDiv.innerHTML = `
+                <div class="alert alert-danger d-flex align-items-center" role="alert">
+                    <i class="bi bi-x-circle-fill me-2"></i>
+                    <div>
+                        Connection failed
+                        <small class="d-block">Error: ${data.error}</small>
+                    </div>
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        connectionStatusDiv.innerHTML = `
+            <div class="alert alert-danger d-flex align-items-center" role="alert">
+                <i class="bi bi-x-circle-fill me-2"></i>
+                <div>
+                    Connection failed
+                    <small class="d-block">Error: ${error.message}</small>
+                </div>
+            </div>
+        `;
+    });
+});
+
+// Handle form submissions
+document.getElementById('generalSettingsForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    saveSettings('general', new FormData(this));
+});
+
+document.getElementById('connectionSettingsForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    saveSettings('connection', new FormData(this));
+});
+
+document.getElementById('automationSettingsForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    saveSettings('automation', new FormData(this));
+});
+
+document.getElementById('aiSettingsForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    saveSettings('ai', new FormData(this));
+});
+
+document.getElementById('dataSettingsForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    saveSettings('data', new FormData(this));
+});
+
+// Confirm data deletion
+document.getElementById('deleteAllData').addEventListener('click', function(e) {
+    if (confirm('Are you sure you want to delete all data? This cannot be undone.')) {
+        fetch('/api/delete_all_data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('All data has been deleted successfully.');
+                window.location.reload();
+            } else {
+                alert('Failed to delete data: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('An error occurred: ' + error.message);
+        });
+    }
+});
+
+// Helper function to save settings
+function saveSettings(section, formData) {
+    const settings = {};
+    formData.forEach((value, key) => {
+        settings[key] = value;
+    });
+    
+    fetch('/api/update_settings', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            section: section,
+            settings: settings
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Settings saved successfully');
+        } else {
+            alert('Failed to save settings: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('An error occurred: ' + error.message);
+    });
+}
+</script>
+{% endblock %}

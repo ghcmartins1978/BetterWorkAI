@@ -900,6 +900,49 @@ def update_settings():
     
     return jsonify({'success': success})
 
+@app.route('/test_connection')
+def test_connection():
+    """Test connection to automation server"""
+    server_url = settings.get_setting('automation_server_url', '')
+    
+    if not server_url:
+        return jsonify({
+            'connected': False, 
+            'error': 'Server URL not configured'
+        })
+    
+    # Initialize the client with the server URL
+    client = AutomationClient(server_url)
+    
+    try:
+        # Test the connection by getting the screen size
+        is_connected = client.is_connected()
+        
+        if is_connected:
+            # Get screen size for additional verification
+            response = requests.get(f"{server_url}/screen_size")
+            if response.status_code == 200:
+                screen_size = response.json()
+                return jsonify({
+                    'connected': True,
+                    'screen_size': screen_size
+                })
+            else:
+                return jsonify({
+                    'connected': False,
+                    'error': 'Connected, but failed to get screen size'
+                })
+        else:
+            return jsonify({
+                'connected': False,
+                'error': 'Failed to connect to automation server'
+            })
+    except Exception as e:
+        return jsonify({
+            'connected': False,
+            'error': str(e)
+        })
+
 @app.route('/scheduled_jobs')
 def scheduled_jobs():
     """View and manage scheduled jobs"""
@@ -1418,7 +1461,7 @@ def api_stats():
     })
 
 @app.route('/api/test_connection', methods=['POST'])
-def test_connection():
+def api_test_connection():
     """Test connection to the local automation server"""
     import requests
     from requests.exceptions import RequestException

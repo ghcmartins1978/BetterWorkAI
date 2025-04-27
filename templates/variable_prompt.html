@@ -17,6 +17,17 @@
                     <i class="bi bi-clock me-1"></i> This prompt will automatically close in <span id="countdown">{{ timeout }}</span> seconds.
                 </div>
             </div>
+            
+            <div class="alert alert-secondary mb-4">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-lightbulb-fill me-2 text-warning"></i>
+                    <strong>Need help with variables?</strong>
+                    <a href="/variable_documentation" target="_blank" class="ms-auto btn btn-sm btn-outline-info">
+                        <i class="bi bi-question-circle me-1"></i>
+                        View Documentation
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -43,16 +54,65 @@
                                 {% if variable.current_value and variable.current_value|lower in ['true', '1', 'yes', 'y'] %}checked{% endif %}>
                             <label class="form-check-label" for="var_{{ variable.id }}">Enabled</label>
                         </div>
+                        <div class="mt-2 small text-muted fst-italic">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Can be used in conditional expressions
+                        </div>
                         {% elif variable.type == 'number' %}
-                        <input type="number" class="form-control bg-dark text-light border-secondary" 
-                               id="var_{{ variable.id }}" name="var_{{ variable.id }}" 
-                               value="{{ variable.current_value }}" 
-                               {% if variable.is_required %}required{% endif %}>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark text-light border-secondary">
+                                <i class="bi bi-123"></i>
+                            </span>
+                            <input type="number" class="form-control bg-dark text-light border-secondary" 
+                                id="var_{{ variable.id }}" name="var_{{ variable.id }}" 
+                                value="{{ variable.current_value }}" 
+                                placeholder="Enter a number" 
+                                {% if variable.is_required %}required{% endif %}>
+                        </div>
+                        <div class="mt-2 small text-muted fst-italic">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Can be formatted with patterns like <code>{% raw %}{{{% endraw %}{{variable.name}}{% raw %}:0.2f}}{% endraw %}</code> or used in calculations
+                        </div>
+                        {% elif variable.type == 'date' %}
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark text-light border-secondary">
+                                <i class="bi bi-calendar"></i>
+                            </span>
+                            <input type="date" class="form-control bg-dark text-light border-secondary" 
+                                id="var_{{ variable.id }}" name="var_{{ variable.id }}" 
+                                value="{{ variable.current_value }}" 
+                                {% if variable.is_required %}required{% endif %}>
+                        </div>
+                        <div class="mt-2 small text-muted fst-italic">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Can be formatted with <code>{% raw %}{{{% endraw %}{{variable.name}}{% raw %}:date:%Y-%m-%d}}{% endraw %}</code>
+                        </div>
                         {% else %}
-                        <input type="text" class="form-control bg-dark text-light border-secondary" 
-                               id="var_{{ variable.id }}" name="var_{{ variable.id }}" 
-                               value="{{ variable.current_value }}" 
-                               {% if variable.is_required %}required{% endif %}>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark text-light border-secondary">
+                                <i class="bi bi-type"></i>
+                            </span>
+                            <input type="text" class="form-control bg-dark text-light border-secondary" 
+                                id="var_{{ variable.id }}" name="var_{{ variable.id }}" 
+                                value="{{ variable.current_value }}" 
+                                placeholder="Enter text" 
+                                {% if variable.is_required %}required{% endif %}>
+                        </div>
+                        <div class="mt-2 small text-muted fst-italic">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Can be formatted with <code>{% raw %}{{{% endraw %}{{variable.name}}{% raw %}:upper}}{% endraw %}</code>, <code>{% raw %}{{{% endraw %}{{variable.name}}{% raw %}:lower}}{% endraw %}</code>, etc.
+                        </div>
+                        {% endif %}
+                        
+                        {% if variable.default_value %}
+                        <div class="mt-2 small text-muted d-flex align-items-center">
+                            <span>Default: </span>
+                            <code class="ms-1">{{ variable.default_value }}</code>
+                            <button type="button" class="btn btn-sm btn-link text-info ms-2"
+                                    onclick="document.getElementById('var_{{ variable.id }}').value = '{{ variable.default_value }}';">
+                                Use Default
+                            </button>
+                        </div>
                         {% endif %}
                     </div>
                 </div>

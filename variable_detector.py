@@ -414,8 +414,16 @@ def apply_variable_format(value: Any, format_spec: str) -> str:
                 elif _is_float(value):
                     value = float(value)
         
+        # Apply text formatting methods
+        if format_spec == 'upper':
+            return str(value).upper()
+        elif format_spec == 'lower':
+            return str(value).lower()
+        elif format_spec == 'title':
+            return str(value).title()
+            
         # Apply Python's standard formatting
-        if format_spec.startswith('py:'):
+        elif format_spec.startswith('py:'):
             # Using Python's format specification language
             format_str = format_spec[3:]  # Remove 'py:' prefix
             return format(value, format_str)

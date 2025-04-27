@@ -6,6 +6,23 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
+class AIAnalysisReport(Base):
+    """
+    Represents an AI analysis report of a screenshot, pattern, or macro
+    """
+    __tablename__ = 'ai_analysis_reports'
+    
+    id = Column(Integer, primary_key=True)
+    report_type = Column(String(20), nullable=False)  # screenshot, pattern, macro
+    source_id = Column(Integer)  # ID of the related object (event, pattern, macro)
+    source_path = Column(String(255))  # File path if applicable (for screenshots)
+    timestamp = Column(DateTime, default=datetime.now)
+    analysis_data = Column(Text)  # JSON string of AI analysis results
+    summary = Column(Text)  # Human-readable summary
+    insights = Column(Text)  # Key insights
+    automation_potential = Column(Float, default=0.0)  # Score from 0-1
+    application_context = Column(String(255))  # Application or context that was analyzed
+
 class Event(Base):
     """
     Represents a user input event (mouse, keyboard, window)
@@ -16,6 +33,8 @@ class Event(Base):
     type = Column(String(20), nullable=False)  # mouse_move, key_press, etc.
     data = Column(Text, nullable=False)  # JSON string of event data
     timestamp = Column(DateTime, default=datetime.now)
+    has_screenshot = Column(Integer, default=0)  # Whether this event has an associated screenshot
+    analysis_report_id = Column(Integer, ForeignKey('ai_analysis_reports.id'), nullable=True)
 
 class EventSequence(Base):
     """

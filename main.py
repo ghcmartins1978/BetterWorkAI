@@ -24,6 +24,10 @@ app.secret_key = os.environ.get("SESSION_SECRET", "betterman_ai_secret")
 # Initialize database
 init_db()
 
+# Check and update database schema if needed
+from database import check_and_update_schema
+check_and_update_schema()
+
 # Initialize settings
 settings = Settings()
 

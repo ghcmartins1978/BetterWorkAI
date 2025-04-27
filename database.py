@@ -39,3 +39,47 @@ def init_db():
     except Exception as e:
         logger.error(f"Error initializing database: {e}")
         raise
+
+def check_and_update_schema():
+    """Check if the database schema needs to be updated and perform migrations if needed"""
+    try:
+        logger.info("Checking database schema for updates...")
+        
+        # Import models
+        import models
+        import sqlalchemy as sa
+        from sqlalchemy import inspect
+        
+        # Get inspector
+        inspector = inspect(engine)
+        
+        # Check if events table exists and has the required columns
+        if 'events' in inspector.get_table_names():
+            columns = [col['name'] for col in inspector.get_columns('events')]
+            if 'has_screenshot' not in columns:
+                # Add has_screenshot column
+                logger.info("Adding has_screenshot column to events table")
+                with engine.begin() as conn:
+                    conn.execute(sa.text(
+                        "ALTER TABLE events ADD COLUMN has_screenshot INTEGER DEFAULT 0"
+                    ))
+            
+            if 'analysis_report_id' not in columns:
+                # Add analysis_report_id column
+                logger.info("Adding analysis_report_id column to events table")
+                with engine.begin() as conn:
+                    conn.execute(sa.text(
+                        "ALTER TABLE events ADD COLUMN analysis_report_id INTEGER"
+                    ))
+        
+        # Check if ai_analysis_reports table exists
+        if 'ai_analysis_reports' not in inspector.get_table_names():
+            # Create ai_analysis_reports table
+            logger.info("Creating ai_analysis_reports table")
+            models.AIAnalysisReport.__table__.create(engine)
+        
+        logger.info("Database schema update complete")
+        return True
+    except Exception as e:
+        logger.error(f"Error updating database schema: {e}")
+        return False

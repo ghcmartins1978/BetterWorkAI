@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}AI Analysis Reports - BettermanAI{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">AI Analysis Reports</h1>
+    
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Screenshot Analysis Reports</h5>
+                </div>
+                <div class="card-body">
+                    <p>These reports contain AI analysis of screenshots captured during your interactions, helping to identify automation opportunities and patterns.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if reports|length == 0 %}
+        <div class="alert alert-info" role="alert">
+            No AI analysis reports are available yet. Reports will appear here once the AI has analyzed your screenshots and interactions.
+        </div>
+    {% else %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Context</th>
+                        <th>Summary</th>
+                        <th>Automation Potential</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for report in reports %}
+                    <tr>
+                        <td>{{ report.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>
+                            <span class="badge {% if report.report_type == 'screenshot' %}bg-primary{% elif report.report_type == 'pattern' %}bg-success{% else %}bg-info{% endif %}">
+                                {{ report.report_type }}
+                            </span>
+                        </td>
+                        <td>{{ report.application_context }}</td>
+                        <td>{{ report.summary|truncate(80) }}</td>
+                        <td>
+                            <div class="progress">
+                                <div class="progress-bar {% if report.automation_potential > 0.7 %}bg-success{% elif report.automation_potential > 0.4 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                     role="progressbar" 
+                                     style="width: {{ (report.automation_potential * 100)|int }}%;" 
+                                     aria-valuenow="{{ (report.automation_potential * 100)|int }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">{{ (report.automation_potential * 100)|int }}%</div>
+                            </div>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('view_ai_report', report_id=report.id) }}" class="btn btn-sm btn-primary">View</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

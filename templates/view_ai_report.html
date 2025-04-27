@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}AI Analysis Report - BettermanAI{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="mb-3">
+        <a href="{{ url_for('ai_reports') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Reports
+        </a>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">AI Analysis Report #{{ report.id }}</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Report Type:</strong> 
+                        <span class="badge {% if report.report_type == 'screenshot' %}bg-primary{% elif report.report_type == 'pattern' %}bg-success{% else %}bg-info{% endif %}">
+                            {{ report.report_type }}
+                        </span>
+                    </p>
+                    <p><strong>Date:</strong> {{ report.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                    <p><strong>Application Context:</strong> {{ report.application_context }}</p>
+                    <p><strong>Automation Potential:</strong>
+                        <div class="progress">
+                            <div class="progress-bar {% if report.automation_potential > 0.7 %}bg-success{% elif report.automation_potential > 0.4 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                 role="progressbar" 
+                                 style="width: {{ (report.automation_potential * 100)|int }}%;" 
+                                 aria-valuenow="{{ (report.automation_potential * 100)|int }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">{{ (report.automation_potential * 100)|int }}%</div>
+                        </div>
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    {% if report.report_type == 'screenshot' and report.source_path %}
+                        <div class="text-center">
+                            <p><strong>Screenshot:</strong></p>
+                            <img src="{{ url_for('static', filename='screenshots/' + report.source_path.split('/')[-1]) }}" 
+                                 alt="Screenshot" class="img-fluid rounded border" style="max-height: 300px;" />
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <hr>
+            
+            <h5>Summary</h5>
+            <p>{{ report.summary }}</p>
+            
+            <h5>Insights</h5>
+            <p>{{ report.insights }}</p>
+            
+            <h5>Detailed Analysis</h5>
+            <div class="accordion" id="analysisAccordion">
+                {% for key, value in analysis.items() %}
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="heading{{ loop.index }}">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}" aria-expanded="false" aria-controls="collapse{{ loop.index }}">
+                            {{ key|replace('_', ' ')|title }}
+                        </button>
+                    </h2>
+                    <div id="collapse{{ loop.index }}" class="accordion-collapse collapse" aria-labelledby="heading{{ loop.index }}" data-bs-parent="#analysisAccordion">
+                        <div class="accordion-body">
+                            {% if value is mapping %}
+                                <ul class="list-group">
+                                {% for sub_key, sub_value in value.items() %}
+                                    <li class="list-group-item">
+                                        <strong>{{ sub_key|replace('_', ' ')|title }}:</strong> {{ sub_value }}
+                                    </li>
+                                {% endfor %}
+                                </ul>
+                            {% elif value is iterable and value is not string %}
+                                <ul class="list-group">
+                                {% for item in value %}
+                                    <li class="list-group-item">{{ item }}</li>
+                                {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p>{{ value }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            {% if event %}
+            <hr>
+            <h5>Associated Event Data</h5>
+            <div class="card">
+                <div class="card-body">
+                    <p><strong>Event Type:</strong> {{ event.type }}</p>
+                    <p><strong>Timestamp:</strong> {{ event.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                    <div class="accordion" id="eventDataAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingEventData">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEventData" aria-expanded="false" aria-controls="collapseEventData">
+                                    Event Data
+                                </button>
+                            </h2>
+                            <div id="collapseEventData" class="accordion-collapse collapse" aria-labelledby="headingEventData" data-bs-parent="#eventDataAccordion">
+                                <div class="accordion-body">
+                                    <pre class="p-3 bg-light rounded"><code>{{ event.data }}</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        <div class="card-footer text-muted">
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="mb-0"><strong>Report ID:</strong> {{ report.id }}</p>
+                </div>
+                <div class="col-md-6 text-end">
+                    <p class="mb-0"><strong>Generated:</strong> {{ report.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

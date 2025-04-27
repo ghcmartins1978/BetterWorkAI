@@ -3,8 +3,9 @@ import time
 import json
 import threading
 import logging
+import base64
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, abort
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, abort, send_file, Response
 import signal
 import sys
 import random

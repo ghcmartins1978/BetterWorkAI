@@ -734,26 +734,18 @@ def stop_recording(macro_id):
     return jsonify({'success': True, 'redirect': url_for('view_macro', macro_id=macro.id)})
 
 @app.route('/macro/<int:macro_id>/execute', methods=['POST'])
-def execute_macro(macro_id):
-    """Execute a macro"""
-    macro = db_session.query(Macro).get(macro_id)
-    if not macro:
-        return jsonify({'success': False, 'error': 'Macro not found'})
+def web_execute_macro(macro_id):
+    """Web route to execute a macro, redirects back to the macro view page"""
+    # Call the API execute_macro function with default mode
+    result = execute_macro(macro_id, 'normal')
     
-    # In a real implementation, this would execute the macro
-    # Here we just update the execution count and time
-    macro.status = 'executing'
-    db_session.commit()
-    
-    # Simulate execution delay
-    time.sleep(2)
-    
-    macro.status = 'recorded'
-    macro.execution_count += 1
-    macro.last_execution_time = datetime.now()
-    db_session.commit()
-    
-    return jsonify({'success': True})
+    # For web routes, return a redirect to the macro view page
+    if result.get('status') == 'error':
+        flash(f"Error executing macro: {result.get('message')}", 'danger')
+    else:
+        flash(f"Macro execution started successfully", 'success')
+        
+    return redirect(url_for('view_macro', macro_id=macro_id))
 
 @app.route('/statistics')
 def statistics():
@@ -1806,6 +1798,98 @@ def api_delete_macro(macro_id):
             'message': str(e)
         })
 
+def execute_macro(macro_id, mode='normal'):
+    """
+    Execute a macro
+    
+    Args:
+        macro_id: ID of the macro to execute
+        mode: Execution mode ('normal' or 'dry-run')
+        
+    Returns:
+        Dictionary with execution result
+    """
+    macro = db_session.query(Macro).get(macro_id)
+    if not macro:
+        return {'status': 'error', 'message': 'Macro not found'}
+    
+    # Log the execution attempt
+    logger.info(f"Executing macro {macro_id} in {mode} mode")
+    
+    try:
+        # In a real implementation, this would execute the macro
+        # Here we just update the execution count and time
+        macro.status = 'running'
+        macro.last_execution = datetime.now()
+        macro.execution_count += 1
+        db_session.commit()
+        
+        # Prepare the result
+        result = {
+            'status': 'running',
+            'macro_id': macro_id,
+            'mode': mode,
+            'name': macro.name,
+            'description': macro.description,
+            'started_at': macro.last_execution.isoformat() if macro.last_execution else None,
+        }
+        
+        # For normal execution, connect to the local automation server
+        # For dry-run, just simulate the execution in the browser
+        if mode == 'normal':
+            # Get the automation server URL from environment
+            server_url = os.environ.get('AUTOMATION_SERVER_URL')
+            if not server_url:
+                return {
+                    'status': 'error',
+                    'message': 'Automation server URL not configured. Please configure it in the Server URL Manager.',
+                    'macro_id': macro_id
+                }
+                
+            # Log the attempt to connect to the server
+            logger.info(f"Connecting to automation server at {server_url}")
+            result['server_url'] = server_url
+            
+            # Create a temporary directory for execution logs
+            log_dir = os.path.join(os.getcwd(), 'logs', 'macros', str(macro_id))
+            os.makedirs(log_dir, exist_ok=True)
+            log_path = os.path.join(log_dir, f"execution_{int(time.time())}.log")
+            
+            # Log the created log path
+            logger.info(f"Created log file at {log_path}")
+            result['log_path'] = log_path
+            
+            # Record the log path for later retrieval
+            with open(log_path, 'w') as f:
+                f.write(f"Starting execution of macro {macro.name} (ID: {macro_id}) at {datetime.now().isoformat()}\n")
+                f.write(f"Mode: {mode}\n")
+                f.write(f"Server URL: {server_url}\n")
+                f.write("Steps to execute:\n")
+                
+                # Write the steps to the log
+                for i, step in enumerate(json.loads(macro.steps)):
+                    f.write(f"  {i+1}. {step['type']}: {json.dumps(step['params'])}\n")
+                
+                f.write("\nExecution log:\n")
+        
+        return result
+    except Exception as e:
+        logger.error(f"Error executing macro {macro_id}: {e}")
+        
+        # Update the macro status
+        try:
+            macro.status = 'failed'
+            db_session.commit()
+        except:
+            pass
+            
+        # Return the error
+        return {
+            'status': 'error',
+            'message': str(e),
+            'macro_id': macro_id
+        }
+
 @app.route('/api/automation/macros/<macro_id>/execute', methods=['POST'])
 def api_execute_macro(macro_id):
     """API endpoint to execute a macro"""
@@ -1828,6 +1912,49 @@ def api_execute_macro(macro_id):
                 'automation_server_url': os.environ.get('AUTOMATION_SERVER_URL', 'Not set')
             }
         })
+
+@app.route('/api/automation/macros/<macro_id>/status', methods=['GET'])
+def get_macro_status(macro_id):
+    """
+    Get the status of a running macro
+    
+    Args:
+        macro_id: ID of the macro to check
+        
+    Returns:
+        Dictionary with status information
+    """
+    macro = db_session.query(Macro).get(macro_id)
+    if not macro:
+        return {'status': 'error', 'message': 'Macro not found'}
+    
+    # In a real implementation, this would check the actual execution status
+    # Here we just return the stored status
+    status = 'completed'  # Default to completed for this example
+    if macro.status == 'running':
+        status = 'running'
+    elif macro.status == 'failed':
+        status = 'failed'
+    
+    # Find any log files for this macro
+    log_dir = os.path.join(os.getcwd(), 'logs', 'macros', str(macro_id))
+    log_path = None
+    if os.path.exists(log_dir):
+        log_files = [f for f in os.listdir(log_dir) if f.startswith('execution_')]
+        if log_files:
+            # Get the most recent log file
+            log_files.sort(reverse=True)
+            log_path = os.path.join(log_dir, log_files[0])
+    
+    return {
+        'status': status,
+        'macro_id': macro_id,
+        'name': macro.name,
+        'description': macro.description,
+        'execution_count': macro.execution_count,
+        'last_execution': macro.last_execution.isoformat() if macro.last_execution else None,
+        'log_path': log_path
+    }
 
 @app.route('/api/automation/macros/<macro_id>/status', methods=['GET'])
 def api_get_macro_status(macro_id):

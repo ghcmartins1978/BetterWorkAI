@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Stop the macro execution
     stopExecutionBtn.addEventListener('click', function() {
-        fetch(`/api/macros/${macroId}/stop`, {
+        fetch(`/api/automation/macros/${macroId}/stop`, {
             method: 'POST'
         })
         .then(response => {
@@ -136,7 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
         statusDisplay.className = 'alert alert-info';
         logOutput.textContent = 'Waiting for logs...';
         
-        fetch(`/api/macros/${macroId}/execute`, {
+        fetch(`/api/automation/macros/${macroId}/execute`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -186,7 +186,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Function to check the macro execution status
     function checkStatus() {
-        fetch(`/api/macros/${macroId}/status`)
+        fetch(`/api/automation/macros/${macroId}/status`)
         .then(response => {
             // Check if the response is JSON
             const contentType = response.headers.get('content-type');

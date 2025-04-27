@@ -23,6 +23,14 @@ Test Macro Execution
                             <dt class="col-sm-3">Macro ID:</dt>
                             <dd class="col-sm-9" id="macro-id">{{ macro.macro_id }}</dd>
                             
+                            <dt class="col-sm-3">Debug Info:</dt>
+                            <dd class="col-sm-9">
+                                <div class="small text-muted">
+                                    <div>Macro ID Type: <code>{{ macro.macro_id.__class__.__name__ }}</code></div>
+                                    <div>Macro ID as JSON: <code>{{ macro.macro_id|tojson }}</code></div>
+                                </div>
+                            </dd>
+                            
                             <dt class="col-sm-3">Name:</dt>
                             <dd class="col-sm-9">{{ macro.name }}</dd>
                             

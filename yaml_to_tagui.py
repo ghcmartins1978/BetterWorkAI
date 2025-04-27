@@ -104,7 +104,28 @@ class YAMLToTagUICompiler:
             
         Returns:
             Complete TagUI script as a string
+            
+        Raises:
+            ValueError: If the YAML data is missing required fields or has invalid structure
         """
+        # Validate the YAML structure
+        if not isinstance(data, dict):
+            error_msg = f"Invalid YAML structure, expected dictionary but got {type(data)}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+            
+        # Check for the required "steps" section
+        if "steps" not in data:
+            error_msg = "YAML is missing required 'steps' section"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+            
+        # Validate steps is a list
+        if not isinstance(data.get("steps"), list):
+            error_msg = f"Invalid steps format, expected list but got {type(data.get('steps'))}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+            
         # Reset indentation and variables
         self.indent_level = 0
         self.variables = {}
@@ -112,6 +133,18 @@ class YAMLToTagUICompiler:
         # Extract metadata and variables
         metadata = data.get("metadata", {})
         variables = data.get("variables", {})
+        
+        # Validate metadata is a dictionary
+        if not isinstance(metadata, dict):
+            error_msg = f"Invalid metadata format, expected dictionary but got {type(metadata)}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+            
+        # Validate variables is a dictionary
+        if not isinstance(variables, dict):
+            error_msg = f"Invalid variables format, expected dictionary but got {type(variables)}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
         
         # Store variables for substitution
         self.variables = variables
@@ -124,10 +157,26 @@ class YAMLToTagUICompiler:
         
         # Generate steps
         steps = ""
-        for step in data.get("steps", []):
+        for i, step in enumerate(data.get("steps", [])):
+            # Validate step is a dictionary
+            if not isinstance(step, dict):
+                error_msg = f"Invalid step format at index {i}, expected dictionary but got {type(step)}"
+                logger.error(error_msg)
+                raise ValueError(error_msg)
+                
+            # Validate step has an "action" field
+            if "action" not in step:
+                error_msg = f"Step at index {i} is missing required 'action' field"
+                logger.error(error_msg)
+                raise ValueError(error_msg)
+                
             step_text = self._process_step(step)
             if step_text:
                 steps += step_text + "\n"
+        
+        # Check if we have any steps
+        if not steps.strip():
+            logger.warning("No valid steps found in the YAML")
         
         # Combine all parts
         script = header + "\n" + var_declarations + "\n" + steps
@@ -410,9 +459,51 @@ def compile_yaml_to_tagui(yaml_file: str, output_file: Optional[str] = None) -> 
         
     Returns:
         Path to the compiled TagUI script
+        
+    Raises:
+        FileNotFoundError: If the YAML file does not exist
+        yaml.YAMLError: If the YAML file is invalid
+        ValueError: If the YAML content is missing required sections
+        IOError: If the output file cannot be written
     """
-    compiler = YAMLToTagUICompiler()
-    return compiler.compile(yaml_file, output_file)
+    # Check if the YAML file exists
+    if not os.path.isfile(yaml_file):
+        error_msg = f"YAML file not found: {yaml_file}"
+        logger.error(error_msg)
+        raise FileNotFoundError(error_msg)
+    
+    # Check if the output directory exists (if output_file is provided)
+    if output_file:
+        output_dir = os.path.dirname(output_file)
+        if output_dir and not os.path.isdir(output_dir):
+            try:
+                os.makedirs(output_dir, exist_ok=True)
+                logger.info(f"Created output directory: {output_dir}")
+            except Exception as e:
+                error_msg = f"Could not create output directory {output_dir}: {e}"
+                logger.error(error_msg)
+                raise IOError(error_msg)
+    
+    # Compile the YAML to TagUI
+    try:
+        compiler = YAMLToTagUICompiler()
+        result = compiler.compile(yaml_file, output_file)
+        
+        # Double check the output file exists
+        if output_file and not os.path.isfile(output_file):
+            error_msg = f"Output file was not created: {output_file}"
+            logger.error(error_msg)
+            raise IOError(error_msg)
+            
+        return result
+    except yaml.YAMLError as e:
+        error_msg = f"Invalid YAML in {yaml_file}: {e}"
+        logger.error(error_msg)
+        raise
+    except Exception as e:
+        error_msg = f"Error compiling {yaml_file}: {e}"
+        logger.error(error_msg)
+        raise
 
 
 if __name__ == "__main__":

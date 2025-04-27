@@ -1,0 +1,27 @@
+metadata:
+  name: Test Macro
+  description: A simple test macro for validating the execution process
+  id: test_macro_123
+  tags:
+    - test
+    - demo
+  created_at: 1682345678
+  updated_at: 1682345678
+
+variables:
+  text_to_type: Hello from BettermanAI!
+  wait_time: 1
+
+steps:
+  - action: focus
+    window: Notepad
+  - action: wait
+    seconds: 1
+  - action: click
+    target: 100,100
+    button: left
+  - action: type
+    target: page
+    value: ${text_to_type}
+  - action: keyboard
+    keys: enter

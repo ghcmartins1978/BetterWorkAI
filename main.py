@@ -1680,11 +1680,25 @@ def test_macro_execution():
                 macro = Macro(
                     name=macro_data['metadata']['name'],
                     description=macro_data['metadata']['description'],
-                    steps=json.dumps(steps),
                     status='recorded',
                     step_count=len(steps),
                     execution_count=0
                 )
+                
+                # Add the macro to the database
+                db_session.add(macro)
+                db_session.commit()
+                
+                # Now create the step objects
+                for index, step in enumerate(steps):
+                    macro_step = MacroStep(
+                        macro_id=macro.id,
+                        step_number=index + 1,
+                        action_type=step['type'],
+                        parameters=json.dumps(step['params']),
+                        delay_before=0.0
+                    )
+                    db_session.add(macro_step)
                 
                 db_session.add(macro)
                 db_session.commit()
@@ -1717,7 +1731,6 @@ def test_macro_execution():
                 macro = Macro(
                     name="Test Macro",
                     description="A simple test macro for validating the execution process",
-                    steps=json.dumps(sample_steps),
                     status='recorded',
                     step_count=len(sample_steps),
                     execution_count=0
@@ -1725,22 +1738,51 @@ def test_macro_execution():
                 
                 db_session.add(macro)
                 db_session.commit()
+                
+                # Now create step objects for this macro
+                for index, step in enumerate(sample_steps):
+                    macro_step = MacroStep(
+                        macro_id=macro.id,
+                        step_number=index + 1,
+                        action_type=step['type'],
+                        parameters=json.dumps(step['params']),
+                        delay_before=0.0
+                    )
+                    db_session.add(macro_step)
+                
+                db_session.commit()
                 macro_id = macro.id
+        
+        # Convert macro steps relationship to a list of dictionaries for the template
+        steps_list = []
+        for step in macro.steps:
+            step_dict = {
+                'type': step.action_type,
+                'params': json.loads(step.parameters) if isinstance(step.parameters, str) else step.parameters
+            }
+            steps_list.append(step_dict)
         
         # Convert to dict for template
         macro_dict = {
             'macro_id': macro.id,  # Use the database ID
             'name': macro.name,
             'description': macro.description,
-            'steps': json.loads(macro.steps) if isinstance(macro.steps, str) else macro.steps
+            'steps': steps_list
         }
         
         # Return the test macro execution page with the macro data
         return render_template("test_macro_execution.html", macro=macro_dict)
     except Exception as e:
         logger.error(f"Error loading test macro: {e}")
+        # Make sure to rollback the transaction in case of failure
+        try:
+            db_session.rollback()
+        except:
+            pass
+        
         flash(f"Error loading test macro: {e}", "danger")
-        return redirect(url_for("automation"))
+        # Redirect to the automation manager since there's no 'automation' route
+        return redirect(url_for("automation_manager"))
 
 # TagUI Automation API Routes
 from automation_macros import (
@@ -1847,12 +1889,24 @@ def execute_macro(macro_id, mode='normal'):
                 macro = Macro(
                     name=macro_data['metadata']['name'],
                     description=macro_data['metadata']['description'],
-                    steps=json.dumps(macro_data['steps']),
                     status='recorded',
                     step_count=len(macro_data['steps']),
                     execution_count=0
                 )
                 db_session.add(macro)
+                db_session.commit()
+                
+                # Add step objects for this macro
+                for index, step_data in enumerate(macro_data['steps']):
+                    macro_step = MacroStep(
+                        macro_id=macro.id,
+                        step_number=index + 1,
+                        action_type=step_data['type'],
+                        parameters=json.dumps(step_data['params'] if 'params' in step_data else {}),
+                        delay_before=0.0
+                    )
+                    db_session.add(macro_step)
+                
                 db_session.commit()
                 
                 # Override macro_id with the newly created database ID
@@ -1932,8 +1986,9 @@ def execute_macro(macro_id, mode='normal'):
                 f.write("Steps to execute:\n")
                 
                 # Write the steps to the log
-                for i, step in enumerate(json.loads(macro.steps)):
-                    f.write(f"  {i+1}. {step['type']}: {json.dumps(step['params'])}\n")
+                for i, step in enumerate(macro.steps):
+                    step_params = json.loads(step.parameters) if isinstance(step.parameters, str) else step.parameters
+                    f.write(f"  {i+1}. {step.action_type}: {json.dumps(step_params)}\n")
                 
                 f.write("\nExecution log:\n")
         
@@ -2234,13 +2289,25 @@ def create_sample_macro():
     macro = Macro(
         name="Sample Test Macro",
         description="A sample macro for testing the execution system",
-        steps=json.dumps(sample_steps),
         status='recorded',
         step_count=len(sample_steps),
         execution_count=0
     )
     
     db_session.add(macro)
+    db_session.commit()
+    
+    # Now create the step objects
+    for index, step in enumerate(sample_steps):
+        macro_step = MacroStep(
+            macro_id=macro.id,
+            step_number=index + 1,
+            action_type=step['type'],
+            parameters=json.dumps(step['params']),
+            delay_before=0.0
+        )
+        db_session.add(macro_step)
+    
     db_session.commit()
     
     return macro.id

@@ -2398,6 +2398,187 @@ def api_compile_yaml():
         logger.error(f"Error compiling YAML: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)})
 
+@app.route('/api/automation/macros/<macro_id>/export', methods=['GET'])
+def api_export_macro(macro_id):
+    """API endpoint to export a macro to YAML format"""
+    try:
+        # Get the macro
+        macro = db_session.query(Macro).get(macro_id)
+        if not macro:
+            return jsonify({
+                'status': 'error',
+                'message': f'Macro with ID {macro_id} not found'
+            })
+        
+        # Get steps
+        steps = db_session.query(MacroStep).filter_by(macro_id=macro.id).order_by(MacroStep.step_number).all()
+        
+        # Get variables
+        variables = db_session.query(MacroVariable).filter_by(macro_id=macro.id).all()
+        variables_dict = {}
+        for var in variables:
+            variables_dict[var.name] = {
+                'description': var.description or f"Variable {var.name}",
+                'type': var.variable_type or 'string',
+                'default_value': var.default_value or '',
+                'is_required': var.is_required == 1
+            }
+        
+        # Format macro steps
+        steps_data = []
+        for step in steps:
+            try:
+                params = json.loads(step.parameters)
+                steps_data.append({
+                    'type': step.action_type,
+                    'params': params,
+                    'delay_before': step.delay_before
+                })
+            except:
+                logger.warning(f"Could not parse parameters for step {step.id}")
+        
+        # Format tags
+        tags = []
+        if macro.tags:
+            try:
+                # Try to parse as JSON first
+                tags = json.loads(macro.tags)
+            except:
+                # Fallback to comma-separated
+                tags = [tag.strip() for tag in macro.tags.split(',') if tag.strip()]
+        
+        # Create YAML structure
+        yaml_data = {
+            'metadata': {
+                'name': macro.name,
+                'description': macro.description or '',
+                'id': str(macro.id),
+                'created_at': macro.creation_time.timestamp() if macro.creation_time else time.time(),
+                'updated_at': macro.last_execution_time.timestamp() if macro.last_execution_time else time.time(),
+                'tags': tags,
+                'color': macro.color or 'secondary',
+                'icon': macro.icon or 'robot'
+            },
+            'variables': variables_dict,
+            'steps': steps_data
+        }
+        
+        # Convert to YAML
+        import yaml
+        yaml_str = yaml.dump(yaml_data, default_flow_style=False)
+        
+        return jsonify({
+            'status': 'success',
+            'yaml': yaml_str
+        })
+    except Exception as e:
+        logger.error(f"Error exporting macro {macro_id}: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        })
+
+@app.route('/api/automation/macros/import', methods=['POST'])
+def api_import_macro():
+    """API endpoint to import a macro from YAML format"""
+    try:
+        # Get the YAML content
+        if 'yaml' not in request.json:
+            return jsonify({
+                'status': 'error',
+                'message': 'No YAML content provided'
+            })
+        
+        yaml_content = request.json['yaml']
+        
+        # Parse YAML
+        import yaml
+        try:
+            yaml_data = yaml.safe_load(yaml_content)
+        except Exception as e:
+            return jsonify({
+                'status': 'error',
+                'message': f'Invalid YAML format: {str(e)}'
+            })
+        
+        # Validate basic structure
+        if 'metadata' not in yaml_data or 'steps' not in yaml_data:
+            return jsonify({
+                'status': 'error',
+                'message': 'Invalid macro format: missing metadata or steps'
+            })
+        
+        # Extract metadata
+        metadata = yaml_data['metadata']
+        name = metadata.get('name', 'Imported Macro')
+        description = metadata.get('description', '')
+        tags = metadata.get('tags', [])
+        color = metadata.get('color', 'secondary')
+        icon = metadata.get('icon', 'robot')
+        
+        # Create new macro
+        macro = Macro(
+            name=name,
+            description=description,
+            tags=json.dumps(tags) if isinstance(tags, list) else tags,
+            color=color,
+            icon=icon,
+            status='imported',
+            creation_time=datetime.now(),
+            step_count=len(yaml_data['steps']),
+            execution_count=0
+        )
+        db_session.add(macro)
+        db_session.flush()  # Get ID without committing
+        
+        # Import steps
+        for i, step_data in enumerate(yaml_data['steps']):
+            step_type = step_data.get('type')
+            params = step_data.get('params', {})
+            delay = step_data.get('delay_before', 0.0)
+            
+            if not step_type:
+                continue
+                
+            step = MacroStep(
+                macro_id=macro.id,
+                step_number=i + 1,
+                action_type=step_type,
+                parameters=json.dumps(params),
+                delay_before=delay
+            )
+            db_session.add(step)
+        
+        # Import variables if present
+        if 'variables' in yaml_data and yaml_data['variables']:
+            for name, var_data in yaml_data['variables'].items():
+                variable = MacroVariable(
+                    macro_id=macro.id,
+                    name=name,
+                    description=var_data.get('description', f"Variable {name}"),
+                    default_value=var_data.get('default_value', ''),
+                    current_value=var_data.get('default_value', ''),
+                    variable_type=var_data.get('type', 'string'),
+                    is_required=1 if var_data.get('is_required', True) else 0
+                )
+                db_session.add(variable)
+        
+        # Commit changes
+        db_session.commit()
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Macro imported successfully',
+            'macro_id': macro.id
+        })
+    except Exception as e:
+        db_session.rollback()
+        logger.error(f"Error importing macro: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        })
+
 # Variable detection and management API endpoints
 @app.route('/api/automation/macros/<macro_id>/detect-variables', methods=['POST'])
 def api_detect_variables(macro_id):

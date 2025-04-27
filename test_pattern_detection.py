@@ -6,215 +6,622 @@ import requests
 import logging
 from datetime import datetime, timedelta
 import random
+from database import db_session
+from models import Event, EventSequence
+from sqlalchemy import func, desc
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, 
                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def create_pattern(server_url, pattern_name, repeat_count=3):
+class TestPatternGenerator:
     """
-    Create a test pattern by sending simulated events to the automation server
-    
-    Args:
-        server_url: URL of the automation server
-        pattern_name: Name of the pattern to create
-        repeat_count: Number of times to repeat the pattern
+    Test pattern generator that simulates user activity patterns
     """
-    if not server_url:
-        logger.error("No server URL provided")
-        return False
-        
-    # Make sure server is up and monitoring is enabled
-    try:
-        response = requests.get(f"{server_url}/api/status", timeout=5)
-        status = response.json()
-        
-        if not status.get('monitoring', False):
-            logger.error("Monitoring is not enabled on the server")
-            return False
-    except Exception as e:
-        logger.error(f"Error checking server status: {e}")
-        return False
-        
-    # Now generate simulated patterns
-    logger.info(f"Generating '{pattern_name}' pattern {repeat_count} times")
+    def __init__(self, server_url=None):
+        self.server_url = server_url or os.environ.get('AUTOMATION_SERVER_URL', '')
+        if not self.server_url:
+            logger.warning("No automation server URL provided.")
     
-    for i in range(repeat_count):
-        logger.info(f"Generating pattern instance {i+1}/{repeat_count}")
-        
-        if pattern_name == "copy_paste":
-            simulate_copy_paste_pattern(server_url)
-        elif pattern_name == "browser_navigation":
-            simulate_browser_navigation_pattern(server_url)
-        elif pattern_name == "window_arrange":
-            simulate_window_arrange_pattern(server_url)
-        else:
-            logger.error(f"Unknown pattern name: {pattern_name}")
+    def is_connected(self):
+        """Check if we can connect to the automation server"""
+        if not self.server_url:
             return False
             
-        # Wait between pattern instances to ensure they're separate sequences
-        time.sleep(20)
-        
-    logger.info(f"Successfully generated {repeat_count} instances of '{pattern_name}' pattern")
-    return True
-
-def send_event(server_url, event_type, **params):
-    """Send a single event to the automation server"""
-    try:
-        event_data = {
-            'type': event_type,
-            'timestamp': datetime.now().isoformat(),
-            **params
-        }
-        
-        # For debugging
-        logger.info(f"Sending event: {event_type} - {params}")
-        
-        response = requests.post(
-            f"{server_url}/api/events/add", 
-            json=event_data,
-            timeout=5
-        )
-        
-        if response.status_code == 200:
-            return True
-        else:
-            logger.error(f"Error sending event: Status code {response.status_code}")
+        try:
+            response = requests.get(f"{self.server_url}/api/status", timeout=3)
+            return response.status_code == 200
+        except Exception as e:
+            logger.error(f"Failed to connect to automation server: {e}")
             return False
-    except Exception as e:
-        logger.error(f"Error sending event: {e}")
-        return False
-
-def simulate_copy_paste_pattern(server_url):
-    """Simulate a copy-paste pattern with multiple windows"""
-    # Start in first window
-    send_event(server_url, 'window_change', window="Document Editor")
-    time.sleep(1)
+            
+    def start_monitoring(self):
+        """Start monitoring on the server"""
+        if not self.server_url:
+            return False
+            
+        try:
+            response = requests.post(
+                f"{self.server_url}/api/monitoring", 
+                json={'enable': True},
+                timeout=3
+            )
+            return response.status_code == 200
+        except Exception as e:
+            logger.error(f"Failed to start monitoring: {e}")
+            return False
+            
+    def create_direct_events(self, pattern_name, repeat_count=3):
+        """
+        Create test patterns by directly inserting events into the database
+        
+        Args:
+            pattern_name: Name of the pattern to create
+            repeat_count: Number of times to repeat the pattern
+        """
+        logger.info(f"Generating '{pattern_name}' pattern {repeat_count} times by direct database insertion")
+        
+        for i in range(repeat_count):
+            logger.info(f"Generating pattern instance {i+1}/{repeat_count}")
+            
+            if pattern_name == "copy_paste":
+                events = self._generate_copy_paste_events()
+            elif pattern_name == "browser_navigation":
+                events = self._generate_browser_navigation_events()
+            elif pattern_name == "window_arrange":
+                events = self._generate_window_arrange_events()
+            else:
+                logger.error(f"Unknown pattern name: {pattern_name}")
+                return False
+                
+            # Insert events directly into database
+            self._create_event_sequence(events)
+            
+            # Wait between pattern instances
+            time.sleep(5)
+            
+        logger.info(f"Successfully generated {repeat_count} instances of '{pattern_name}' pattern")
+        return True
+        
+    def _create_event_sequence(self, events):
+        """Create an event sequence with the given events"""
+        try:
+            # First create events in the events table
+            for event_data in events:
+                timestamp = datetime.fromisoformat(event_data['timestamp'])
+                event = Event(
+                    type=event_data['type'],
+                    data=json.dumps(event_data),
+                    timestamp=timestamp
+                )
+                db_session.add(event)
+            
+            # Then create a sequence
+            start_time = datetime.fromisoformat(events[0]['timestamp'])
+            end_time = datetime.fromisoformat(events[-1]['timestamp'])
+            
+            # Extract windows from events
+            windows = set()
+            for event in events:
+                if 'window' in event:
+                    windows.add(event['window'])
+            
+            metadata = {
+                'start_time': start_time.isoformat(),
+                'end_time': end_time.isoformat(),
+                'event_count': len(events),
+                'window_count': len(windows),
+                'windows': list(windows),
+                'reason': 'test_pattern'
+            }
+            
+            sequence = EventSequence(
+                start_time=start_time,
+                end_time=end_time,
+                event_count=len(events),
+                meta_data=json.dumps(metadata),
+                data=json.dumps(events)
+            )
+            
+            db_session.add(sequence)
+            db_session.commit()
+            
+            logger.info(f"Created event sequence with {len(events)} events")
+            return True
+        except Exception as e:
+            logger.error(f"Error creating event sequence: {e}")
+            db_session.rollback()
+            return False
     
-    # Select text
-    send_event(server_url, 'mouse_click', x=100, y=200, button='left')
-    time.sleep(0.5)
-    send_event(server_url, 'key_press', key='shift')
-    for i in range(5):
-        send_event(server_url, 'key_press', key='right')
-        time.sleep(0.2)
-    send_event(server_url, 'key_release', key='shift')
-    time.sleep(0.5)
+    def _generate_timestamp(self, offset_seconds=0):
+        """Generate a timestamp with an offset from now"""
+        return (datetime.now() + timedelta(seconds=offset_seconds)).isoformat()
     
-    # Copy
-    send_event(server_url, 'key_press', key='ctrl')
-    send_event(server_url, 'key_press', key='c')
-    send_event(server_url, 'key_release', key='c')
-    send_event(server_url, 'key_release', key='ctrl')
-    time.sleep(1)
-    
-    # Switch window
-    send_event(server_url, 'window_change', window="Email Client")
-    time.sleep(1)
-    
-    # Click to position cursor
-    send_event(server_url, 'mouse_click', x=150, y=300, button='left')
-    time.sleep(0.5)
-    
-    # Paste
-    send_event(server_url, 'key_press', key='ctrl')
-    send_event(server_url, 'key_press', key='v')
-    send_event(server_url, 'key_release', key='v')
-    send_event(server_url, 'key_release', key='ctrl')
-    time.sleep(0.5)
-
-def simulate_browser_navigation_pattern(server_url):
-    """Simulate a web browsing pattern"""
-    # Start in browser
-    send_event(server_url, 'window_change', window="Web Browser")
-    time.sleep(1)
-    
-    # Click on address bar
-    send_event(server_url, 'mouse_click', x=300, y=50, button='left')
-    time.sleep(0.5)
-    
-    # Type URL
-    for c in "example.com":
-        send_event(server_url, 'key_press', key=c)
-        send_event(server_url, 'key_release', key=c)
-        time.sleep(0.1)
-    
-    # Press Enter
-    send_event(server_url, 'key_press', key='enter')
-    send_event(server_url, 'key_release', key='enter')
-    time.sleep(1)
-    
-    # Scroll down
-    for i in range(3):
-        send_event(server_url, 'mouse_scroll', x=400, y=300, dy=-1)
-        time.sleep(0.5)
-    
-    # Click a link
-    send_event(server_url, 'mouse_click', x=250, y=400, button='left')
-    time.sleep(1)
-    
-    # Go back
-    send_event(server_url, 'key_press', key='alt')
-    send_event(server_url, 'key_press', key='left')
-    send_event(server_url, 'key_release', key='left')
-    send_event(server_url, 'key_release', key='alt')
-    time.sleep(1)
-
-def simulate_window_arrange_pattern(server_url):
-    """Simulate arranging windows pattern"""
-    # Start with first window
-    send_event(server_url, 'window_change', window="Excel Spreadsheet")
-    time.sleep(1)
-    
-    # Resize window (drag bottom-right corner)
-    send_event(server_url, 'mouse_click', x=800, y=600, button='left')
-    for i in range(5):
-        send_event(server_url, 'mouse_move', x=800+i*10, y=600+i*10)
-        time.sleep(0.2)
-    send_event(server_url, 'mouse_click', x=850, y=650, button='left')
-    time.sleep(1)
-    
-    # Move window (drag title bar)
-    send_event(server_url, 'mouse_click', x=400, y=20, button='left')
-    for i in range(5):
-        send_event(server_url, 'mouse_move', x=400+i*10, y=20)
-        time.sleep(0.2)
-    send_event(server_url, 'mouse_click', x=450, y=20, button='left')
-    time.sleep(1)
-    
-    # Switch to second window
-    send_event(server_url, 'window_change', window="PowerPoint Presentation")
-    time.sleep(1)
-    
-    # Resize second window
-    send_event(server_url, 'mouse_click', x=800, y=600, button='left')
-    for i in range(5):
-        send_event(server_url, 'mouse_move', x=800-i*10, y=600+i*10)
-        time.sleep(0.2)
-    send_event(server_url, 'mouse_click', x=750, y=650, button='left')
-    time.sleep(1)
-    
-    # Move second window
-    send_event(server_url, 'mouse_click', x=400, y=20, button='left')
-    for i in range(5):
-        send_event(server_url, 'mouse_move', x=400-i*10, y=20)
-        time.sleep(0.2)
-    send_event(server_url, 'mouse_click', x=350, y=20, button='left')
-    time.sleep(1)
+    def _generate_copy_paste_events(self):
+        """Generate events for a copy-paste pattern"""
+        events = []
+        base_time = 0
+        
+        # Start in first window
+        events.append({
+            'type': 'window_change',
+            'window': "Document Editor",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 1
+        
+        # Select text
+        events.append({
+            'type': 'mouse_click',
+            'x': 100,
+            'y': 200,
+            'button': 'left',
+            'window': "Document Editor",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 0.5
+        
+        # Key presses for selection
+        events.append({
+            'type': 'key_press',
+            'key': 'shift',
+            'window': "Document Editor",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 0.2
+        
+        for i in range(5):
+            events.append({
+                'type': 'key_press',
+                'key': 'right',
+                'window': "Document Editor",
+                'timestamp': self._generate_timestamp(base_time)
+            })
+            base_time += 0.2
+            
+        events.append({
+            'type': 'key_release',
+            'key': 'shift',
+            'window': "Document Editor",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 0.5
+        
+        # Copy
+        events.append({
+            'type': 'key_press',
+            'key': 'ctrl',
+            'window': "Document Editor",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 0.2
+        
+        events.append({
+            'type': 'key_press',
+            'key': 'c',
+            'window': "Document Editor",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 0.2
+        
+        events.append({
+            'type': 'key_release',
+            'key': 'c',
+            'window': "Document Editor",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 0.2
+        
+        events.append({
+            'type': 'key_release',
+            'key': 'ctrl',
+            'window': "Document Editor",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 1
+        
+        # Switch window
+        events.append({
+            'type': 'window_change',
+            'window': "Email Client",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 1
+        
+        # Click to position cursor
+        events.append({
+            'type': 'mouse_click',
+            'x': 150,
+            'y': 300,
+            'button': 'left',
+            'window': "Email Client",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 0.5
+        
+        # Paste
+        events.append({
+            'type': 'key_press',
+            'key': 'ctrl',
+            'window': "Email Client",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 0.2
+        
+        events.append({
+            'type': 'key_press',
+            'key': 'v',
+            'window': "Email Client",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 0.2
+        
+        events.append({
+            'type': 'key_release',
+            'key': 'v',
+            'window': "Email Client",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 0.2
+        
+        events.append({
+            'type': 'key_release',
+            'key': 'ctrl',
+            'window': "Email Client",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        
+        return events
+        
+    def _generate_browser_navigation_events(self):
+        """Generate events for a browser navigation pattern"""
+        events = []
+        base_time = 0
+        
+        # Start in browser
+        events.append({
+            'type': 'window_change',
+            'window': "Web Browser",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 1
+        
+        # Click address bar
+        events.append({
+            'type': 'mouse_click',
+            'x': 300,
+            'y': 50,
+            'button': 'left',
+            'window': "Web Browser",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 0.5
+        
+        # Type URL
+        for c in "example.com":
+            events.append({
+                'type': 'key_press',
+                'key': c,
+                'window': "Web Browser",
+                'timestamp': self._generate_timestamp(base_time)
+            })
+            base_time += 0.1
+            
+            events.append({
+                'type': 'key_release',
+                'key': c,
+                'window': "Web Browser",
+                'timestamp': self._generate_timestamp(base_time)
+            })
+            base_time += 0.1
+        
+        # Press Enter
+        events.append({
+            'type': 'key_press',
+            'key': 'enter',
+            'window': "Web Browser",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 0.2
+        
+        events.append({
+            'type': 'key_release',
+            'key': 'enter',
+            'window': "Web Browser",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 1
+        
+        # Scroll down
+        for i in range(3):
+            events.append({
+                'type': 'mouse_scroll',
+                'x': 400,
+                'y': 300,
+                'dx': 0,
+                'dy': -1,
+                'window': "Web Browser",
+                'timestamp': self._generate_timestamp(base_time)
+            })
+            base_time += 0.5
+        
+        # Click a link
+        events.append({
+            'type': 'mouse_click',
+            'x': 250,
+            'y': 400,
+            'button': 'left',
+            'window': "Web Browser",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 1
+        
+        # Go back (Alt+Left)
+        events.append({
+            'type': 'key_press',
+            'key': 'alt',
+            'window': "Web Browser",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 0.2
+        
+        events.append({
+            'type': 'key_press',
+            'key': 'left',
+            'window': "Web Browser",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 0.2
+        
+        events.append({
+            'type': 'key_release',
+            'key': 'left',
+            'window': "Web Browser",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 0.2
+        
+        events.append({
+            'type': 'key_release',
+            'key': 'alt',
+            'window': "Web Browser",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        
+        return events
+        
+    def _generate_window_arrange_events(self):
+        """Generate events for a window arrangement pattern"""
+        events = []
+        base_time = 0
+        
+        # Start with first window
+        events.append({
+            'type': 'window_change',
+            'window': "Excel Spreadsheet",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 1
+        
+        # Resize first window
+        events.append({
+            'type': 'mouse_click',
+            'x': 800,
+            'y': 600,
+            'button': 'left',
+            'window': "Excel Spreadsheet",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 0.2
+        
+        for i in range(5):
+            events.append({
+                'type': 'mouse_move',
+                'x': 800+i*10,
+                'y': 600+i*10,
+                'window': "Excel Spreadsheet",
+                'timestamp': self._generate_timestamp(base_time)
+            })
+            base_time += 0.2
+            
+        events.append({
+            'type': 'mouse_click',
+            'x': 850,
+            'y': 650,
+            'button': 'left',
+            'window': "Excel Spreadsheet",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 1
+        
+        # Move first window
+        events.append({
+            'type': 'mouse_click',
+            'x': 400,
+            'y': 20,
+            'button': 'left',
+            'window': "Excel Spreadsheet",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 0.2
+        
+        for i in range(5):
+            events.append({
+                'type': 'mouse_move',
+                'x': 400+i*10,
+                'y': 20,
+                'window': "Excel Spreadsheet",
+                'timestamp': self._generate_timestamp(base_time)
+            })
+            base_time += 0.2
+            
+        events.append({
+            'type': 'mouse_click',
+            'x': 450,
+            'y': 20,
+            'button': 'left',
+            'window': "Excel Spreadsheet",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 1
+        
+        # Switch to second window
+        events.append({
+            'type': 'window_change',
+            'window': "PowerPoint Presentation",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 1
+        
+        # Resize second window
+        events.append({
+            'type': 'mouse_click',
+            'x': 800,
+            'y': 600,
+            'button': 'left',
+            'window': "PowerPoint Presentation",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 0.2
+        
+        for i in range(5):
+            events.append({
+                'type': 'mouse_move',
+                'x': 800-i*10,
+                'y': 600+i*10,
+                'window': "PowerPoint Presentation",
+                'timestamp': self._generate_timestamp(base_time)
+            })
+            base_time += 0.2
+            
+        events.append({
+            'type': 'mouse_click',
+            'x': 750,
+            'y': 650,
+            'button': 'left',
+            'window': "PowerPoint Presentation",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 1
+        
+        # Move second window
+        events.append({
+            'type': 'mouse_click',
+            'x': 400,
+            'y': 20,
+            'button': 'left',
+            'window': "PowerPoint Presentation",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        base_time += 0.2
+        
+        for i in range(5):
+            events.append({
+                'type': 'mouse_move',
+                'x': 400-i*10,
+                'y': 20,
+                'window': "PowerPoint Presentation",
+                'timestamp': self._generate_timestamp(base_time)
+            })
+            base_time += 0.2
+            
+        events.append({
+            'type': 'mouse_click',
+            'x': 350,
+            'y': 20,
+            'button': 'left',
+            'window': "PowerPoint Presentation",
+            'timestamp': self._generate_timestamp(base_time)
+        })
+        
+        return events
+        
+    def check_patterns(self):
+        """Check for detected patterns in the database"""
+        from models import Pattern
+        
+        try:
+            patterns = db_session.query(Pattern).order_by(desc(Pattern.detection_time)).all()
+            
+            if not patterns:
+                logger.info("No patterns detected yet")
+                return []
+                
+            logger.info(f"Found {len(patterns)} patterns:")
+            for pattern in patterns:
+                logger.info(f"  Pattern {pattern.id}: {pattern.name}")
+                logger.info(f"    Status: {pattern.status}")
+                logger.info(f"    Score: {pattern.score}")
+                logger.info(f"    Detected: {pattern.detection_time}")
+                
+                # Get number of sequences
+                sequence_ids = json.loads(pattern.sequence_ids)
+                logger.info(f"    Sequences: {len(sequence_ids)}")
+                
+            return patterns
+        except Exception as e:
+            logger.error(f"Error checking patterns: {e}")
+            return []
+            
+    def check_suggestions(self):
+        """Check for automation suggestions in the database"""
+        from models import Suggestion
+        
+        try:
+            suggestions = db_session.query(Suggestion).order_by(desc(Suggestion.creation_time)).all()
+            
+            if not suggestions:
+                logger.info("No suggestions available yet")
+                return []
+                
+            logger.info(f"Found {len(suggestions)} suggestions:")
+            for suggestion in suggestions:
+                logger.info(f"  Suggestion {suggestion.id}: {suggestion.title}")
+                logger.info(f"    Status: {suggestion.status}")
+                logger.info(f"    Created: {suggestion.creation_time}")
+                
+                # Get pattern info
+                if suggestion.pattern:
+                    logger.info(f"    Pattern: {suggestion.pattern.name}")
+                
+            return suggestions
+        except Exception as e:
+            logger.error(f"Error checking suggestions: {e}")
+            return []
 
 def main():
     server_url = os.environ.get('AUTOMATION_SERVER_URL', '')
     
     if len(sys.argv) < 2:
-        print("Usage: python test_pattern_detection.py <pattern_name> [repeat_count]")
-        print("Available patterns: copy_paste, browser_navigation, window_arrange")
+        print("Usage: python test_pattern_detection.py <command> [args]")
+        print("Commands:")
+        print("  generate <pattern_name> [repeat_count] - Generate a pattern")
+        print("    Available patterns: copy_paste, browser_navigation, window_arrange")
+        print("  check_patterns - Check for detected patterns")
+        print("  check_suggestions - Check for automation suggestions")
         return
         
-    pattern_name = sys.argv[1]
-    repeat_count = int(sys.argv[2]) if len(sys.argv) > 2 else 3
+    command = sys.argv[1]
     
-    create_pattern(server_url, pattern_name, repeat_count)
+    # Create generator instance
+    generator = TestPatternGenerator(server_url)
+    
+    if command == "generate":
+        if len(sys.argv) < 3:
+            print("Error: Missing pattern name")
+            return
+            
+        pattern_name = sys.argv[2]
+        repeat_count = int(sys.argv[3]) if len(sys.argv) > 3 else 3
+        
+        generator.create_direct_events(pattern_name, repeat_count)
+    elif command == "check_patterns":
+        generator.check_patterns()
+    elif command == "check_suggestions":
+        generator.check_suggestions()
+    else:
+        print(f"Unknown command: {command}")
 
 if __name__ == "__main__":
     main()

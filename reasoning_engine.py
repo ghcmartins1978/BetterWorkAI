@@ -87,9 +87,17 @@ class ReasoningEngine:
                 db_session.commit()
                 return
                 
+            # Get event count from the first sequence to create a better description
+            try:
+                first_sequence = db_session.query(EventSequence).get(sequence_ids[0])
+                event_count = first_sequence.event_count if first_sequence else 0
+            except Exception as e:
+                logger.error(f"Error getting event count: {e}")
+                event_count = "multiple"
+                
             # Prepare suggestion
             title = f"Automate {pattern.name}"
-            description = f"This automation would replace a sequence of {pattern.event_count} events that you've performed {len(sequence_ids)} times."
+            description = f"This automation would replace a sequence of {event_count} events that you've performed {len(sequence_ids)} times."
             
             # Check if suggestion already exists for this pattern
             existing_suggestion = db_session.query(Suggestion).filter(
@@ -103,7 +111,7 @@ class ReasoningEngine:
             # Create simple steps for the suggestion (in a real system, this would be more complex)
             steps = [
                 {"type": "start", "description": "Start automation"},
-                {"type": "execute", "description": f"Execute {pattern.event_count} actions"},
+                {"type": "execute", "description": f"Execute {event_count} actions"},
                 {"type": "end", "description": "Finish automation"}
             ]
             

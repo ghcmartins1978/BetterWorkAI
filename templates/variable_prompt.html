@@ -152,9 +152,60 @@
             }
         }, 1000);
         
+        // Setup input validation and hints
+        {% for variable in variables %}
+        const varInput{{ variable.id }} = document.getElementById('var_{{ variable.id }}');
+        
+        {% if variable.type == 'number' %}
+        // Add validation for number inputs
+        varInput{{ variable.id }}.addEventListener('input', function(e) {
+            const value = e.target.value;
+            if (value !== '' && isNaN(Number(value))) {
+                e.target.setCustomValidity('Please enter a valid number');
+            } else {
+                e.target.setCustomValidity('');
+            }
+            e.target.reportValidity();
+        });
+        {% elif variable.type == 'date' %}
+        // Add validation for date inputs
+        varInput{{ variable.id }}.addEventListener('input', function(e) {
+            const value = e.target.value;
+            const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+            if (value !== '' && !dateRegex.test(value)) {
+                e.target.setCustomValidity('Please enter a valid date in YYYY-MM-DD format');
+            } else {
+                e.target.setCustomValidity('');
+            }
+            e.target.reportValidity();
+        });
+        {% endif %}
+        {% endfor %}
+        
         // Handle form submission
         document.getElementById('variableForm').addEventListener('submit', function(e) {
             e.preventDefault();
+            
+            // Validate all required fields
+            let isValid = true;
+            {% for variable in variables %}
+            {% if variable.is_required %}
+            const varInput{{ variable.id }} = document.getElementById('var_{{ variable.id }}');
+            {% if variable.type != 'boolean' %}
+            if (!varInput{{ variable.id }}.value.trim()) {
+                varInput{{ variable.id }}.setCustomValidity('This field is required');
+                varInput{{ variable.id }}.reportValidity();
+                isValid = false;
+            } else {
+                varInput{{ variable.id }}.setCustomValidity('');
+            }
+            {% endif %}
+            {% endif %}
+            {% endfor %}
+            
+            if (!isValid) {
+                return;
+            }
             
             const formData = {};
             const macroId = document.getElementById('macro_id').value;
@@ -168,6 +219,12 @@
             formData['{{ variable.id }}'] = varInput{{ variable.id }}.value;
             {% endif %}
             {% endfor %}
+            
+            // Show loading state on submit button
+            const submitBtn = document.querySelector('button[type="submit"]');
+            const originalBtnHtml = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Submitting...';
+            submitBtn.disabled = true;
             
             // Save to the response file expected by the automation executor
             fetch('/variable_prompt_submit', {
@@ -184,14 +241,25 @@
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
-                    // Close the window on success
-                    window.close();
+                    // Show success message briefly before closing
+                    submitBtn.classList.remove('btn-primary');
+                    submitBtn.classList.add('btn-success');
+                    submitBtn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Success!';
+                    
+                    // Close the window after a short delay
+                    setTimeout(() => window.close(), 800);
                 } else {
+                    // Reset button and show error
+                    submitBtn.innerHTML = originalBtnHtml;
+                    submitBtn.disabled = false;
                     alert('Error saving variables: ' + data.message);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
+                // Reset button and show error
+                submitBtn.innerHTML = originalBtnHtml;
+                submitBtn.disabled = false;
                 alert('An error occurred while saving variables.');
             });
         });

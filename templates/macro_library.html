@@ -162,10 +162,20 @@
                         
                         <div class="macro-details-section">
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h5>Variables</h5>
-                                <button class="btn btn-sm btn-outline-primary" id="detect-variables-btn" title="Scan macro steps for variables">
-                                    <i class="bi bi-search"></i> Detect Variables
-                                </button>
+                                <div class="d-flex align-items-center">
+                                    <h5 class="mb-0 me-2">Variables</h5>
+                                    <a href="/variable_documentation" target="_blank" class="text-info" title="Learn about variable formatting and usage">
+                                        <i class="bi bi-question-circle"></i>
+                                    </a>
+                                </div>
+                                <div>
+                                    <a href="/variable_documentation" target="_blank" class="btn btn-sm btn-outline-info me-2">
+                                        <i class="bi bi-book me-1"></i> Documentation
+                                    </a>
+                                    <button class="btn btn-sm btn-outline-primary" id="detect-variables-btn" title="Scan macro steps for variables">
+                                        <i class="bi bi-search"></i> Detect Variables
+                                    </button>
+                                </div>
                             </div>
                             <table class="table table-sm variables-table">
                                 <thead>

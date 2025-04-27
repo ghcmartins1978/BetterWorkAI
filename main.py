@@ -1507,6 +1507,12 @@ def automation_manager():
     """UI for managing automation macros"""
     return render_template('automation_manager.html')
 
+# YAML DSL Compiler route
+@app.route('/yaml-compiler')
+def yaml_compiler():
+    """UI for testing the YAML to TagUI compiler"""
+    return render_template('yaml_compiler.html')
+
 # TagUI Automation API Routes
 from automation_macros import (
     list_macros, get_macro, save_macro, delete_macro,
@@ -1654,6 +1660,69 @@ def api_create_sample_macro():
             'status': 'error',
             'message': str(e)
         })
+
+@app.route('/api/automation/yaml-compile', methods=['POST'])
+def api_compile_yaml():
+    """API endpoint to test the YAML to TagUI compiler"""
+    import tempfile
+    from yaml_to_tagui import compile_yaml_to_tagui
+    
+    try:
+        # Check if we have raw YAML content in the request
+        if 'yaml_content' in request.json:
+            yaml_content = request.json['yaml_content']
+            
+            # Create a temporary directory for the files
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # Save the YAML content to a file
+                yaml_path = os.path.join(temp_dir, "temp.yaml")
+                with open(yaml_path, "w") as f:
+                    f.write(yaml_content)
+                
+                # Compile the YAML file to TagUI script
+                output_path = os.path.join(temp_dir, "temp.tag")
+                compile_yaml_to_tagui(yaml_path, output_path)
+                
+                # Read the compiled script
+                with open(output_path, "r") as f:
+                    tagui_script = f.read()
+                
+                return jsonify({
+                    'status': 'success',
+                    'tagui_script': tagui_script
+                })
+        
+        # Check if we have a YAML file in the request
+        elif 'yaml_file' in request.files:
+            yaml_file = request.files['yaml_file']
+            if yaml_file.filename == '':
+                return jsonify({'status': 'error', 'message': 'No file selected'})
+            
+            # Create a temporary directory for the files
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # Save the uploaded YAML file
+                yaml_path = os.path.join(temp_dir, yaml_file.filename)
+                yaml_file.save(yaml_path)
+                
+                # Compile the YAML file to TagUI script
+                output_path = os.path.join(temp_dir, os.path.splitext(yaml_file.filename)[0] + ".tag")
+                
+                compile_yaml_to_tagui(yaml_path, output_path)
+                
+                # Read the compiled script
+                with open(output_path, "r") as f:
+                    tagui_script = f.read()
+                
+                return jsonify({
+                    'status': 'success', 
+                    'yaml_filename': yaml_file.filename,
+                    'tagui_script': tagui_script
+                })
+        else:
+            return jsonify({'status': 'error', 'message': 'No YAML content or file provided'})
+    except Exception as e:
+        logger.error(f"Error compiling YAML: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)})
 
 def start_monitoring_components():
     """Initialize and start the monitoring components"""

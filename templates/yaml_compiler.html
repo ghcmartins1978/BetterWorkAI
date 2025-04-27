@@ -1,0 +1,355 @@
+{% extends 'layout.html' %}
+
+{% block title %}YAML DSL Compiler{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">YAML DSL Compiler <span class="badge bg-primary">Beta</span></h1>
+    
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i>
+        This tool converts YAML automation descriptions to TagUI script format.
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">YAML Input</h5>
+                    <div>
+                        <button id="load-example-btn" class="btn btn-sm btn-outline-secondary me-1">
+                            <i class="bi bi-file-earmark-code"></i> Load Example
+                        </button>
+                        <button id="clear-btn" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-trash"></i> Clear
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <textarea id="yaml-input" class="form-control font-monospace" rows="20" placeholder="Enter your YAML here..."></textarea>
+                </div>
+                <div class="card-footer text-end">
+                    <button id="compile-btn" class="btn btn-primary">
+                        <i class="bi bi-chevron-right"></i> Compile to TagUI
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">TagUI Output</h5>
+                    <button id="copy-btn" class="btn btn-sm btn-outline-primary" disabled>
+                        <i class="bi bi-clipboard"></i> Copy
+                    </button>
+                </div>
+                <div class="card-body">
+                    <pre id="tagui-output" class="font-monospace border rounded p-3 bg-dark text-light" style="height: 430px; overflow-y: auto;">No output yet. Click "Compile to TagUI" to generate the script.</pre>
+                </div>
+                <div class="card-footer text-muted">
+                    <small><i class="bi bi-info-circle me-1"></i> The compiled TagUI script can be executed by the TagUI automation engine.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-4">
+        <h3>YAML DSL Documentation</h3>
+        <div class="card">
+            <div class="card-body">
+                <p>The YAML DSL (Domain Specific Language) provides a more readable way to define automation workflows. The structure consists of three main sections:</p>
+                
+                <h5>1. Metadata</h5>
+                <p>Contains information about the automation workflow:</p>
+                <pre class="bg-dark text-light p-3 rounded">metadata:
+  name: Example Workflow
+  description: An example workflow
+  id: workflow_001
+  tags:
+    - example
+    - test</pre>
+                
+                <h5>2. Variables</h5>
+                <p>Define variables that can be used throughout the workflow:</p>
+                <pre class="bg-dark text-light p-3 rounded">variables:
+  app_name: Notepad
+  text_to_type: Hello from BettermanAI!
+  wait_time: 1</pre>
+                
+                <h5>3. Steps</h5>
+                <p>Define the sequence of actions to perform:</p>
+                <pre class="bg-dark text-light p-3 rounded">steps:
+  - action: echo
+    message: Starting workflow
+    
+  - action: focus
+    window: ${app_name}
+    
+  - action: wait
+    seconds: ${wait_time}
+    
+  - action: type
+    target: page
+    value: ${text_to_type}</pre>
+                
+                <h5>Supported Actions</h5>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Action</th>
+                                <th>Parameters</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>click</td>
+                                <td>target, button</td>
+                                <td>Click on a target element or coordinates</td>
+                            </tr>
+                            <tr>
+                                <td>hover</td>
+                                <td>target</td>
+                                <td>Move mouse to a target element or coordinates</td>
+                            </tr>
+                            <tr>
+                                <td>type</td>
+                                <td>target, value</td>
+                                <td>Type text into a target element</td>
+                            </tr>
+                            <tr>
+                                <td>keyboard</td>
+                                <td>keys</td>
+                                <td>Press keyboard keys</td>
+                            </tr>
+                            <tr>
+                                <td>wait</td>
+                                <td>seconds</td>
+                                <td>Wait for a specified number of seconds</td>
+                            </tr>
+                            <tr>
+                                <td>focus</td>
+                                <td>window</td>
+                                <td>Focus on a specific window</td>
+                            </tr>
+                            <tr>
+                                <td>echo</td>
+                                <td>message</td>
+                                <td>Display a message</td>
+                            </tr>
+                            <tr>
+                                <td>assign</td>
+                                <td>variable, value</td>
+                                <td>Assign a value to a variable</td>
+                            </tr>
+                            <tr>
+                                <td>url</td>
+                                <td>address</td>
+                                <td>Navigate to a URL</td>
+                            </tr>
+                            <tr>
+                                <td>if</td>
+                                <td>condition</td>
+                                <td>Start a conditional block</td>
+                            </tr>
+                            <tr>
+                                <td>else</td>
+                                <td>-</td>
+                                <td>Start the else part of a conditional block</td>
+                            </tr>
+                            <tr>
+                                <td>for</td>
+                                <td>variable, from, to</td>
+                                <td>Start a for loop</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // DOM references
+    const yamlInput = document.getElementById('yaml-input');
+    const taguiOutput = document.getElementById('tagui-output');
+    const compileBtn = document.getElementById('compile-btn');
+    const loadExampleBtn = document.getElementById('load-example-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const copyBtn = document.getElementById('copy-btn');
+    
+    // Example YAML for the "Load Example" button
+    const exampleYaml = `metadata:
+  name: Example Workflow
+  description: An example automation workflow demonstrating YAML to TagUI conversion
+  id: workflow_001
+  tags:
+    - example
+    - demo
+    - test
+  created_at: 2025-04-27
+  updated_at: 2025-04-27
+
+variables:
+  app_name: Notepad
+  text_to_type: Hello from BettermanAI YAML DSL!
+  wait_time: 1
+  search_term: example search
+  iterations: 3
+  username: user@example.com
+  password: dummy_password
+
+steps:
+  - action: echo
+    message: Starting Example Workflow
+
+  - action: focus
+    window: \${app_name}
+
+  - action: wait
+    seconds: \${wait_time}
+
+  - action: type
+    target: page
+    value: \${text_to_type}
+
+  - action: keyboard
+    keys: enter
+
+  - action: wait
+    seconds: 0.5
+
+  - action: echo
+    message: Demonstrating variable substitution and control structures
+
+  - action: assign
+    variable: counter
+    value: 1
+
+  - action: if
+    condition: counter <= \${iterations}
+
+  - action: echo
+    message: "Iteration \${counter}"
+
+  - action: keyboard
+    keys: "hello iteration \${counter}"
+
+  - action: keyboard
+    keys: enter
+
+  - action: assign
+    variable: counter
+    value: counter + 1
+
+  - action: echo
+    message: End of conditional block
+
+  - action: url
+    address: example.com
+
+  - action: wait
+    seconds: 2
+
+  - action: echo
+    message: Demonstrating form filling
+
+  - action: type
+    target: email_field
+    value: \${username}
+
+  - action: type
+    target: password_field
+    value: \${password}
+  
+  - action: click
+    target: submit_button
+    button: left
+
+  - action: echo
+    message: Completed Example Workflow`;
+    
+    // Event listeners
+    compileBtn.addEventListener('click', compileYaml);
+    loadExampleBtn.addEventListener('click', loadExample);
+    clearBtn.addEventListener('click', clearInput);
+    copyBtn.addEventListener('click', copyOutput);
+    
+    // Function to compile YAML to TagUI
+    function compileYaml() {
+        const yaml = yamlInput.value.trim();
+        
+        if (!yaml) {
+            taguiOutput.textContent = 'Please enter YAML content to compile.';
+            return;
+        }
+        
+        // Show loading indicator
+        taguiOutput.textContent = 'Compiling...';
+        compileBtn.disabled = true;
+        
+        // Send the YAML to the server for compilation
+        fetch('/api/automation/yaml-compile', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                yaml_content: yaml
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                taguiOutput.textContent = data.tagui_script;
+                copyBtn.disabled = false;
+            } else {
+                taguiOutput.textContent = `Error: ${data.message}`;
+                copyBtn.disabled = true;
+            }
+        })
+        .catch(error => {
+            taguiOutput.textContent = `Error: ${error.message}`;
+            copyBtn.disabled = true;
+        })
+        .finally(() => {
+            compileBtn.disabled = false;
+        });
+    }
+    
+    // Function to load example YAML
+    function loadExample() {
+        yamlInput.value = exampleYaml;
+        taguiOutput.textContent = 'No output yet. Click "Compile to TagUI" to generate the script.';
+        copyBtn.disabled = true;
+    }
+    
+    // Function to clear the input
+    function clearInput() {
+        yamlInput.value = '';
+        taguiOutput.textContent = 'No output yet. Click "Compile to TagUI" to generate the script.';
+        copyBtn.disabled = true;
+    }
+    
+    // Function to copy the output to clipboard
+    function copyOutput() {
+        navigator.clipboard.writeText(taguiOutput.textContent)
+            .then(() => {
+                const originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<i class="bi bi-check2"></i> Copied!';
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalText;
+                }, 2000);
+            })
+            .catch(err => {
+                console.error('Failed to copy: ', err);
+                alert('Failed to copy to clipboard');
+            });
+    }
+</script>
+{% endblock %}

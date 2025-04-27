@@ -1,0 +1,49 @@
+## BettermanAI Copilot — **System Intent & Feature Summary (Replit-friendly)**  
+
+> Use this block as the single source-of-truth so every Replit task stays aligned.
+
+---
+
+### 1  Mission Statement  
+Create a lightweight, **local-first AI assistant** that:
+1. **Observes** user activity on Windows/macOS (mouse, keyboard, active window, optional mic).  
+2. **Learns patterns**, asks for confirmation, then **suggests / builds automations** that repeat those patterns faster.  
+3. Runs **privately on the user’s machine**; only compressed summaries leave the device for LLM reasoning (OpenAI API for MVP, pluggable local model later).
+
+### 2  Core Functional Modules  
+| # | Module | Purpose | Key Tech |
+|---|--------|---------|----------|
+| 1 | **Event Listener** | Capture mouse, keyboard, active-window data. | `pynput`, `pygetwindow` |
+| 2 | **SQLite Store** | Persist all events + screenshots + transcripts. | `sqlite3` |
+| 3 | **Pattern Detector** | Short-window live grouping + nightly long-window scan (weekly/monthly). | Adaptive heuristic + optional DBSCAN |
+| 4 | **Mic Capture (Opt-in)** | Ring-buffer audio; 5 s clip around important clicks; offline STT at idle. | `pyaudio`, `faster-whisper-tiny` |
+| 5 | **Macro Recorder** | Record confirmed sequences to Python/TagUI scripts. | `pyautogui` |
+| 6 | **Automation Executor** | Safely run macros manually, scheduled, or on trigger. | Local runner + safety preview |
+| 7 | **Reasoning Engine** | GPT-4-turbo for questions & suggestions (pluggable). | OpenAI API |
+| 8 | **UI (Tauri)** | Tray widget: mic toggle, notifications, “My Recurring Tasks”, metrics dashboard. | Tauri (Rust+JS) |
+| 9 | **Metrics & Privacy** | `/metrics` JSON + local dashboard, opt-in toggles, encryption of DB. | Tauri + simple REST |
+
+### 3  Privacy Guarantees  
+- Raw audio & (future) webcam frames **never leave local disk**; deleted after transcription/embedding.  
+- User can toggle mic/webcam any time via tray.  
+- LLM sees only anonymized sequence summaries.
+
+### 4  Planned Feature Timeline (Replit Tickets)  
+1. **Async DB writer, default DB path, UTF-8 fix**  
+2. **Screenshot path storage & adaptive sequence timeout**  
+3. **Rolling + nightly pattern jobs**  
+4. **Mic widget, ring-buffer capture, idle STT**  
+5. **Metrics endpoint + dashboard**  
+6. **“My Recurring Tasks” dialog + matcher**  
+7. **Nightly LLM summarizer (token-efficient)**  
+8. **Webcam placeholder flag (blur pipeline later)**  
+
+### 5  Success Criteria  
+- ≤ 200 MB RAM idle, ≤ 5 % CPU average.  
+- 100 % of keyboard/mouse events persisted (no loss).  
+- Pattern detector surfaces ≥ 90 % of daily & weekly repetitive tasks in internal dog-food tests.  
+- User can toggle mic and see “Hours Saved” metric grow after accepting automations.  
+
+---
+
+**→ Replit agents should implement tickets in the order above and respect privacy guardrails.**

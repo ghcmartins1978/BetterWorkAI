@@ -101,11 +101,20 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Execute the macro in dry-run mode
     executeDryRunBtn.addEventListener('click', function() {
+        // Visual overlay dry run simulation
+        window.dryRunManager.start(macroId);
+        
+        // Also call the API to record the dry run
         executeMacro('dry-run');
     });
     
     // Stop the macro execution
     stopExecutionBtn.addEventListener('click', function() {
+        // Stop the dry run overlay if it's running
+        if (window.dryRunManager) {
+            window.dryRunManager.stop();
+        }
+        
         fetch(`/api/automation/macros/${macroId}/stop`, {
             method: 'POST'
         })

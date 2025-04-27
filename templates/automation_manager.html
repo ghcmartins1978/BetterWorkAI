@@ -2,6 +2,12 @@
 
 {% block title %}Automation Manager{% endblock %}
 
+{% block head %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/dry-run-overlay.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dry-run-manager.js') }}"></script>
+{% endblock %}
+
 {% block content %}
 <div class="container py-4">
     <h1 class="mb-4">Automation Manager</h1>
@@ -105,7 +111,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/dry-run-overlay.js') }}"></script>
 <script>
     // Global variables
     let currentMacroId = null;
@@ -321,7 +326,7 @@
                 success: function(response) {
                     if (response.status === 'success') {
                         // Start the dry run overlay
-                        window.dryRunOverlay.start(currentMacroId, response.macro.steps);
+                        window.dryRunManager.start(currentMacroId, response.macro.steps);
                     } else {
                         showAlert('Error', response.message || 'Failed to load macro details');
                     }

@@ -154,7 +154,13 @@ class Settings:
             'show_execution_countdown': True,
             'monitoring_start_time': None,
             'privacy_level': 'medium',  # low, medium, high
-            'log_retention_days': 7
+            'log_retention_days': 7,
+            
+            # Variable handling settings
+            'prompt_for_required_variables': True,
+            'save_variable_values': True,
+            'auto_detect_variables': True,
+            'variable_prompt_timeout': 30  # seconds to wait for variable input before aborting
         }
         
         # Set default settings if they don't exist

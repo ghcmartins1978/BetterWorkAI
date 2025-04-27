@@ -389,12 +389,22 @@ class AutomationExecutor:
                 description = var.description or f"Enter value for {var.name}"
                 prompt_text = f"Macro '{macro_name}' requires a value for '{var.name}':\n{description}"
                 
-                # Use PyAutoGUI prompt or OS-specific dialog
-                value = pyautogui.prompt(
-                    text=prompt_text,
+                # Use tkinter dialog for better cross-platform compatibility
+                root = tk.Tk()
+                root.withdraw()  # Hide the main window
+                
+                # Make sure it appears on top
+                root.attributes("-topmost", True)
+                
+                # Show the dialog
+                value = simpledialog.askstring(
                     title="Variable Required",
-                    default=var.default_value or ""
+                    prompt=prompt_text,
+                    initialvalue=var.default_value or ""
                 )
+                
+                # Clean up
+                root.destroy()
                 
                 # Update the variable if a value was provided
                 if value is not None:  # None means the user clicked Cancel

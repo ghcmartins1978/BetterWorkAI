@@ -13,8 +13,15 @@ from database import db_session
 
 logger = logging.getLogger(__name__)
 
-# Variable placeholder pattern {{variable_name}}
+# Variable patterns
+# Basic variable pattern: {{variable_name}}
 VARIABLE_PATTERN = r'{{([A-Za-z0-9_]+)}}'
+
+# Formatted variable pattern: {{variable_name:format_spec}}
+FORMATTED_VARIABLE_PATTERN = r'{{([A-Za-z0-9_]+):(.*?)}}'
+
+# Conditional variable pattern: {{if:variable_name:then_value:else_value}}
+CONDITIONAL_VARIABLE_PATTERN = r'{{if:([A-Za-z0-9_]+):([^:]*):([^}]*)}}'
 
 
 def detect_variables_in_macro(macro_id: int) -> Dict[str, List[Dict[str, Any]]]:
@@ -49,8 +56,29 @@ def detect_variables_in_macro(macro_id: int) -> Dict[str, List[Dict[str, Any]]]:
             # Find variables in each parameter value
             for param_name, param_value in params.items():
                 if isinstance(param_value, str):
-                    matches = re.findall(VARIABLE_PATTERN, param_value)
-                    for var_name in matches:
+                    # Find basic variables {{variable_name}}
+                    basic_matches = re.findall(VARIABLE_PATTERN, param_value)
+                    for var_name in basic_matches:
+                        # Skip if it's part of a complex pattern (with : or if:)
+                        if f"{{{{{var_name}:" not in param_value and f"{{if:{var_name}:" not in param_value:
+                            if var_name not in variables:
+                                variables[var_name] = []
+                            
+                            variables[var_name].append({
+                                'step_id': step.id,
+                                'step_number': step.step_number,
+                                'action_type': step.action_type,
+                                'parameter_name': param_name,
+                                'parameter_value': param_value,
+                                'variable_format': 'basic'
+                            })
+                    
+                    # Find formatted variables {{variable_name:format_spec}}
+                    formatted_matches = re.finditer(FORMATTED_VARIABLE_PATTERN, param_value)
+                    for match in formatted_matches:
+                        var_name = match.group(1)
+                        format_spec = match.group(2)
+                        
                         if var_name not in variables:
                             variables[var_name] = []
                         
@@ -59,7 +87,30 @@ def detect_variables_in_macro(macro_id: int) -> Dict[str, List[Dict[str, Any]]]:
                             'step_number': step.step_number,
                             'action_type': step.action_type,
                             'parameter_name': param_name,
-                            'parameter_value': param_value
+                            'parameter_value': param_value,
+                            'variable_format': 'formatted',
+                            'format_spec': format_spec
+                        })
+                    
+                    # Find conditional variables {{if:variable_name:then:else}}
+                    conditional_matches = re.finditer(CONDITIONAL_VARIABLE_PATTERN, param_value)
+                    for match in conditional_matches:
+                        var_name = match.group(1)
+                        then_value = match.group(2)
+                        else_value = match.group(3)
+                        
+                        if var_name not in variables:
+                            variables[var_name] = []
+                        
+                        variables[var_name].append({
+                            'step_id': step.id,
+                            'step_number': step.step_number,
+                            'action_type': step.action_type,
+                            'parameter_name': param_name,
+                            'parameter_value': param_value,
+                            'variable_format': 'conditional',
+                            'then_value': then_value,
+                            'else_value': else_value
                         })
         except json.JSONDecodeError:
             logger.error(f"Failed to parse parameters for step {step.id} in macro {macro_id}")
@@ -155,6 +206,29 @@ def _infer_variable_type(occurrences: List[Dict[str, Any]]) -> str:
     # Default to string
     inferred_type = "string"
     
+    # Check for conditional usage first, which indicates boolean
+    for occurrence in occurrences:
+        variable_format = occurrence.get('variable_format', '')
+        if variable_format == 'conditional':
+            return "boolean"  # Variables used in conditions are likely booleans
+            
+        # Look for formatting that indicates a specific type
+        if variable_format == 'formatted':
+            format_spec = occurrence.get('format_spec', '')
+            
+            # Formatting that suggests numeric type
+            if format_spec.startswith('calc:'):
+                return "number"
+                
+            # Formatting with padding suggests numeric type
+            if format_spec.startswith('pad:'):
+                return "number"
+                
+            # Other numeric formatting
+            if any(token in format_spec for token in ['.2f', '.3f', 'd', 'x', 'X', 'o', 'b']):
+                return "number"
+    
+    # Check parameter usage for common patterns
     for occurrence in occurrences:
         param_name = occurrence.get('parameter_name', '')
         action_type = occurrence.get('action_type', '')
@@ -164,12 +238,23 @@ def _infer_variable_type(occurrences: List[Dict[str, Any]]) -> str:
             return "number"
         
         # Seconds or delay are likely numbers
-        if param_name in ['seconds', 'delay', 'timeout']:
+        if param_name in ['seconds', 'delay', 'timeout', 'interval', 'duration']:
+            return "number"
+        
+        # Count or quantities are likely numbers
+        if any(token in param_name for token in ['count', 'quantity', 'amount', 'num', 'length', 'size', 'width', 'height']):
             return "number"
         
         # Button type might be a choice from limited options
         if param_name == 'button' and action_type == 'mouse_click':
             return "choice"
+            
+        # Boolean-like variables
+        if any(param_name.startswith(prefix) for prefix in ['is_', 'has_', 'enable_', 'disable_', 'should_']):
+            return "boolean"
+            
+        if param_name in ['enabled', 'active', 'visible', 'show', 'hide']:
+            return "boolean"
     
     return inferred_type
 

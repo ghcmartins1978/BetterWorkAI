@@ -14,6 +14,7 @@ from typing import Dict, List, Optional, Any, Tuple, Union
 from pathlib import Path
 import tempfile
 import yaml
+from yaml_to_tagui import compile_yaml_to_tagui
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -401,9 +402,9 @@ class AutomationMacroManager:
             return {"status": "error", "message": f"Macro with ID {macro_id} not found"}
 
         # Prepare the command
-        file_path = os.path.join(MACRO_DIR, f"{macro_id}.yaml")
-        if not os.path.isfile(file_path):
-            return {"status": "error", "message": f"Macro file {file_path} not found"}
+        yaml_file_path = os.path.join(MACRO_DIR, f"{macro_id}.yaml")
+        if not os.path.isfile(yaml_file_path):
+            return {"status": "error", "message": f"Macro file {yaml_file_path} not found"}
 
         # For now, we're using a subprocess to call our TagUI wrapper
         # Later, this can be replaced with direct calls to the Rust library
@@ -420,36 +421,54 @@ class AutomationMacroManager:
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             log_file_name = f"macro_{macro_id}_{timestamp}.log"
             log_path = os.path.join(LOGS_DIR, log_file_name)
-
-            # Prepare the command
-            cmd = [tagui_binary, file_path]
-            if mode.lower() == "dry-run":
-                cmd.append("-n")
-            cmd.append("--nobrowser")  # For safety
-
-            # Execute the command
-            with open(log_path, "w") as log_file:
-                process = subprocess.Popen(
-                    cmd,
-                    stdout=log_file,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                    bufsize=1,
-                )
-
-            # Store the process and log info
-            self.running_processes[macro_id] = {
-                "process": process,
-                "log_path": log_path,
-                "start_time": time.time(),
-            }
-
-            return {
-                "status": "running",
-                "macro_id": macro_id,
-                "pid": process.pid,
-                "log_path": log_path,
-            }
+            
+            # Compile the YAML to TagUI script
+            try:
+                # Create a temporary directory for the compiled TagUI script
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    # Compile the YAML to TagUI script
+                    tagui_script_path = os.path.join(temp_dir, f"{macro_id}.tag")
+                    compile_yaml_to_tagui(yaml_file_path, tagui_script_path)
+                    
+                    # Prepare the command
+                    cmd = [tagui_binary, tagui_script_path]
+                    if mode.lower() == "dry-run":
+                        cmd.append("-n")
+                    cmd.append("--nobrowser")  # For safety
+                    
+                    # Execute the command
+                    with open(log_path, "w") as log_file:
+                        log_file.write(f"Executing macro: {macro.name}\n")
+                        log_file.write(f"Mode: {mode}\n")
+                        log_file.write(f"Compiled using YAML DSL Compiler\n")
+                        log_file.write("-" * 50 + "\n\n")
+                        
+                        process = subprocess.Popen(
+                            cmd,
+                            stdout=log_file,
+                            stderr=subprocess.STDOUT,
+                            text=True,
+                            bufsize=1,
+                        )
+                    
+                    # Store the process and log info
+                    self.running_processes[macro_id] = {
+                        "process": process,
+                        "log_path": log_path,
+                        "start_time": time.time(),
+                    }
+                    
+                    return {
+                        "status": "running",
+                        "macro_id": macro_id,
+                        "pid": process.pid,
+                        "log_path": log_path,
+                    }
+            except Exception as e:
+                logger.error(f"Error compiling or executing TagUI script: {e}")
+                with open(log_path, "w") as log_file:
+                    log_file.write(f"Error compiling or executing TagUI script: {e}\n")
+                return {"status": "error", "message": f"Error compiling or executing TagUI script: {e}"}
 
         except Exception as e:
             logger.error(f"Error executing macro {macro_id}: {e}")

@@ -1,0 +1,89 @@
+metadata:
+  name: Example Workflow
+  description: An example automation workflow demonstrating YAML to TagUI conversion
+  id: workflow_001
+  tags:
+    - example
+    - demo
+    - test
+  created_at: 2025-04-27
+  updated_at: 2025-04-27
+
+variables:
+  app_name: Notepad
+  text_to_type: Hello from BettermanAI YAML DSL!
+  wait_time: 1
+  search_term: example search
+  iterations: 3
+  username: user@example.com
+  password: dummy_password
+
+steps:
+  - action: echo
+    message: Starting Example Workflow
+
+  - action: focus
+    window: ${app_name}
+
+  - action: wait
+    seconds: ${wait_time}
+
+  - action: type
+    target: page
+    value: ${text_to_type}
+
+  - action: keyboard
+    keys: enter
+
+  - action: wait
+    seconds: 0.5
+
+  - action: echo
+    message: Demonstrating variable substitution and control structures
+
+  - action: assign
+    variable: counter
+    value: 1
+
+  - action: if
+    condition: counter <= ${iterations}
+
+  - action: echo
+    message: "Iteration ${counter}"
+
+  - action: keyboard
+    keys: "hello iteration ${counter}"
+
+  - action: keyboard
+    keys: enter
+
+  - action: assign
+    variable: counter
+    value: counter + 1
+
+  - action: echo
+    message: End of conditional block
+
+  - action: url
+    address: example.com
+
+  - action: wait
+    seconds: 2
+
+  - action: echo
+    message: Demonstrating form filling
+
+  - action: type
+    target: email_field
+    value: ${username}
+
+  - action: type
+    target: password_field
+    value: ${password}
+  
+  - action: click
+    target: submit_button
+    button: left
+
+  - action: echo
+    message: Completed Example Workflow

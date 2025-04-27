@@ -119,16 +119,17 @@ def register_variables_for_macro(macro_id: int) -> List[Dict[str, Any]]:
         else:
             # Variable already exists, add information to the result
             var = next((v for v in existing_variables if v.name == var_name), None)
-            var_info.append({
-                'name': var_name,
-                'description': var.description,
-                'default_value': var.default_value,
-                'current_value': var.current_value,
-                'type': var.variable_type,
-                'is_required': var.is_required == 1,
-                'is_new': False,
-                'occurrences': occurrences
-            })
+            if var:  # Ensure var is not None
+                var_info.append({
+                    'name': var_name,
+                    'description': var.description or f"Variable {var_name}",
+                    'default_value': var.default_value or "",
+                    'current_value': var.current_value or "",
+                    'type': var.variable_type or "string",
+                    'is_required': var.is_required == 1 if var.is_required is not None else True,
+                    'is_new': False,
+                    'occurrences': occurrences
+                })
     
     # Commit changes to the database
     try:
@@ -232,11 +233,11 @@ def get_variables_for_macro(macro_id: int) -> Dict[str, Dict[str, Any]]:
         var.name: {
             'id': var.id,
             'name': var.name,
-            'description': var.description,
-            'default_value': var.default_value,
+            'description': var.description or f"Variable {var.name}",
+            'default_value': var.default_value or "",
             'current_value': var.current_value or var.default_value or '',
-            'type': var.variable_type,
-            'is_required': var.is_required == 1
+            'type': var.variable_type or "string",
+            'is_required': var.is_required == 1 if var.is_required is not None else True
         }
         for var in variables
     }

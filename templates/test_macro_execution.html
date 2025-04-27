@@ -4,6 +4,12 @@
 Test Macro Execution
 {% endblock %}
 
+{% block head %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/dry-run-overlay.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dry-run-manager.js') }}"></script>
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
     <div class="row">

@@ -6,7 +6,7 @@ import os
 from datetime import datetime
 
 from database import db_session
-from models import Pattern, Suggestion, Macro, MacroStep
+from models import Pattern, Suggestion, Macro, MacroStep, EventSequence
 
 logger = logging.getLogger(__name__)
 

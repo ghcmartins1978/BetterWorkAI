@@ -1044,6 +1044,112 @@ def privacy():
     """Privacy information"""
     return render_template('privacy.html')
 
+
+@app.route('/server-url-manager')
+def server_url_manager():
+    """Server URL Manager page"""
+    server_url = os.environ.get('AUTOMATION_SERVER_URL', '')
+    return render_template('server_url_manager.html', server_url=server_url)
+
+
+@app.route('/api/update-server-url', methods=['POST'])
+def update_server_url():
+    """API endpoint to test and update the automation server URL"""
+    try:
+        data = request.json
+        server_url = data.get('server_url', '')
+        permanent = data.get('permanent', False)
+        
+        if not server_url:
+            return jsonify({
+                'status': 'error',
+                'message': 'No server URL provided'
+            })
+        
+        # Run various connection tests
+        import requests
+        from requests.exceptions import RequestException
+        
+        tests = []
+        
+        # Test basic connectivity
+        try:
+            status_response = requests.get(f"{server_url}/api/status", timeout=3)
+            if status_response.status_code == 200:
+                tests.append({
+                    'name': 'Basic API Connectivity',
+                    'status': 'success',
+                    'message': 'Successfully connected to the server API'
+                })
+            else:
+                tests.append({
+                    'name': 'Basic API Connectivity',
+                    'status': 'failed',
+                    'message': f'Server returned status code {status_response.status_code}'
+                })
+        except Exception as e:
+            tests.append({
+                'name': 'Basic API Connectivity',
+                'status': 'failed',
+                'message': f'Failed to connect: {str(e)}'
+            })
+        
+        # Test window list API
+        try:
+            from automation_client import AutomationClient
+            client = AutomationClient(server_url)
+            window_list = client.get_window_list()
+            if isinstance(window_list, list):
+                tests.append({
+                    'name': 'Window List API',
+                    'status': 'success',
+                    'message': f'Retrieved window list with {len(window_list)} windows'
+                })
+            else:
+                tests.append({
+                    'name': 'Window List API',
+                    'status': 'failed',
+                    'message': 'Failed to get window list'
+                })
+        except Exception as e:
+            tests.append({
+                'name': 'Window List API',
+                'status': 'failed',
+                'message': f'Error getting window list: {str(e)}'
+            })
+        
+        # Check overall connection status
+        connection_success = any(test['status'] == 'success' for test in tests)
+        
+        if connection_success:
+            # Update the environment variable permanently if requested
+            if permanent:
+                os.environ['AUTOMATION_SERVER_URL'] = server_url
+                settings.set_setting('automation_server_url', server_url)
+                tests.append({
+                    'name': 'Environment Update',
+                    'status': 'success',
+                    'message': 'Updated environment variable permanently'
+                })
+            
+            return jsonify({
+                'status': 'success',
+                'message': 'Successfully connected to the automation server',
+                'tests': tests
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': 'Failed to connect to the automation server',
+                'tests': tests
+            })
+    except Exception as e:
+        logger.error(f"Error updating server URL: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Error: {str(e)}'
+        })
+
 @app.route('/audio')
 def audio_settings():
     """Audio settings page"""

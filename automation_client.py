@@ -61,15 +61,35 @@ class AutomationClient:
     def _handle_response(self, response):
         """Handle a response from the server, with proper error checking"""
         if response.status_code != 200:
+            logger.error(f"Server returned non-200 status code: {response.status_code}")
             return {'status': 'error', 'message': f'Server returned status code {response.status_code}'}
             
         # Check if response is JSON
         try:
             # Try to parse as JSON first
             return response.json()
-        except:
-            # If not JSON, return the text with a success status
-            return {'status': 'success', 'message': 'Command executed', 'response': response.text}
+        except Exception as e:
+            # If not JSON, log what we received and return a graceful response
+            content_type = response.headers.get('Content-Type', 'unknown')
+            response_preview = response.text[:100] + '...' if len(response.text) > 100 else response.text
+            
+            logger.warning(f"Received non-JSON response (Content-Type: {content_type}): {response_preview}")
+            
+            # Check if it's HTML (probably an error page)
+            if 'text/html' in content_type or response.text.strip().startswith(('<!DOCTYPE', '<html')):
+                logger.error("Received HTML response instead of JSON - this likely indicates an error occurred on the server")
+                return {
+                    'status': 'error', 
+                    'message': 'Received HTML response instead of JSON. The server may be returning an error page.',
+                    'html_response': True
+                }
+            
+            # For other non-JSON responses
+            return {
+                'status': 'success', 
+                'message': 'Command executed but received non-JSON response', 
+                'response': response.text
+            }
     
     # Mouse actions
     def mouse_move(self, x, y):

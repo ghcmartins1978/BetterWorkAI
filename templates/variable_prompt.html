@@ -1,123 +1,147 @@
-{% extends "layout.html" %}
+{% extends 'layout.html' %}
 
-{% block title %}Variable Input{% endblock %}
+{% block title %}Macro Variable Prompt{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="card shadow-sm border-0 my-4">
-        <div class="card-body p-4">
-            <h2 class="mb-4 d-flex align-items-center">
-                <i class="bi bi-tag-fill me-2 text-primary"></i>
-                <span>Variable Input Required</span>
-            </h2>
-            
-            <div class="mb-4">
-                <p class="lead">
-                    The macro "{{ macro.name }}" requires input for the following variables:
-                </p>
-                
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle-fill me-2"></i>
-                    The macro will continue after you fill in these values, or after {{ timeout }} seconds.
+<div class="container my-4 p-4 bg-dark rounded shadow">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-3 d-flex align-items-center">
+                <i class="bi bi-braces-asterisk me-2"></i>
+                Variable Input Required
+            </h1>
+            <div class="alert alert-info mb-4">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Macro "{{ macro_name }}"</strong> requires input for the following variables to run.
+                <div class="mt-2 small">
+                    <i class="bi bi-clock me-1"></i> This prompt will automatically close in <span id="countdown">{{ timeout }}</span> seconds.
                 </div>
             </div>
-            
-            <form id="variableForm" method="post" action="{{ url_for('submit_variable_values', macro_id=macro.id) }}">
-                <div class="row">
-                    {% for var in variables %}
-                    <div class="col-md-6 mb-3">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-body">
-                                <h5 class="card-title">{{ var.name }}</h5>
-                                <p class="card-text text-muted small">{{ var.description }}</p>
-                                
-                                {% if var.type == 'string' %}
-                                <input type="text" class="form-control" name="var_{{ var.id }}" 
-                                       value="{{ var.current_value }}" placeholder="{{ var.default_value }}">
-                                
-                                {% elif var.type == 'number' %}
-                                <input type="number" class="form-control" name="var_{{ var.id }}" 
-                                       value="{{ var.current_value }}" placeholder="{{ var.default_value }}">
-                                
-                                {% elif var.type == 'boolean' %}
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" name="var_{{ var.id }}" 
-                                           id="var_{{ var.id }}" {% if var.current_value == 'true' %}checked{% endif %}>
-                                    <label class="form-check-label" for="var_{{ var.id }}">Enabled</label>
-                                </div>
-                                
-                                {% elif var.type == 'choice' %}
-                                <select class="form-select" name="var_{{ var.id }}">
-                                    {% if var.name == 'button' %}
-                                    <option value="left" {% if var.current_value == 'left' %}selected{% endif %}>Left</option>
-                                    <option value="right" {% if var.current_value == 'right' %}selected{% endif %}>Right</option>
-                                    <option value="middle" {% if var.current_value == 'middle' %}selected{% endif %}>Middle</option>
-                                    {% else %}
-                                    <option value="">Please select...</option>
-                                    <option value="{{ var.current_value }}" {% if var.current_value %}selected{% endif %}>
-                                        {{ var.current_value }}
-                                    </option>
-                                    {% endif %}
-                                </select>
-                                
-                                {% else %}
-                                <input type="text" class="form-control" name="var_{{ var.id }}" 
-                                       value="{{ var.current_value }}" placeholder="{{ var.default_value }}">
-                                {% endif %}
-                                
-                                <small class="form-text text-muted">
-                                    {% if var.is_required %}
-                                    <i class="bi bi-asterisk text-danger small"></i> Required
-                                    {% else %}
-                                    Optional
-                                    {% endif %}
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-                
-                <div class="d-flex justify-content-between mt-4">
-                    <button type="button" class="btn btn-outline-secondary" id="cancelButton">
-                        <i class="bi bi-x-circle me-1"></i> Skip
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check-circle me-1"></i> Continue with these values
-                    </button>
-                </div>
-            </form>
         </div>
     </div>
+
+    <form id="variableForm" class="mb-4">
+        <input type="hidden" id="macro_id" name="macro_id" value="{{ macro_id }}">
+        <div class="row">
+            {% for variable in variables %}
+            <div class="col-md-6 mb-3">
+                <div class="card bg-dark border-secondary">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">{{ variable.name }}</span>
+                        {% if variable.is_required %}
+                        <span class="badge bg-danger">Required</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Optional</span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3 small">{{ variable.description }}</p>
+                        
+                        {% if variable.type == 'boolean' %}
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="var_{{ variable.id }}" name="var_{{ variable.id }}" 
+                                {% if variable.current_value and variable.current_value|lower in ['true', '1', 'yes', 'y'] %}checked{% endif %}>
+                            <label class="form-check-label" for="var_{{ variable.id }}">Enabled</label>
+                        </div>
+                        {% elif variable.type == 'number' %}
+                        <input type="number" class="form-control bg-dark text-light border-secondary" 
+                               id="var_{{ variable.id }}" name="var_{{ variable.id }}" 
+                               value="{{ variable.current_value }}" 
+                               {% if variable.is_required %}required{% endif %}>
+                        {% else %}
+                        <input type="text" class="form-control bg-dark text-light border-secondary" 
+                               id="var_{{ variable.id }}" name="var_{{ variable.id }}" 
+                               value="{{ variable.current_value }}" 
+                               {% if variable.is_required %}required{% endif %}>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12 d-flex justify-content-between">
+                <button type="button" class="btn btn-danger" id="cancelButton">
+                    <i class="bi bi-x-circle me-2"></i>Cancel
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle me-2"></i>Submit
+                </button>
+            </div>
+        </div>
+    </form>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Set up the countdown timer
-    let remainingSeconds = {{ timeout }};
-    const countdownElement = document.querySelector('.alert-info');
-    
-    const countdownInterval = setInterval(function() {
-        remainingSeconds--;
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle countdown timer
+        let countdown = {{ timeout }};
+        const countdownElement = document.getElementById('countdown');
         
-        if (remainingSeconds <= 0) {
-            clearInterval(countdownInterval);
-            document.getElementById('variableForm').submit();
-        } else {
-            countdownElement.innerHTML = `
-                <i class="bi bi-info-circle-fill me-2"></i>
-                The macro will continue after you fill in these values, or after ${remainingSeconds} seconds.
-            `;
-        }
-    }, 1000);
-    
-    // Handle cancel button
-    document.getElementById('cancelButton').addEventListener('click', function() {
-        clearInterval(countdownInterval);
-        document.getElementById('variableForm').submit();
+        const timer = setInterval(() => {
+            countdown--;
+            countdownElement.textContent = countdown;
+            
+            if (countdown <= 0) {
+                clearInterval(timer);
+                // Timeout - close the window
+                window.close();
+            }
+        }, 1000);
+        
+        // Handle form submission
+        document.getElementById('variableForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = {};
+            const macroId = document.getElementById('macro_id').value;
+            
+            // Get all variable inputs
+            {% for variable in variables %}
+            const varInput{{ variable.id }} = document.getElementById('var_{{ variable.id }}');
+            {% if variable.type == 'boolean' %}
+            formData['{{ variable.id }}'] = varInput{{ variable.id }}.checked ? 'true' : 'false';
+            {% else %}
+            formData['{{ variable.id }}'] = varInput{{ variable.id }}.value;
+            {% endif %}
+            {% endfor %}
+            
+            // Save to the response file expected by the automation executor
+            fetch('/variable_prompt_submit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    macro_id: macroId,
+                    variables: formData,
+                    temp_file: '{{ temp_file }}'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Close the window on success
+                    window.close();
+                } else {
+                    alert('Error saving variables: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while saving variables.');
+            });
+        });
+        
+        // Handle cancel button
+        document.getElementById('cancelButton').addEventListener('click', function() {
+            if (confirm('Are you sure you want to cancel? The macro execution will be aborted.')) {
+                window.close();
+            }
+        });
     });
-});
 </script>
 {% endblock %}

@@ -2706,6 +2706,79 @@ def api_update_variable(variable_id):
             'status': 'error',
             'message': str(e)
         })
+        
+@app.route('/variable_prompt', methods=['GET'])
+def variable_prompt():
+    """
+    Display a form to prompt for variable values during macro execution.
+    This is opened by the automation executor when variables need to be filled in.
+    """
+    try:
+        # Get parameters
+        macro_id = request.args.get('macro_id')
+        temp_file = request.args.get('temp_file')
+        
+        if not macro_id or not temp_file:
+            return render_template('error.html', 
+                                   error="Missing required parameters", 
+                                   details="Both macro_id and temp_file are required.")
+        
+        # Check if the temp file exists
+        if not os.path.exists(temp_file):
+            return render_template('error.html', 
+                                   error="Invalid temporary file", 
+                                   details="The specified temporary file does not exist.")
+        
+        # Load variable data from the temp file
+        with open(temp_file, 'r') as f:
+            data = json.load(f)
+            
+        # Render the variable prompt template
+        return render_template('variable_prompt.html',
+                              macro_id=macro_id,
+                              macro_name=data.get('macro_name', 'Unknown Macro'),
+                              variables=data.get('variables', []),
+                              timeout=data.get('timeout', 30),
+                              temp_file=temp_file)
+    except Exception as e:
+        logger.error(f"Error displaying variable prompt: {e}")
+        return render_template('error.html', 
+                               error="Error displaying variable prompt", 
+                               details=str(e))
+
+@app.route('/variable_prompt_submit', methods=['POST'])
+def variable_prompt_submit():
+    """
+    Handle submission of variable values from the variable prompt form.
+    Saves the values to a response file that will be read by the automation executor.
+    """
+    try:
+        data = request.json
+        macro_id = data.get('macro_id')
+        variables = data.get('variables', {})
+        temp_file = data.get('temp_file')
+        
+        if not macro_id or not temp_file:
+            return jsonify({
+                'status': 'error',
+                'message': 'Missing required parameters'
+            })
+        
+        # Save the response to a file that will be read by the automation executor
+        response_file = temp_file + '.response'
+        with open(response_file, 'w') as f:
+            json.dump(variables, f)
+            
+        return jsonify({
+            'status': 'success',
+            'message': 'Variables saved successfully'
+        })
+    except Exception as e:
+        logger.error(f"Error saving variable prompt response: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        })
 
 def start_monitoring_components():
     """Initialize and start the monitoring components"""

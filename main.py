@@ -29,9 +29,10 @@ from database import check_and_update_schema
 check_and_update_schema()
 
 # Initialize settings
+from settings import Settings
 settings = Settings()
 
-# Initialize demo data
+# Define the seed_demo_data function
 def seed_demo_data():
     """Add demo data to the database if tables are empty"""
     try:
@@ -481,6 +482,11 @@ def seed_demo_data():
         db_session.rollback()
         logger.error(f"Error seeding demo data: {e}")
         raise
+
+# Call seed_demo_data to populate the database with demo data
+logger.info("Calling seed_demo_data()")
+seed_demo_data()
+logger.info("seed_demo_data() call completed")
 
 # UI Routes for BettermanAI Web Interface
 

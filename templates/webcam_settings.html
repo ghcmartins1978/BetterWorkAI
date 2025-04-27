@@ -1,0 +1,543 @@
+{% extends "layout.html" %}
+
+{% block title %}Webcam Settings | BettermanAI{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Webcam Settings</h1>
+            <p class="text-muted">Configure webcam capture and privacy settings</p>
+        </div>
+        <div class="col-auto">
+            <div class="form-check form-switch mt-2">
+                <input class="form-check-input" type="checkbox" id="webcamEnabledSwitch" {% if settings.get('webcam_enabled', False) %}checked{% endif %}>
+                <label class="form-check-label" for="webcamEnabledSwitch">Enable Webcam Capture</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-5">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Webcam Settings</h5>
+                </div>
+                <div class="card-body">
+                    <form id="webcamSettingsForm">
+                        <div class="mb-3">
+                            <label for="captureMode" class="form-label">Capture Mode</label>
+                            <select class="form-select" id="captureMode">
+                                <option value="manual" {% if settings.get('webcam_capture_mode') == 'manual' %}selected{% endif %}>Manual (On demand)</option>
+                                <option value="continuous" {% if settings.get('webcam_capture_mode') == 'continuous' %}selected{% endif %}>Continuous (Always on)</option>
+                                <option value="trigger" {% if settings.get('webcam_capture_mode') == 'trigger' %}selected{% endif %}>Trigger Mode</option>
+                            </select>
+                            <div class="form-text">How webcam should be used</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="privacyMode" class="form-label">Privacy Mode</label>
+                            <select class="form-select" id="privacyMode">
+                                <option value="blur" {% if settings.get('webcam_privacy_mode') == 'blur' %}selected{% endif %}>Blur</option>
+                                <option value="pixelate" {% if settings.get('webcam_privacy_mode') == 'pixelate' %}selected{% endif %}>Pixelate</option>
+                                <option value="silhouette" {% if settings.get('webcam_privacy_mode') == 'silhouette' %}selected{% endif %}>Silhouette</option>
+                                <option value="none" {% if settings.get('webcam_privacy_mode') == 'none' %}selected{% endif %}>None (Raw Video)</option>
+                            </select>
+                            <div class="form-text">Privacy filter to apply to webcam video</div>
+                        </div>
+                        
+                        <div class="mb-3" id="blurStrengthDiv" style="{% if settings.get('webcam_privacy_mode') != 'blur' %}display: none;{% endif %}">
+                            <label for="blurStrength" class="form-label">Blur Strength</label>
+                            <input type="range" class="form-range" id="blurStrength" min="1" max="31" step="2" value="{{ settings.get('webcam_blur_strength', 15) }}">
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">Low</small>
+                                <small class="text-muted" id="blurStrengthValue">{{ settings.get('webcam_blur_strength', 15) }}</small>
+                                <small class="text-muted">High</small>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3" id="pixelateFactorDiv" style="{% if settings.get('webcam_privacy_mode') != 'pixelate' %}display: none;{% endif %}">
+                            <label for="pixelateFactor" class="form-label">Pixelate Factor</label>
+                            <input type="range" class="form-range" id="pixelateFactor" min="5" max="30" step="1" value="{{ settings.get('webcam_pixelate_factor', 15) }}">
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">Low</small>
+                                <small class="text-muted" id="pixelateFactorValue">{{ settings.get('webcam_pixelate_factor', 15) }}</small>
+                                <small class="text-muted">High</small>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="faceDetection" 
+                                   {% if settings.get('webcam_face_detection', True) %}checked{% endif %}>
+                            <label class="form-check-label" for="faceDetection">Face Detection</label>
+                            <div class="form-text">Detect faces in the webcam feed</div>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="saveFrames" 
+                                   {% if settings.get('webcam_save_frames', False) %}checked{% endif %}>
+                            <label class="form-check-label" for="saveFrames">Save Frames</label>
+                            <div class="form-text">Save frames to disk during capture</div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Save Settings</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-7">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Webcam Preview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <div class="btn-group">
+                            <button id="startCapture" class="btn btn-success" {% if not settings.get('webcam_enabled', False) %}disabled{% endif %}>
+                                <i class="bi bi-camera-video-fill me-1"></i> Start Capture
+                            </button>
+                            <button id="stopCapture" class="btn btn-danger" disabled>
+                                <i class="bi bi-stop-fill me-1"></i> Stop
+                            </button>
+                            <button id="takeSnapshot" class="btn btn-primary" disabled>
+                                <i class="bi bi-camera-fill me-1"></i> Take Snapshot
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="webcam-container border rounded bg-dark text-center position-relative">
+                        <img id="webcamFeed" src="{{ url_for('static', filename='img/webcam-placeholder.png') }}" class="img-fluid" alt="Webcam Feed">
+                        
+                        <!-- Face detection overlay (shown when faces are detected) -->
+                        <div id="faceOverlay" class="position-absolute top-0 start-0 w-100 h-100" style="pointer-events: none;"></div>
+                        
+                        <!-- Capture indicator -->
+                        <div id="captureIndicator" class="position-absolute top-0 end-0 p-2" style="display: none;">
+                            <span class="badge bg-danger blink">REC</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <h6>Snapshot Gallery</h6>
+                        <div id="snapshotGallery" class="d-flex flex-wrap gap-2 mt-2">
+                            <p class="text-muted">No snapshots available. Click "Take Snapshot" to capture an image.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get DOM elements
+        const webcamEnabledSwitch = document.getElementById('webcamEnabledSwitch');
+        const webcamSettingsForm = document.getElementById('webcamSettingsForm');
+        const privacyMode = document.getElementById('privacyMode');
+        const blurStrengthDiv = document.getElementById('blurStrengthDiv');
+        const pixelateFactorDiv = document.getElementById('pixelateFactorDiv');
+        const blurStrength = document.getElementById('blurStrength');
+        const pixelateFactor = document.getElementById('pixelateFactor');
+        const blurStrengthValue = document.getElementById('blurStrengthValue');
+        const pixelateFactorValue = document.getElementById('pixelateFactorValue');
+        
+        // Webcam capture controls
+        const startCaptureBtn = document.getElementById('startCapture');
+        const stopCaptureBtn = document.getElementById('stopCapture');
+        const takeSnapshotBtn = document.getElementById('takeSnapshot');
+        const webcamFeed = document.getElementById('webcamFeed');
+        const faceOverlay = document.getElementById('faceOverlay');
+        const captureIndicator = document.getElementById('captureIndicator');
+        const snapshotGallery = document.getElementById('snapshotGallery');
+        
+        // Initialize WebcamFeed refresh interval
+        let webcamInterval = null;
+        let faceDetectionInterval = null;
+        
+        // Show/hide appropriate privacy filter controls
+        privacyMode.addEventListener('change', function() {
+            if (this.value === 'blur') {
+                blurStrengthDiv.style.display = 'block';
+                pixelateFactorDiv.style.display = 'none';
+            } else if (this.value === 'pixelate') {
+                blurStrengthDiv.style.display = 'none';
+                pixelateFactorDiv.style.display = 'block';
+            } else {
+                blurStrengthDiv.style.display = 'none';
+                pixelateFactorDiv.style.display = 'none';
+            }
+        });
+        
+        // Update displayed values for sliders
+        blurStrength.addEventListener('input', function() {
+            blurStrengthValue.textContent = this.value;
+        });
+        
+        pixelateFactor.addEventListener('input', function() {
+            pixelateFactorValue.textContent = this.value;
+        });
+        
+        // Handle enable/disable webcam switch
+        webcamEnabledSwitch.addEventListener('change', function() {
+            const enabled = this.checked;
+            
+            fetch('/api/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    settings: {
+                        'webcam_enabled': enabled
+                    }
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(enabled ? 'Webcam capture enabled' : 'Webcam capture disabled');
+                    startCaptureBtn.disabled = !enabled;
+                } else {
+                    showToast('Error updating setting', 'error');
+                    this.checked = !enabled;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error updating setting', 'error');
+                this.checked = !enabled;
+            });
+        });
+        
+        // Handle settings form submission
+        if (webcamSettingsForm) {
+            webcamSettingsForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const captureMode = document.getElementById('captureMode').value;
+                const privacyMode = document.getElementById('privacyMode').value;
+                const blurStrength = parseInt(document.getElementById('blurStrength').value);
+                const pixelateFactor = parseInt(document.getElementById('pixelateFactor').value);
+                const faceDetection = document.getElementById('faceDetection').checked;
+                const saveFrames = document.getElementById('saveFrames').checked;
+                
+                fetch('/api/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        settings: {
+                            'webcam_capture_mode': captureMode,
+                            'webcam_privacy_mode': privacyMode,
+                            'webcam_blur_strength': blurStrength,
+                            'webcam_pixelate_factor': pixelateFactor,
+                            'webcam_face_detection': faceDetection,
+                            'webcam_save_frames': saveFrames
+                        }
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Webcam settings updated');
+                        
+                        // If webcam is running, apply settings immediately
+                        if (webcamInterval) {
+                            // Refresh the feed to apply new settings
+                            clearInterval(webcamInterval);
+                            startWebcamFeed();
+                        }
+                    } else {
+                        showToast('Error updating settings', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error updating settings', 'error');
+                });
+            });
+        }
+        
+        // Handle webcam capture buttons
+        startCaptureBtn.addEventListener('click', function() {
+            startCaptureBtn.disabled = true;
+            stopCaptureBtn.disabled = false;
+            takeSnapshotBtn.disabled = false;
+            
+            fetch('/api/webcam/start_capture', {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Webcam capture started');
+                    captureIndicator.style.display = 'block';
+                    startWebcamFeed();
+                    
+                    // If face detection is enabled, start that too
+                    if (document.getElementById('faceDetection').checked) {
+                        startFaceDetection();
+                    }
+                } else {
+                    showToast('Error starting webcam capture: ' + data.error, 'error');
+                    startCaptureBtn.disabled = false;
+                    stopCaptureBtn.disabled = true;
+                    takeSnapshotBtn.disabled = true;
+                    captureIndicator.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error starting webcam capture', 'error');
+                startCaptureBtn.disabled = false;
+                stopCaptureBtn.disabled = true;
+                takeSnapshotBtn.disabled = true;
+                captureIndicator.style.display = 'none';
+            });
+        });
+        
+        stopCaptureBtn.addEventListener('click', function() {
+            stopCaptureBtn.disabled = true;
+            takeSnapshotBtn.disabled = true;
+            
+            fetch('/api/webcam/stop_capture', {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Webcam capture stopped');
+                    startCaptureBtn.disabled = false;
+                    captureIndicator.style.display = 'none';
+                    stopWebcamFeed();
+                    stopFaceDetection();
+                } else {
+                    showToast('Error stopping webcam capture: ' + data.error, 'error');
+                    stopCaptureBtn.disabled = false;
+                    takeSnapshotBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error stopping webcam capture', 'error');
+                stopCaptureBtn.disabled = false;
+                takeSnapshotBtn.disabled = false;
+            });
+        });
+        
+        takeSnapshotBtn.addEventListener('click', function() {
+            takeSnapshotBtn.disabled = true;
+            
+            fetch('/api/webcam/snapshot', {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.image) {
+                    // Flash effect
+                    webcamFeed.classList.add('flash');
+                    setTimeout(() => {
+                        webcamFeed.classList.remove('flash');
+                    }, 300);
+                    
+                    // Add to gallery
+                    addSnapshotToGallery(data.image, data.timestamp);
+                    
+                    showToast('Snapshot captured');
+                } else {
+                    showToast('Error capturing snapshot: ' + (data.error || 'Unknown error'), 'error');
+                }
+                takeSnapshotBtn.disabled = false;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error capturing snapshot', 'error');
+                takeSnapshotBtn.disabled = false;
+            });
+        });
+        
+        // Functions to start/stop webcam feed
+        function startWebcamFeed() {
+            // Clear any existing interval
+            if (webcamInterval) {
+                clearInterval(webcamInterval);
+            }
+            
+            // Start a new interval to update the feed
+            webcamInterval = setInterval(() => {
+                // Add timestamp to prevent caching
+                const timestamp = new Date().getTime();
+                webcamFeed.src = `/api/webcam/frame?t=${timestamp}`;
+            }, 100); // Update at roughly 10 FPS
+        }
+        
+        function stopWebcamFeed() {
+            if (webcamInterval) {
+                clearInterval(webcamInterval);
+                webcamInterval = null;
+            }
+            
+            // Reset to placeholder
+            webcamFeed.src = "{{ url_for('static', filename='img/webcam-placeholder.png') }}";
+            
+            // Clear face overlay
+            faceOverlay.innerHTML = '';
+        }
+        
+        function startFaceDetection() {
+            // Clear any existing interval
+            if (faceDetectionInterval) {
+                clearInterval(faceDetectionInterval);
+            }
+            
+            // Start a new interval to update face detection overlay
+            faceDetectionInterval = setInterval(() => {
+                fetch('/api/webcam/detect_faces')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.faces) {
+                            updateFaceOverlay(data.faces);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error detecting faces:', error);
+                    });
+            }, 500); // Update at 2 FPS to reduce load
+        }
+        
+        function stopFaceDetection() {
+            if (faceDetectionInterval) {
+                clearInterval(faceDetectionInterval);
+                faceDetectionInterval = null;
+            }
+            
+            // Clear face overlay
+            faceOverlay.innerHTML = '';
+        }
+        
+        function updateFaceOverlay(faces) {
+            // Clear existing boxes
+            faceOverlay.innerHTML = '';
+            
+            // Add a box for each detected face
+            faces.forEach(face => {
+                const box = document.createElement('div');
+                box.className = 'face-box';
+                box.style.position = 'absolute';
+                box.style.border = '2px solid #00ff00';
+                box.style.left = `${face.x}px`;
+                box.style.top = `${face.y}px`;
+                box.style.width = `${face.width}px`;
+                box.style.height = `${face.height}px`;
+                
+                faceOverlay.appendChild(box);
+            });
+        }
+        
+        function addSnapshotToGallery(base64Image, timestamp) {
+            // Clear the "no snapshots" message if it exists
+            if (snapshotGallery.querySelector('p')) {
+                snapshotGallery.innerHTML = '';
+            }
+            
+            // Create snapshot container
+            const container = document.createElement('div');
+            container.className = 'snapshot-container';
+            container.style.position = 'relative';
+            
+            // Create image
+            const img = document.createElement('img');
+            img.src = `data:image/jpeg;base64,${base64Image}`;
+            img.className = 'img-thumbnail';
+            img.style.width = '120px';
+            img.style.height = '90px';
+            img.title = new Date(timestamp).toLocaleString();
+            
+            // Create delete button
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0';
+            deleteBtn.innerHTML = '&times;';
+            deleteBtn.style.padding = '0 4px';
+            deleteBtn.style.fontSize = '10px';
+            
+            // Add delete functionality
+            deleteBtn.addEventListener('click', function() {
+                container.remove();
+                
+                // If gallery is empty, show the "no snapshots" message
+                if (snapshotGallery.children.length === 0) {
+                    snapshotGallery.innerHTML = '<p class="text-muted">No snapshots available. Click "Take Snapshot" to capture an image.</p>';
+                }
+            });
+            
+            // Add elements to container
+            container.appendChild(img);
+            container.appendChild(deleteBtn);
+            
+            // Add to gallery
+            snapshotGallery.prepend(container);
+        }
+    });
+    
+    // Show toast notification
+    function showToast(message, type = 'success') {
+        const toastEl = document.createElement('div');
+        toastEl.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0 position-fixed bottom-0 end-0 m-3`;
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+        
+        toastEl.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        
+        document.body.appendChild(toastEl);
+        const toast = new bootstrap.Toast(toastEl, { autohide: true, delay: 3000 });
+        toast.show();
+        
+        toastEl.addEventListener('hidden.bs.toast', function () {
+            toastEl.remove();
+        });
+    }
+</script>
+
+<style>
+    .webcam-container {
+        min-height: 240px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+    
+    #webcamFeed {
+        max-width: 100%;
+        max-height: 360px;
+    }
+    
+    #webcamFeed.flash {
+        filter: brightness(1.75);
+        transition: filter 0.1s;
+    }
+    
+    .blink {
+        animation: blink-animation 1s steps(2, start) infinite;
+    }
+    
+    @keyframes blink-animation {
+        to {
+            opacity: 0;
+        }
+    }
+</style>
+{% endblock %}

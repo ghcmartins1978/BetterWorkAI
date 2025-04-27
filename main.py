@@ -1059,6 +1059,23 @@ def audio_settings():
     
     return render_template('audio_settings.html', settings=all_settings)
 
+@app.route('/webcam')
+def webcam_settings():
+    """Webcam settings page"""
+    all_settings = {}
+    for setting in db_session.query(Setting).all():
+        if setting.name.startswith('webcam_'):
+            if setting.value_type == 'boolean':
+                all_settings[setting.name] = setting.value.lower() == 'true'
+            elif setting.value_type == 'number':
+                all_settings[setting.name] = float(setting.value)
+                if all_settings[setting.name].is_integer():
+                    all_settings[setting.name] = int(all_settings[setting.name])
+            else:
+                all_settings[setting.name] = setting.value
+    
+    return render_template('webcam_settings.html', settings=all_settings)
+
 @app.route('/api/audio/start_capture', methods=['POST'])
 def start_audio_capture():
     """Start audio capture"""
@@ -1144,6 +1161,134 @@ def save_openai_api_key():
         return jsonify({'success': True})
     except Exception as e:
         logger.error(f"Error saving OpenAI API key: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/webcam/start_capture', methods=['POST'])
+def start_webcam_capture():
+    """Start webcam capture"""
+    from webcam_capture import WebcamCapture
+    
+    # Check if webcam is enabled
+    if not settings.get_setting('webcam_enabled', default=False):
+        return jsonify({'success': False, 'error': 'Webcam capture is disabled in settings'})
+    
+    try:
+        # Initialize webcam capture
+        webcam_capture = WebcamCapture(settings)
+        
+        # Store in app context for reuse
+        app.config['WEBCAM_CAPTURE'] = webcam_capture
+        
+        # Start capturing
+        webcam_capture.start_capture()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error starting webcam capture: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/webcam/stop_capture', methods=['POST'])
+def stop_webcam_capture():
+    """Stop webcam capture"""
+    webcam_capture = app.config.get('WEBCAM_CAPTURE')
+    
+    if not webcam_capture:
+        return jsonify({'success': False, 'error': 'No active webcam capture'})
+    
+    try:
+        # Stop capturing
+        webcam_capture.stop_capture()
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error stopping webcam capture: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/webcam/frame')
+def get_webcam_frame():
+    """Get current webcam frame as JPEG image"""
+    webcam_capture = app.config.get('WEBCAM_CAPTURE')
+    
+    if not webcam_capture:
+        # Return placeholder image
+        return send_file('static/img/webcam-placeholder.png', mimetype='image/png')
+    
+    try:
+        # Get frame as base64
+        frame_base64 = webcam_capture.get_frame_as_base64()
+        
+        if not frame_base64:
+            # Return placeholder if no frame is available
+            return send_file('static/img/webcam-placeholder.png', mimetype='image/png')
+        
+        # Convert base64 to binary and return as JPEG
+        frame_binary = base64.b64decode(frame_base64)
+        return Response(frame_binary, mimetype='image/jpeg')
+    except Exception as e:
+        logger.error(f"Error getting webcam frame: {e}")
+        # Return placeholder on error
+        return send_file('static/img/webcam-placeholder.png', mimetype='image/png')
+
+@app.route('/api/webcam/snapshot', methods=['POST'])
+def take_webcam_snapshot():
+    """Take a snapshot from the webcam"""
+    webcam_capture = app.config.get('WEBCAM_CAPTURE')
+    
+    if not webcam_capture:
+        return jsonify({'success': False, 'error': 'No active webcam capture'})
+    
+    try:
+        # Get frame as base64
+        frame_base64 = webcam_capture.get_frame_as_base64()
+        
+        if not frame_base64:
+            return jsonify({'success': False, 'error': 'No frame available'})
+        
+        # If save_frames is enabled, save the frame to disk
+        if settings.get_setting('webcam_save_frames', default=False):
+            # Create snapshots directory if it doesn't exist
+            os.makedirs('snapshots', exist_ok=True)
+            
+            # Save frame with timestamp
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filepath = os.path.join('snapshots', f'snapshot_{timestamp}.jpg')
+            
+            with open(filepath, 'wb') as f:
+                f.write(base64.b64decode(frame_base64))
+                
+            logger.info(f"Saved snapshot to {filepath}")
+        
+        return jsonify({
+            'success': True, 
+            'image': frame_base64,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error taking snapshot: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/webcam/detect_faces')
+def detect_webcam_faces():
+    """Detect faces in the current webcam frame"""
+    webcam_capture = app.config.get('WEBCAM_CAPTURE')
+    
+    if not webcam_capture:
+        return jsonify({'success': False, 'error': 'No active webcam capture'})
+    
+    # Check if face detection is enabled
+    if not settings.get_setting('webcam_face_detection', default=True):
+        return jsonify({'success': False, 'error': 'Face detection is disabled in settings'})
+    
+    try:
+        # Detect faces
+        faces = webcam_capture.detect_faces()
+        
+        return jsonify({
+            'success': True,
+            'faces': faces,
+            'count': len(faces)
+        })
+    except Exception as e:
+        logger.error(f"Error detecting faces: {e}")
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/stats')
@@ -1330,7 +1475,16 @@ def init_default_settings():
         'audio_stt_engine': 'openai',  # openai, local
         'audio_local_model_path': '',
         'audio_privacy_mode': True,
-        'audio_use_openai_whisper': True
+        'audio_use_openai_whisper': True,
+        
+        # Webcam capture settings
+        'webcam_enabled': False,
+        'webcam_capture_mode': 'manual',  # manual, continuous, trigger
+        'webcam_privacy_mode': 'blur',  # blur, pixelate, silhouette, none
+        'webcam_blur_strength': 15,
+        'webcam_pixelate_factor': 15,
+        'webcam_face_detection': True,
+        'webcam_save_frames': False
     }
     
     for name, value in default_settings.items():

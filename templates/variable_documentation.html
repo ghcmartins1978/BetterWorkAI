@@ -26,11 +26,11 @@
                 </div>
                 <div class="card-body">
                     <p>Use basic variables by enclosing the variable name in double curly braces:</p>
-                    <pre class="bg-dark text-light p-3 rounded"><code>{{variable_name}}</code></pre>
+                    <pre class="bg-dark text-light p-3 rounded"><code>{% raw %}{{variable_name}}{% endraw %}</code></pre>
                     
                     <p class="mt-3">For example, when automating a login form, you might use:</p>
-                    <pre class="bg-dark text-light p-3 rounded"><code>Username: {{username}}
-Password: {{password}}</code></pre>
+                    <pre class="bg-dark text-light p-3 rounded"><code>{% raw %}Username: {{username}}
+Password: {{password}}{% endraw %}</code></pre>
                     
                     <p class="mt-3">When the macro runs, you'll be prompted to enter values for these variables.</p>
                 </div>
@@ -46,33 +46,33 @@ Password: {{password}}</code></pre>
                 </div>
                 <div class="card-body">
                     <p>Format variables to control how they appear using the syntax:</p>
-                    <pre class="bg-dark text-light p-3 rounded"><code>{{variable_name:format_specifier}}</code></pre>
+                    <pre class="bg-dark text-light p-3 rounded"><code>{% raw %}{{variable_name:format_specifier}}{% endraw %}</code></pre>
                     
                     <h5 class="mt-4">Text Formatting</h5>
                     <ul>
-                        <li><code>{{name:upper}}</code> - Convert to uppercase: "john" → "JOHN"</li>
-                        <li><code>{{name:lower}}</code> - Convert to lowercase: "John" → "john"</li>
-                        <li><code>{{name:title}}</code> - Capitalize words: "john doe" → "John Doe"</li>
+                        <li><code>{% raw %}{{name:upper}}{% endraw %}</code> - Convert to uppercase: "john" → "JOHN"</li>
+                        <li><code>{% raw %}{{name:lower}}{% endraw %}</code> - Convert to lowercase: "John" → "john"</li>
+                        <li><code>{% raw %}{{name:title}}{% endraw %}</code> - Capitalize words: "john doe" → "John Doe"</li>
                     </ul>
                     
                     <h5 class="mt-4">Number Formatting</h5>
                     <ul>
-                        <li><code>{{price:0.2f}}</code> - Format with 2 decimal places: 10 → "10.00"</li>
-                        <li><code>{{quantity:pad:3:0}}</code> - Pad with zeros: 7 → "007"</li>
+                        <li><code>{% raw %}{{price:0.2f}}{% endraw %}</code> - Format with 2 decimal places: 10 → "10.00"</li>
+                        <li><code>{% raw %}{{quantity:pad:3:0}}{% endraw %}</code> - Pad with zeros: 7 → "007"</li>
                     </ul>
                     
                     <h5 class="mt-4">Calculations</h5>
                     <ul>
-                        <li><code>{{price:calc:+10}}</code> - Add to numeric value: 50 → "60"</li>
-                        <li><code>{{price:calc:-5}}</code> - Subtract from numeric value: 50 → "45"</li>
-                        <li><code>{{price:calc:*1.1}}</code> - Multiply numeric value: 50 → "55.0"</li>
-                        <li><code>{{price:calc:/2}}</code> - Divide numeric value: 50 → "25.0"</li>
+                        <li><code>{% raw %}{{price:calc:+10}}{% endraw %}</code> - Add to numeric value: 50 → "60"</li>
+                        <li><code>{% raw %}{{price:calc:-5}}{% endraw %}</code> - Subtract from numeric value: 50 → "45"</li>
+                        <li><code>{% raw %}{{price:calc:*1.1}}{% endraw %}</code> - Multiply numeric value: 50 → "55.0"</li>
+                        <li><code>{% raw %}{{price:calc:/2}}{% endraw %}</code> - Divide numeric value: 50 → "25.0"</li>
                     </ul>
                     
                     <h5 class="mt-4">Date Formatting</h5>
                     <ul>
-                        <li><code>{{date:date:%Y-%m-%d}}</code> - Format dates: "2025-04-27"</li>
-                        <li><code>{{date:date:%B %d, %Y}}</code> - Format dates: "April 27, 2025"</li>
+                        <li><code>{% raw %}{{date:date:%Y-%m-%d}}{% endraw %}</code> - Format dates: "2025-04-27"</li>
+                        <li><code>{% raw %}{{date:date:%B %d, %Y}}{% endraw %}</code> - Format dates: "April 27, 2025"</li>
                     </ul>
                 </div>
             </div>
@@ -87,18 +87,18 @@ Password: {{password}}</code></pre>
                 </div>
                 <div class="card-body">
                     <p>Use conditional expressions to show different values based on another variable:</p>
-                    <pre class="bg-dark text-light p-3 rounded"><code>{{if:condition_variable:then_value:else_value}}</code></pre>
+                    <pre class="bg-dark text-light p-3 rounded"><code>{% raw %}{{if:condition_variable:then_value:else_value}}{% endraw %}</code></pre>
                     
                     <p class="mt-3">For example:</p>
-                    <pre class="bg-dark text-light p-3 rounded"><code>{{if:is_member:Welcome back, member!:Sign up to become a member}}</code></pre>
+                    <pre class="bg-dark text-light p-3 rounded"><code>{% raw %}{{if:is_member:Welcome back, member!:Sign up to become a member}}{% endraw %}</code></pre>
                     
                     <p class="mt-3">If <code>is_member</code> is <code>true</code>, <code>yes</code>, <code>1</code>, or <code>y</code>, it will show "Welcome back, member!" Otherwise, it will show "Sign up to become a member".</p>
                     
                     <h5 class="mt-4">Examples</h5>
                     <ul>
-                        <li>Toggle visibility: <code>{{if:show_details:Details: {{details}}:}}</code></li>
-                        <li>Different messages based on status: <code>{{if:is_approved:Approved:Pending approval}}</code></li>
-                        <li>Dynamic CSS classes: <code>class="btn {{if:is_primary:btn-primary:btn-secondary}}"</code></li>
+                        <li>Toggle visibility: <code>{% raw %}{{if:show_details:Details: {{details}}:}}{% endraw %}</code></li>
+                        <li>Different messages based on status: <code>{% raw %}{{if:is_approved:Approved:Pending approval}}{% endraw %}</code></li>
+                        <li>Dynamic CSS classes: <code>{% raw %}class="btn {{if:is_primary:btn-primary:btn-secondary}}"{% endraw %}</code></li>
                     </ul>
                 </div>
             </div>

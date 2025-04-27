@@ -494,6 +494,11 @@ logger.info("seed_demo_data() call completed")
 
 # UI Routes for BettermanAI Web Interface
 
+# Add context processor to make os available to all templates
+@app.context_processor
+def inject_os():
+    return dict(os=os)
+
 @app.route('/')
 def index():
     """Main application page"""

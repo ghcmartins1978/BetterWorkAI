@@ -750,9 +750,9 @@
     }
     
     // Show a Bootstrap alert
-    function showAlert(title, message) {
+    function showAlert(title, message, type = 'info') {
         const alertHtml = `
-            <div class="alert alert-info alert-dismissible fade show" role="alert">
+            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
                 <strong>${title}:</strong> ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
@@ -765,6 +765,109 @@
         setTimeout(() => {
             $alert.alert('close');
         }, 5000);
+    }
+    
+    // Variable detection and management functions
+    
+    // Detect variables in a macro
+    function detectVariables(macroId) {
+        if (!macroId) {
+            showAlert('Error', 'No macro selected', 'danger');
+            return;
+        }
+        
+        // Show loading indicator
+        const $variablesContainer = $('#detail-macro-variables');
+        $variablesContainer.html('<tr><td colspan="3" class="text-center"><div class="spinner-border spinner-border-sm text-secondary" role="status"></div> Detecting variables...</td></tr>');
+        
+        // Call the API to detect and register variables
+        $.ajax({
+            url: `/api/automation/macros/${macroId}/register-variables`,
+            method: 'POST',
+            success: function(response) {
+                if (response.status === 'success') {
+                    // Refresh macro details to show the new variables
+                    viewMacroDetails(macroId);
+                    
+                    // Show success message with variable count
+                    const variableCount = response.variables.length;
+                    showAlert('Success', `Detected ${variableCount} variable${variableCount !== 1 ? 's' : ''}`, 'success');
+                } else {
+                    showAlert('Error', response.message || 'Failed to detect variables', 'danger');
+                    // Restore the original variables view
+                    viewMacroDetails(macroId);
+                }
+            },
+            error: function(xhr) {
+                console.error('Error detecting variables', xhr);
+                showAlert('Error', 'Failed to detect variables', 'danger');
+                // Restore the original variables view
+                viewMacroDetails(macroId);
+            }
+        });
+    }
+    
+    // Update a variable's value
+    function updateVariableValue(variableId, value, $row) {
+        if (!variableId) {
+            showAlert('Error', 'Invalid variable ID', 'danger');
+            return;
+        }
+        
+        // Show loading indicator in the row
+        const $displayValue = $row.find('.variable-value-display');
+        const originalValue = $displayValue.text();
+        $displayValue.html('<div class="spinner-border spinner-border-sm text-secondary" role="status"></div> Updating...');
+        
+        // Call the API to update the variable
+        $.ajax({
+            url: `/api/automation/variables/${variableId}`,
+            method: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({ value: value }),
+            success: function(response) {
+                if (response.status === 'success') {
+                    // Update the display value
+                    $displayValue.text(value);
+                    
+                    // Reset the edit state
+                    $row.find('.variable-value-display').removeClass('d-none');
+                    $row.find('.variable-value-edit').addClass('d-none');
+                    $row.find('.edit-variable-btn').removeClass('d-none');
+                    $row.find('.save-variable-btn, .cancel-variable-btn').addClass('d-none');
+                    
+                    // Show success message
+                    showAlert('Success', 'Variable updated successfully', 'success');
+                } else {
+                    // Show error message
+                    showAlert('Error', response.message || 'Failed to update variable', 'danger');
+                    
+                    // Reset the display value to the original
+                    $displayValue.text(originalValue);
+                    
+                    // Reset the edit state
+                    $row.find('.variable-value-display').removeClass('d-none');
+                    $row.find('.variable-value-edit').addClass('d-none');
+                    $row.find('.edit-variable-btn').removeClass('d-none');
+                    $row.find('.save-variable-btn, .cancel-variable-btn').addClass('d-none');
+                }
+            },
+            error: function(xhr) {
+                console.error('Error updating variable', xhr);
+                
+                // Show error message
+                showAlert('Error', 'Failed to update variable', 'danger');
+                
+                // Reset the display value to the original
+                $displayValue.text(originalValue);
+                
+                // Reset the edit state
+                $row.find('.variable-value-display').removeClass('d-none');
+                $row.find('.variable-value-edit').addClass('d-none');
+                $row.find('.edit-variable-btn').removeClass('d-none');
+                $row.find('.save-variable-btn, .cancel-variable-btn').addClass('d-none');
+            }
+        });
     }
 </script>
 {% endblock %}

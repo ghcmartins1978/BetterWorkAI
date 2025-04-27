@@ -1088,7 +1088,18 @@ def get_events():
 def signal_handler(sig, frame):
     """Handle shutdown signals"""
     logger.info("Shutdown signal received, cleaning up...")
+    
+    # Stop async database writer
+    try:
+        async_db_writer.stop()
+        logger.info("Async database writer stopped")
+    except Exception as e:
+        logger.error(f"Error stopping async database writer: {e}")
+    
+    # Clean up database session
     db_session.remove()
+    
+    # Exit gracefully
     sys.exit(0)
 
 signal.signal(signal.SIGINT, signal_handler)
@@ -1108,7 +1119,14 @@ def init_default_settings():
         'automation_min_pattern_score': 0.7,
         'automation_suggestion_threshold': 3,
         'automation_use_ai': True,
-        'automation_execution_confirmation': True
+        'automation_execution_confirmation': True,
+        
+        # Sequence and adaptive timeout settings
+        'sequence_adaptive_timeout_enabled': True,
+        'sequence_min_timeout': 5,
+        'sequence_max_timeout': 60,
+        'sequence_default_timeout': 15,
+        'sequence_max_events': 200
     }
     
     for name, value in default_settings.items():

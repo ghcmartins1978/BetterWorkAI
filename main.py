@@ -2779,6 +2779,20 @@ def variable_prompt_submit():
             'status': 'error',
             'message': str(e)
         })
+        
+@app.route('/variable_documentation', methods=['GET'])
+def variable_documentation():
+    """
+    Display documentation for the variable system.
+    Helps users understand how to use variables, formatting, and conditional expressions.
+    """
+    try:
+        return render_template('variable_documentation.html')
+    except Exception as e:
+        logger.error(f"Error displaying variable documentation: {e}")
+        return render_template('error.html', 
+                               error="Error displaying variable documentation", 
+                               details=str(e))
 
 def start_monitoring_components():
     """Initialize and start the monitoring components"""

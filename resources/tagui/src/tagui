@@ -1,0 +1,27 @@
+#!/bin/bash
+# This is a mock TagUI binary for testing purposes
+
+echo "TagUI Runner (Mock)"
+echo "Running script: $1"
+echo "Arguments: $@"
+
+# Check if we're in dry-run mode
+if [[ "$*" == *"-n"* ]]; then
+    echo "Running in dry-run mode - no actions will be taken"
+fi
+
+# Read the script file
+if [ -f "$1" ]; then
+    echo "Script content:"
+    cat "$1"
+else
+    echo "Error: Script file not found: $1"
+    exit 1
+fi
+
+# Simulate a running process
+echo "Processing..."
+sleep 2
+echo "DONE"
+
+exit 0

@@ -1126,7 +1126,15 @@ def init_default_settings():
         'sequence_min_timeout': 5,
         'sequence_max_timeout': 60,
         'sequence_default_timeout': 15,
-        'sequence_max_events': 200
+        'sequence_max_events': 200,
+        
+        # Scheduled jobs settings
+        'jobs_enabled': True,
+        'rolling_pattern_detection_interval': 240,  # minutes (4 hours)
+        'rolling_pattern_detection_time_window': 2,  # days
+        'nightly_pattern_analysis_time': '03:00',  # 3 AM
+        'nightly_pattern_analysis_time_window': 7,  # days
+        'nightly_pattern_analysis_min_score': 0.7
     }
     
     for name, value in default_settings.items():
@@ -1149,6 +1157,7 @@ def start_monitoring_components():
     from context_analyzer import ContextAnalyzer
     from pattern_detector import PatternDetector
     from reasoning_engine import ReasoningEngine
+    from scheduled_jobs import JobScheduler
     
     try:
         # Initialize components
@@ -1157,6 +1166,7 @@ def start_monitoring_components():
         context_analyzer = ContextAnalyzer(settings)
         pattern_detector = PatternDetector(settings)
         reasoning_engine = ReasoningEngine(settings)
+        job_scheduler = JobScheduler(settings)
         
         # Connect components
         event_listener.set_analyzer(context_analyzer)
@@ -1168,6 +1178,7 @@ def start_monitoring_components():
         pattern_detector.start()
         context_analyzer.start()
         event_listener.start()
+        job_scheduler.start()
         
         logger.info("All monitoring components started successfully")
         
@@ -1176,7 +1187,8 @@ def start_monitoring_components():
             'event_listener': event_listener,
             'context_analyzer': context_analyzer,
             'pattern_detector': pattern_detector,
-            'reasoning_engine': reasoning_engine
+            'reasoning_engine': reasoning_engine,
+            'job_scheduler': job_scheduler
         }
     except Exception as e:
         logger.error(f"Error starting monitoring components: {e}")

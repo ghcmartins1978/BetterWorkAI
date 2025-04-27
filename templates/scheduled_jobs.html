@@ -1,0 +1,388 @@
+{% extends "layout.html" %}
+
+{% block title %}Scheduled Jobs | BettermanAI{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Scheduled Jobs</h1>
+            <p class="text-muted">Manage automated pattern detection and analysis jobs</p>
+        </div>
+        <div class="col-auto">
+            <div class="form-check form-switch mt-2">
+                <input class="form-check-input" type="checkbox" id="jobsEnabledSwitch" {% if settings.jobs_enabled %}checked{% endif %}>
+                <label class="form-check-label" for="jobsEnabledSwitch">Enable Scheduled Jobs</label>
+            </div>
+        </div>
+    </div>
+
+    {% if jobs %}
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Active Jobs</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Job Type</th>
+                        <th>Status</th>
+                        <th>Last Run</th>
+                        <th>Next Run</th>
+                        <th>Interval</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for job in jobs %}
+                    <tr>
+                        <td>
+                            <strong>{{ job.job_type|replace('_', ' ')|title }}</strong>
+                            <div class="text-muted small">Job #{{ job.id }}</div>
+                        </td>
+                        <td>
+                            {% if job.status == 'scheduled' %}
+                            <span class="badge bg-info">Scheduled</span>
+                            {% elif job.status == 'running' %}
+                            <span class="badge bg-warning">Running</span>
+                            {% elif job.status == 'completed' %}
+                            <span class="badge bg-success">Completed</span>
+                            {% elif job.status == 'failed' %}
+                            <span class="badge bg-danger">Failed</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ job.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if job.last_run_time %}
+                            {{ job.last_run_time.strftime('%Y-%m-%d %H:%M') }}
+                            {% else %}
+                            Never
+                            {% endif %}
+                        </td>
+                        <td>{{ job.next_run_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            {% if job.interval_minutes < 60 %}
+                            {{ job.interval_minutes }} minutes
+                            {% elif job.interval_minutes < 1440 %}
+                            {{ job.interval_minutes // 60 }} hours
+                            {% else %}
+                            {{ job.interval_minutes // 1440 }} days
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                        onclick="viewJobResult({{ job.id }})">
+                                    Results
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" 
+                                        onclick="toggleJobStatus({{ job.id }}, {{ job.enabled }})">
+                                    {% if job.enabled %}
+                                    Disable
+                                    {% else %}
+                                    Enable
+                                    {% endif %}
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-success" 
+                                        onclick="runJobNow({{ job.id }})">
+                                    Run Now
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        No scheduled jobs found. Jobs will be created automatically when the system restarts.
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Rolling Pattern Detection Settings</h5>
+                </div>
+                <div class="card-body">
+                    <form id="rollingSettingsForm">
+                        <div class="mb-3">
+                            <label for="rollingInterval" class="form-label">Check Interval (hours)</label>
+                            <input type="number" class="form-control" id="rollingInterval" 
+                                   value="{{ settings.rolling_pattern_detection_interval // 60 }}" min="1" max="24">
+                            <div class="form-text">How often to run the pattern detection job</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="rollingWindow" class="form-label">Time Window (days)</label>
+                            <input type="number" class="form-control" id="rollingWindow" 
+                                   value="{{ settings.rolling_pattern_detection_time_window }}" min="1" max="7">
+                            <div class="form-text">How far back to look for patterns</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Nightly Pattern Analysis Settings</h5>
+                </div>
+                <div class="card-body">
+                    <form id="nightlySettingsForm">
+                        <div class="mb-3">
+                            <label for="nightlyTime" class="form-label">Analysis Time</label>
+                            <input type="time" class="form-control" id="nightlyTime" 
+                                   value="{{ settings.nightly_pattern_analysis_time }}">
+                            <div class="form-text">When to run the analysis job (recommended during non-work hours)</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="nightlyWindow" class="form-label">Analysis Window (days)</label>
+                            <input type="number" class="form-control" id="nightlyWindow" 
+                                   value="{{ settings.nightly_pattern_analysis_time_window }}" min="1" max="30">
+                            <div class="form-text">How many days worth of patterns to analyze</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="nightlyMinScore" class="form-label">Minimum Pattern Score</label>
+                            <input type="number" class="form-control" id="nightlyMinScore" 
+                                   value="{{ settings.nightly_pattern_analysis_min_score }}" min="0.1" max="1.0" step="0.1">
+                            <div class="form-text">Minimum similarity score (0.1-1.0) for patterns to be analyzed</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Job Results -->
+<div class="modal fade" id="jobResultModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Job Results</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <pre id="jobResultContent" class="bg-light p-3 rounded"></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle global jobs enabled/disabled toggle
+        const jobsEnabledSwitch = document.getElementById('jobsEnabledSwitch');
+        if (jobsEnabledSwitch) {
+            jobsEnabledSwitch.addEventListener('change', function() {
+                const enabled = this.checked;
+                fetch('/api/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        settings: {
+                            'jobs_enabled': enabled
+                        }
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast(enabled ? 'Scheduled jobs enabled' : 'Scheduled jobs disabled');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        showToast('Error updating setting', 'error');
+                        this.checked = !enabled;
+                    }
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                    showToast('Error updating setting', 'error');
+                    this.checked = !enabled;
+                });
+            });
+        }
+
+        // Handle rolling settings form
+        const rollingSettingsForm = document.getElementById('rollingSettingsForm');
+        if (rollingSettingsForm) {
+            rollingSettingsForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const intervalHours = document.getElementById('rollingInterval').value;
+                const window = document.getElementById('rollingWindow').value;
+                
+                fetch('/api/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        settings: {
+                            'rolling_pattern_detection_interval': parseInt(intervalHours) * 60,
+                            'rolling_pattern_detection_time_window': parseInt(window)
+                        }
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Rolling pattern detection settings updated');
+                    } else {
+                        showToast('Error updating settings', 'error');
+                    }
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                    showToast('Error updating settings', 'error');
+                });
+            });
+        }
+
+        // Handle nightly settings form
+        const nightlySettingsForm = document.getElementById('nightlySettingsForm');
+        if (nightlySettingsForm) {
+            nightlySettingsForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const time = document.getElementById('nightlyTime').value;
+                const window = document.getElementById('nightlyWindow').value;
+                const minScore = document.getElementById('nightlyMinScore').value;
+                
+                fetch('/api/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        settings: {
+                            'nightly_pattern_analysis_time': time,
+                            'nightly_pattern_analysis_time_window': parseInt(window),
+                            'nightly_pattern_analysis_min_score': parseFloat(minScore)
+                        }
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Nightly pattern analysis settings updated');
+                    } else {
+                        showToast('Error updating settings', 'error');
+                    }
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                    showToast('Error updating settings', 'error');
+                });
+            });
+        }
+    });
+
+    // View job result
+    function viewJobResult(jobId) {
+        fetch(`/api/jobs/${jobId}/result`)
+            .then(response => response.json())
+            .then(data => {
+                const resultElement = document.getElementById('jobResultContent');
+                resultElement.textContent = JSON.stringify(data.result, null, 2);
+                
+                const modal = new bootstrap.Modal(document.getElementById('jobResultModal'));
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error fetching job result', 'error');
+            });
+    }
+
+    // Toggle job enabled/disabled status
+    function toggleJobStatus(jobId, currentStatus) {
+        fetch(`/api/jobs/${jobId}/toggle`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                enabled: !currentStatus
+            }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(`Job ${data.enabled ? 'enabled' : 'disabled'}`);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showToast('Error updating job status', 'error');
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            showToast('Error updating job status', 'error');
+        });
+    }
+
+    // Run job now
+    function runJobNow(jobId) {
+        fetch(`/api/jobs/${jobId}/run-now`, {
+            method: 'POST',
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Job started successfully');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showToast('Error starting job', 'error');
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            showToast('Error starting job', 'error');
+        });
+    }
+
+    // Show toast notification
+    function showToast(message, type = 'success') {
+        const toastEl = document.createElement('div');
+        toastEl.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0 position-fixed bottom-0 end-0 m-3`;
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+        
+        toastEl.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        
+        document.body.appendChild(toastEl);
+        const toast = new bootstrap.Toast(toastEl, { autohide: true, delay: 3000 });
+        toast.show();
+        
+        toastEl.addEventListener('hidden.bs.toast', function () {
+            toastEl.remove();
+        });
+    }
+</script>
+{% endblock %}

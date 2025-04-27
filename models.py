@@ -134,3 +134,19 @@ class Setting(Base):
     value = Column(Text)
     value_type = Column(String(10))  # string, boolean, number, json
     description = Column(Text)
+
+class ScheduledJob(Base):
+    """
+    Represents a scheduled job for pattern detection and analysis
+    """
+    __tablename__ = 'scheduled_jobs'
+    
+    id = Column(Integer, primary_key=True)
+    job_type = Column(String(50), nullable=False)  # 'rolling_pattern_detection', 'nightly_pattern_analysis', etc.
+    last_run_time = Column(DateTime)
+    next_run_time = Column(DateTime, nullable=False)
+    status = Column(String(20), default='scheduled')  # scheduled, running, completed, failed
+    interval_minutes = Column(Integer, default=60)  # How often the job should run in minutes
+    enabled = Column(Integer, default=1)  # Whether the job is enabled
+    parameters = Column(Text)  # JSON string of job parameters
+    result = Column(Text)  # JSON string of last job results

@@ -87,17 +87,69 @@ class ReasoningEngine:
                 db_session.commit()
                 return
                 
-            # Get event count from the first sequence to create a better description
+            # Get sequences for AI analysis
+            sequences = []
+            event_count = 0
+            
             try:
-                first_sequence = db_session.query(EventSequence).get(sequence_ids[0])
-                event_count = first_sequence.event_count if first_sequence else 0
+                for seq_id in sequence_ids:
+                    seq = db_session.query(EventSequence).get(seq_id)
+                    if seq:
+                        # Use the first sequence to determine event count
+                        if event_count == 0:
+                            event_count = seq.event_count
+                            
+                        # Get the sequence data
+                        if seq.data:
+                            seq_data = json.loads(seq.data)
+                            sequences.append(seq_data)
             except Exception as e:
-                logger.error(f"Error getting event count: {e}")
+                logger.error(f"Error getting sequences: {e}")
+                
+            if event_count == 0:
                 event_count = "multiple"
                 
-            # Prepare suggestion
+            # Prepare suggestion with default values
             title = f"Automate {pattern.name}"
             description = f"This automation would replace a sequence of {event_count} events that you've performed {len(sequence_ids)} times."
+            
+            # Use AI to analyze the pattern if available
+            ai_analysis = None
+            if self.openai_available and sequences:
+                from ai_helper import ai_helper
+                
+                try:
+                    ai_analysis = ai_helper.analyze_pattern(
+                        pattern_name=pattern.name,
+                        sequences=sequences,
+                        score=pattern.score
+                    )
+                    
+                    if ai_analysis:
+                        # Update pattern with AI insights
+                        if 'improved_name' in ai_analysis and ai_analysis['improved_name']:
+                            pattern.name = ai_analysis['improved_name']
+                            title = f"Automate {pattern.name}"
+                            
+                        # Build better description with AI insights
+                        if 'description' in ai_analysis and ai_analysis['description']:
+                            description = ai_analysis['description'] + "\n\n"
+                            
+                        if 'automation_opportunity' in ai_analysis and ai_analysis['automation_opportunity']:
+                            description += f"Automation opportunity: {ai_analysis['automation_opportunity']}\n\n"
+                            
+                        if 'benefits' in ai_analysis and ai_analysis['benefits']:
+                            description += f"Benefits: {ai_analysis['benefits']}\n\n"
+                            
+                        if 'challenges' in ai_analysis and ai_analysis['challenges']:
+                            description += f"Considerations: {ai_analysis['challenges']}"
+                            
+                        # Store AI analysis in evaluation notes
+                        pattern.evaluation_notes = f"AI Analysis: {json.dumps(ai_analysis)}"
+                        logger.info(f"Enhanced pattern {pattern_id} with AI analysis")
+                except Exception as ai_error:
+                    logger.error(f"Error analyzing pattern with AI: {ai_error}")
+                    # Continue with default description if AI analysis fails
             
             # Check if suggestion already exists for this pattern
             existing_suggestion = db_session.query(Suggestion).filter(
@@ -108,7 +160,7 @@ class ReasoningEngine:
                 logger.debug(f"Suggestion already exists for pattern {pattern_id}")
                 return
                 
-            # Create simple steps for the suggestion (in a real system, this would be more complex)
+            # Create steps for the suggestion
             steps = [
                 {"type": "start", "description": "Start automation"},
                 {"type": "execute", "description": f"Execute {event_count} actions"},
@@ -129,7 +181,8 @@ class ReasoningEngine:
             
             # Update pattern status
             pattern.status = 'approved'
-            pattern.evaluation_notes = 'Pattern approved for automation'
+            if not pattern.evaluation_notes:
+                pattern.evaluation_notes = 'Pattern approved for automation'
             
             db_session.commit()
             
@@ -259,21 +312,66 @@ class ReasoningEngine:
             # Get steps
             steps = macro.steps
             
-            # In a real implementation, this would call OpenAI to improve the macro
-            # For now, just add some fake "AI-enhanced" descriptions
+            # Use OpenAI to enhance the macro
+            from ai_helper import ai_helper
             
-            macro.description += "\n\nThis macro has been enhanced with AI optimization."
-            
+            # Convert steps for AI processing
+            steps_data = []
             for step in steps:
-                # Add some fake AI enhancement
-                params = json.loads(step.parameters)
-                params['ai_enhanced'] = True
-                params['optimization_note'] = "Timing optimized by AI"
-                step.parameters = json.dumps(params)
-                
-            db_session.commit()
+                step_data = {
+                    'action_type': step.action_type,
+                    'parameters': step.parameters,
+                    'delay_before': step.delay_before
+                }
+                steps_data.append(step_data)
             
-            logger.info(f"Enhanced macro {macro_id} with AI")
+            # Enhance description
+            enhanced_description = ai_helper.enhance_macro_description(
+                macro_name=macro.name,
+                current_description=macro.description,
+                steps=steps_data
+            )
+            
+            if enhanced_description:
+                macro.description = enhanced_description
+                logger.info(f"Enhanced macro {macro_id} description with AI")
+            
+            # Enhance steps
+            enhanced_steps = ai_helper.enhance_macro_steps(
+                macro_name=macro.name,
+                steps=steps_data
+            )
+            
+            if enhanced_steps:
+                # Update steps with enhanced parameters
+                for i, step in enumerate(steps):
+                    if i < len(enhanced_steps):
+                        enhanced_step = enhanced_steps[i]
+                        
+                        # Update delay if provided
+                        if 'delay_before' in enhanced_step:
+                            try:
+                                delay = float(enhanced_step['delay_before'])
+                                step.delay_before = delay
+                            except:
+                                pass
+                            
+                        # Update parameters if provided
+                        if 'parameters' in enhanced_step:
+                            try:
+                                # If parameters is a string, use it directly
+                                if isinstance(enhanced_step['parameters'], str):
+                                    step.parameters = enhanced_step['parameters']
+                                # If parameters is a dict, convert to JSON string
+                                elif isinstance(enhanced_step['parameters'], dict):
+                                    step.parameters = json.dumps(enhanced_step['parameters'])
+                            except:
+                                pass
+                
+                logger.info(f"Enhanced macro {macro_id} steps with AI")
+            
+            db_session.commit()
+            logger.info(f"Successfully enhanced macro {macro_id} with AI")
             
             return True
             

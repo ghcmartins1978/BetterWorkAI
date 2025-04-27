@@ -415,59 +415,65 @@ def seed_demo_data():
                 )
                 db_session.add(event)
             
-            # Create demo AI analysis reports
-            reports = [
-                {
-                    'report_type': 'screenshot',
-                    'timestamp': datetime.now() - timedelta(days=1, hours=4),
-                    'analysis_data': json.dumps({
-                        'detected_elements': ['button', 'form field', 'dropdown menu'],
-                        'probable_action': 'form submission',
-                        'application': 'Email Client',
-                        'screen_area': 'Compose Window',
-                        'repetition_indicators': True
-                    }),
-                    'summary': 'User is composing and sending emails with similar content structure to multiple recipients.',
-                    'insights': 'This appears to be a repetitive task of sending similar emails to different people. The structure and content have significant overlap, suggesting potential for automation with customizable fields.',
-                    'automation_potential': 0.85,
-                    'application_context': 'Email Client - Message Composition'
-                },
-                {
-                    'report_type': 'pattern',
-                    'timestamp': datetime.now() - timedelta(days=2, hours=8),
-                    'analysis_data': json.dumps({
-                        'sequence_length': 12,
-                        'frequency': 'Daily',
-                        'common_applications': ['Spreadsheet', 'Web Browser', 'File Explorer'],
-                        'complexity': 'Medium',
-                        'keystrokes_saved': 87,
-                        'estimated_time_saved': '4.5 minutes per execution'
-                    }),
-                    'summary': 'Pattern involves extracting data from web pages and organizing it in a spreadsheet following a consistent format.',
-                    'insights': 'This data collection workflow follows a consistent pattern where specific elements from web pages are copied to designated spreadsheet columns. The structure is predictable with high consistency in placement.',
-                    'automation_potential': 0.78,
-                    'application_context': 'Web Research and Data Collection'
-                },
-                {
-                    'report_type': 'screenshot',
-                    'timestamp': datetime.now() - timedelta(hours=14),
-                    'analysis_data': json.dumps({
-                        'detected_elements': ['file dialog', 'document', 'toolbar options'],
-                        'probable_action': 'document formatting',
-                        'application': 'Word Processor',
-                        'screen_area': 'Document View',
-                        'repetition_indicators': True
-                    }),
-                    'summary': 'User is applying consistent formatting to multiple document sections.',
-                    'insights': 'The document formatting pattern shows repeated application of the same style elements to different sections of text. This suggests a formatting template could be created to streamline the process.',
-                    'automation_potential': 0.72,
-                    'application_context': 'Word Processor - Document Formatting'
-                }
-            ]
-            
-            for report_data in reports:
-                report = AIAnalysisReport(**report_data)
-                db_session.add(report)
+            # Check if we need to create demo AI reports
+            if db_session.query(AIAnalysisReport).count() == 0:
+                logger.info("Creating demo AI analysis reports...")
+                
+                # Create demo AI analysis reports
+                reports = [
+                    {
+                        'report_type': 'screenshot',
+                        'timestamp': datetime.now() - timedelta(days=1, hours=4),
+                        'analysis_data': json.dumps({
+                            'detected_elements': ['button', 'form field', 'dropdown menu'],
+                            'probable_action': 'form submission',
+                            'application': 'Email Client',
+                            'screen_area': 'Compose Window',
+                            'repetition_indicators': True
+                        }),
+                        'summary': 'User is composing and sending emails with similar content structure to multiple recipients.',
+                        'insights': 'This appears to be a repetitive task of sending similar emails to different people. The structure and content have significant overlap, suggesting potential for automation with customizable fields.',
+                        'automation_potential': 0.85,
+                        'application_context': 'Email Client - Message Composition'
+                    },
+                    {
+                        'report_type': 'pattern',
+                        'timestamp': datetime.now() - timedelta(days=2, hours=8),
+                        'analysis_data': json.dumps({
+                            'sequence_length': 12,
+                            'frequency': 'Daily',
+                            'common_applications': ['Spreadsheet', 'Web Browser', 'File Explorer'],
+                            'complexity': 'Medium',
+                            'keystrokes_saved': 87,
+                            'estimated_time_saved': '4.5 minutes per execution'
+                        }),
+                        'summary': 'Pattern involves extracting data from web pages and organizing it in a spreadsheet following a consistent format.',
+                        'insights': 'This data collection workflow follows a consistent pattern where specific elements from web pages are copied to designated spreadsheet columns. The structure is predictable with high consistency in placement.',
+                        'automation_potential': 0.78,
+                        'application_context': 'Web Research and Data Collection'
+                    },
+                    {
+                        'report_type': 'screenshot',
+                        'timestamp': datetime.now() - timedelta(hours=14),
+                        'analysis_data': json.dumps({
+                            'detected_elements': ['file dialog', 'document', 'toolbar options'],
+                            'probable_action': 'document formatting',
+                            'application': 'Word Processor',
+                            'screen_area': 'Document View',
+                            'repetition_indicators': True
+                        }),
+                        'summary': 'User is applying consistent formatting to multiple document sections.',
+                        'insights': 'The document formatting pattern shows repeated application of the same style elements to different sections of text. This suggests a formatting template could be created to streamline the process.',
+                        'automation_potential': 0.72,
+                        'application_context': 'Word Processor - Document Formatting'
+                    }
+                ]
+                
+                for report_data in reports:
+                    report = AIAnalysisReport(**report_data)
+                    db_session.add(report)
+                
+                logger.info(f"Added {len(reports)} demo AI analysis reports")
             
             db_session.commit()
             logger.info("Demo data seeded successfully")

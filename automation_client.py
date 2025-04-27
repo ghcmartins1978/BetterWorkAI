@@ -76,7 +76,7 @@ class AutomationClient:
         """Move mouse to absolute position"""
         if not self.server_url:
             logger.warning("Cannot move mouse: No server URL")
-            return False
+            return {'status': 'error', 'message': 'No server URL provided'}
             
         try:
             response = requests.post(
@@ -84,16 +84,16 @@ class AutomationClient:
                 json={'x': x, 'y': y},
                 timeout=3
             )
-            return response.status_code == 200
+            return self._handle_response(response)
         except Exception as e:
             logger.error(f"Failed to move mouse: {e}")
-            return False
+            return {'status': 'error', 'message': str(e)}
     
     def mouse_click(self, x, y, button='left', clicks=1):
         """Click at the specified position"""
         if not self.server_url:
             logger.warning("Cannot click mouse: No server URL")
-            return False
+            return {'status': 'error', 'message': 'No server URL provided'}
             
         try:
             response = requests.post(
@@ -101,17 +101,17 @@ class AutomationClient:
                 json={'x': x, 'y': y, 'button': button, 'clicks': clicks},
                 timeout=3
             )
-            return response.status_code == 200
+            return self._handle_response(response)
         except Exception as e:
             logger.error(f"Failed to click mouse: {e}")
-            return False
+            return {'status': 'error', 'message': str(e)}
     
     # Keyboard actions
     def keyboard_type(self, text):
         """Type the specified text"""
         if not self.server_url:
             logger.warning("Cannot type text: No server URL")
-            return False
+            return {'status': 'error', 'message': 'No server URL provided'}
             
         try:
             response = requests.post(
@@ -119,16 +119,16 @@ class AutomationClient:
                 json={'text': text},
                 timeout=3
             )
-            return response.status_code == 200
+            return self._handle_response(response)
         except Exception as e:
             logger.error(f"Failed to type text: {e}")
-            return False
+            return {'status': 'error', 'message': str(e)}
     
     def keyboard_press(self, key):
         """Press a single key"""
         if not self.server_url:
             logger.warning("Cannot press key: No server URL")
-            return False
+            return {'status': 'error', 'message': 'No server URL provided'}
             
         try:
             response = requests.post(
@@ -136,16 +136,16 @@ class AutomationClient:
                 json={'key': key},
                 timeout=3
             )
-            return response.status_code == 200
+            return self._handle_response(response)
         except Exception as e:
             logger.error(f"Failed to press key: {e}")
-            return False
+            return {'status': 'error', 'message': str(e)}
     
     def keyboard_hotkey(self, *keys):
         """Press a hotkey combination (multiple keys)"""
         if not self.server_url:
             logger.warning("Cannot press hotkey: No server URL")
-            return False
+            return {'status': 'error', 'message': 'No server URL provided'}
             
         try:
             response = requests.post(
@@ -153,10 +153,10 @@ class AutomationClient:
                 json={'keys': list(keys)},
                 timeout=3
             )
-            return response.status_code == 200
+            return self._handle_response(response)
         except Exception as e:
             logger.error(f"Failed to press hotkey: {e}")
-            return False
+            return {'status': 'error', 'message': str(e)}
     
     # Window actions
     def get_window_list(self):
@@ -170,8 +170,9 @@ class AutomationClient:
                 f"{self.server_url}/api/window/list",
                 timeout=3
             )
-            if response.status_code == 200:
-                return response.json().get('windows', [])
+            result = self._handle_response(response)
+            if result.get('status') == 'success' and 'windows' in result:
+                return result['windows']
             return []
         except Exception as e:
             logger.error(f"Failed to get window list: {e}")
@@ -181,7 +182,7 @@ class AutomationClient:
         """Focus a window by its title"""
         if not self.server_url:
             logger.warning("Cannot focus window: No server URL")
-            return False
+            return {'status': 'error', 'message': 'No server URL provided'}
             
         try:
             response = requests.post(
@@ -189,7 +190,7 @@ class AutomationClient:
                 json={'title': title},
                 timeout=3
             )
-            return response.status_code == 200
+            return self._handle_response(response)
         except Exception as e:
             logger.error(f"Failed to focus window: {e}")
-            return False
+            return {'status': 'error', 'message': str(e)}

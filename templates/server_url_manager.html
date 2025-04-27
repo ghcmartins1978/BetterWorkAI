@@ -1,0 +1,182 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Server URL Manager
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Automation Server URL Manager</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <p>The automation server URL is the ngrok URL of your locally running automation server. This URL changes every time you restart ngrok, so you'll need to update it here when that happens.</p>
+                        <p>Current automation server URL: <code id="current-url">{{ server_url }}</code></p>
+                    </div>
+
+                    <form id="server-url-form">
+                        <div class="mb-3">
+                            <label for="server-url-input" class="form-label">New Automation Server URL</label>
+                            <input type="text" class="form-control" id="server-url-input" placeholder="https://your-ngrok-url.ngrok.io" value="{{ server_url }}">
+                            <div class="form-text">Paste the new ngrok URL here, including the https:// prefix.</div>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="permanent-check" checked>
+                            <label class="form-check-label" for="permanent-check">Update environment variable permanently</label>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-primary" id="test-button">Test and Update URL</button>
+                        </div>
+                    </form>
+                    
+                    <div class="mt-4">
+                        <div class="alert alert-secondary d-none" id="status-alert">
+                            <div id="status-message">Testing connection...</div>
+                            <div class="progress mt-2 d-none" id="progress-bar-container">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" id="progress-bar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mt-3">
+                            <div class="card-header">
+                                <h5 class="mb-0">Connection Test Results</h5>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-group" id="test-results">
+                                    <li class="list-group-item text-muted">No tests run yet</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const serverUrlInput = document.getElementById('server-url-input');
+    const permanentCheck = document.getElementById('permanent-check');
+    const testButton = document.getElementById('test-button');
+    const statusAlert = document.getElementById('status-alert');
+    const statusMessage = document.getElementById('status-message');
+    const progressBarContainer = document.getElementById('progress-bar-container');
+    const progressBar = document.getElementById('progress-bar');
+    const testResults = document.getElementById('test-results');
+    
+    // Test and update the URL
+    testButton.addEventListener('click', function() {
+        const serverUrl = serverUrlInput.value.trim();
+        const permanent = permanentCheck.checked;
+        
+        if (!serverUrl) {
+            showStatus('Please enter a server URL', 'danger');
+            return;
+        }
+        
+        if (!serverUrl.startsWith('http://') && !serverUrl.startsWith('https://')) {
+            showStatus('Server URL must start with http:// or https://', 'danger');
+            return;
+        }
+        
+        // Show the testing status
+        showStatus('Testing connection to ' + serverUrl, 'info');
+        progressBarContainer.classList.remove('d-none');
+        testResults.innerHTML = '<li class="list-group-item">Testing connection...</li>';
+        
+        // Simulate progress bar
+        let progress = 0;
+        const progressInterval = setInterval(function() {
+            progress += 5;
+            progressBar.style.width = Math.min(progress, 95) + '%';
+            if (progress >= 95) {
+                clearInterval(progressInterval);
+            }
+        }, 100);
+        
+        // Make the test request
+        fetch('/api/update-server-url', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                server_url: serverUrl,
+                permanent: permanent
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            clearInterval(progressInterval);
+            progressBar.style.width = '100%';
+            setTimeout(() => {
+                progressBarContainer.classList.add('d-none');
+            }, 500);
+            
+            if (data.status === 'success') {
+                showStatus(data.message, 'success');
+                document.getElementById('current-url').textContent = serverUrl;
+                displayTestResults(data.tests);
+                
+                // Reload the page after a delay to reflect changes
+                if (permanent) {
+                    setTimeout(() => {
+                        location.reload();
+                    }, 3000);
+                }
+            } else {
+                showStatus(data.message, 'danger');
+                displayTestResults(data.tests || [
+                    {name: 'Connection Test', status: 'failed', message: data.message}
+                ]);
+            }
+        })
+        .catch(error => {
+            clearInterval(progressInterval);
+            progressBarContainer.classList.add('d-none');
+            showStatus('Error: ' + error.message, 'danger');
+            testResults.innerHTML = `<li class="list-group-item list-group-item-danger">Error: ${error.message}</li>`;
+        });
+    });
+    
+    // Show a status message
+    function showStatus(message, type) {
+        statusAlert.classList.remove('d-none', 'alert-info', 'alert-success', 'alert-danger', 'alert-warning');
+        statusAlert.classList.add('alert-' + type);
+        statusMessage.innerHTML = message;
+    }
+    
+    // Display test results
+    function displayTestResults(tests) {
+        testResults.innerHTML = '';
+        
+        if (!tests || tests.length === 0) {
+            testResults.innerHTML = '<li class="list-group-item text-muted">No test results available</li>';
+            return;
+        }
+        
+        tests.forEach(test => {
+            const item = document.createElement('li');
+            item.className = 'list-group-item';
+            
+            if (test.status === 'success') {
+                item.classList.add('list-group-item-success');
+                item.innerHTML = `<strong>${test.name}</strong>: <i class="bi bi-check-circle-fill text-success"></i> ${test.message}`;
+            } else {
+                item.classList.add('list-group-item-danger');
+                item.innerHTML = `<strong>${test.name}</strong>: <i class="bi bi-x-circle-fill text-danger"></i> ${test.message}`;
+            }
+            
+            testResults.appendChild(item);
+        });
+    }
+});
+</script>
+{% endblock %}

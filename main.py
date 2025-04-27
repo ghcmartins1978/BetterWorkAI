@@ -1316,6 +1316,7 @@ def test_connection():
 
     data = request.json
     server_url = data.get('server_url', os.environ.get('AUTOMATION_SERVER_URL', ''))
+    update_env = data.get('update_env', False)
     
     if not server_url:
         return jsonify({'success': False, 'error': 'No server URL provided'})
@@ -1329,6 +1330,20 @@ def test_connection():
             
             # Update the settings with the new URL if successful
             settings.set_setting('automation_server_url', server_url)
+            
+            # If requested, also update the environment variable
+            if update_env:
+                # Update the environment variable for the current process
+                os.environ['AUTOMATION_SERVER_URL'] = server_url
+                logger.info(f"Updated AUTOMATION_SERVER_URL to: {server_url}")
+                
+                # Add a success message about updating the environment variable
+                return jsonify({
+                    'success': True,
+                    'screen_size': status_data.get('screen_size', {'width': 1920, 'height': 1080}),
+                    'monitoring': status_data.get('monitoring', False),
+                    'message': f"Connected successfully and updated environment variable to {server_url}"
+                })
             
             return jsonify({
                 'success': True,

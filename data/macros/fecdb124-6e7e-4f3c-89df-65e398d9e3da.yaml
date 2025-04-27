@@ -1,0 +1,23 @@
+metadata:
+  created_at: 1745765153.13378
+  description: A sample macro for testing
+  id: fecdb124-6e7e-4f3c-89df-65e398d9e3da
+  name: Sample Macro
+  tags:
+  - sample
+  - test
+  updated_at: 1745765153.1337826
+steps:
+- action: focus
+  window: Notepad
+- action: wait
+  seconds: 1
+- action: click
+  button: left
+  target: 100,100
+- action: type
+  target: page
+  value: Hello from BettermanAI!
+- action: keyboard
+  keys: enter
+variables: {}

@@ -1,554 +1,397 @@
 /**
- * Dry-Run Overlay for BettermanAI
+ * Dry-Run Overlay
  * 
- * This module provides a visual overlay for displaying what's happening during
- * macro execution in dry-run mode, without actually performing the actions.
+ * This module provides visual feedback during macro execution in dry-run mode.
+ * It displays overlays that indicate mouse movements, clicks, keyboard input, etc.
  */
 
 class DryRunOverlay {
-    constructor() {
-        this.isActive = false;
-        this.overlay = null;
-        this.actionDisplay = null;
-        this.logDisplay = null;
-        this.closeButton = null;
-        this.actions = [];
-        this.currentActionIndex = -1;
-        this.pollingInterval = null;
-        this.logUpdateInterval = null;
-        this.macroId = null;
-        this.logPath = null;
+    constructor(options = {}) {
+        // Default options
+        this.options = {
+            containerId: 'dry-run-overlay-container',
+            zIndex: 9999,
+            mouseIndicatorSize: 20,
+            mouseIndicatorColor: '#FF5722',
+            clickRippleColor: '#FF5722',
+            clickRippleDuration: 1000,
+            keyboardIndicatorDuration: 2000,
+            showCoordinates: true,
+            ...options
+        };
+        
+        this.initialize();
     }
-
+    
     /**
      * Initialize the overlay
      */
-    init() {
-        if (this.overlay) {
-            return; // Already initialized
-        }
-
-        // Create overlay container
-        this.overlay = document.createElement('div');
-        this.overlay.className = 'dry-run-overlay';
-        this.overlay.style.display = 'none';
-        
-        // Create header
-        const header = document.createElement('div');
-        header.className = 'dry-run-header';
-        
-        const title = document.createElement('h3');
-        title.textContent = 'Dry Run Mode';
-        title.className = 'dry-run-title';
-        
-        this.closeButton = document.createElement('button');
-        this.closeButton.innerHTML = '&times;';
-        this.closeButton.className = 'dry-run-close-btn';
-        this.closeButton.addEventListener('click', () => this.hide());
-        
-        header.appendChild(title);
-        header.appendChild(this.closeButton);
-        
-        // Create content container
-        const content = document.createElement('div');
-        content.className = 'dry-run-content';
-        
-        // Create action display
-        this.actionDisplay = document.createElement('div');
-        this.actionDisplay.className = 'dry-run-action';
-        
-        // Create progress container
-        const progressContainer = document.createElement('div');
-        progressContainer.className = 'dry-run-progress-container';
-        
-        this.progressBar = document.createElement('div');
-        this.progressBar.className = 'dry-run-progress-bar';
-        this.progressBar.style.width = '0%';
-        
-        progressContainer.appendChild(this.progressBar);
-        
-        // Create log display
-        this.logDisplay = document.createElement('pre');
-        this.logDisplay.className = 'dry-run-log';
-        
-        // Assemble the overlay
-        content.appendChild(this.actionDisplay);
-        content.appendChild(progressContainer);
-        content.appendChild(this.logDisplay);
-        
-        this.overlay.appendChild(header);
-        this.overlay.appendChild(content);
-        
-        // Add to document
-        document.body.appendChild(this.overlay);
-        
-        // Add CSS
-        this.addStyles();
-    }
-
-    /**
-     * Add CSS styles for the overlay
-     */
-    addStyles() {
-        const style = document.createElement('style');
-        style.textContent = `
-            .dry-run-overlay {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                width: 400px;
-                max-height: 80vh;
-                background-color: rgba(33, 37, 41, 0.95);
-                border-radius: 8px;
-                box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-                z-index: 9999;
-                color: white;
-                display: flex;
-                flex-direction: column;
-                overflow: hidden;
-            }
-            
-            .dry-run-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 10px 15px;
-                background-color: rgba(25, 135, 84, 0.8);
-                border-top-left-radius: 8px;
-                border-top-right-radius: 8px;
-            }
-            
-            .dry-run-title {
-                margin: 0;
-                font-size: 18px;
-                font-weight: 600;
-            }
-            
-            .dry-run-close-btn {
-                background: none;
-                border: none;
-                color: white;
-                font-size: 24px;
-                cursor: pointer;
-                padding: 0 5px;
-            }
-            
-            .dry-run-content {
-                padding: 15px;
-                overflow-y: auto;
-                max-height: calc(80vh - 50px);
-                display: flex;
-                flex-direction: column;
-                gap: 15px;
-            }
-            
-            .dry-run-action {
-                background-color: rgba(13, 110, 253, 0.2);
-                padding: 10px;
-                border-radius: 5px;
-                min-height: 60px;
-                display: flex;
-                align-items: center;
-                font-family: monospace;
-            }
-            
-            .dry-run-progress-container {
-                height: 8px;
-                background-color: rgba(255, 255, 255, 0.2);
-                border-radius: 4px;
-                overflow: hidden;
-            }
-            
-            .dry-run-progress-bar {
-                height: 100%;
-                background-color: #0d6efd;
-                transition: width 0.3s ease;
-            }
-            
-            .dry-run-log {
-                background-color: rgba(0, 0, 0, 0.3);
-                padding: 10px;
-                border-radius: 5px;
-                font-family: monospace;
-                font-size: 12px;
-                overflow-y: auto;
-                max-height: 200px;
-                white-space: pre-wrap;
-                margin: 0;
-            }
-            
-            .action-highlight {
-                animation: highlight 2s ease;
-            }
-            
-            @keyframes highlight {
-                0%, 100% { background-color: rgba(13, 110, 253, 0.2); }
-                50% { background-color: rgba(13, 110, 253, 0.5); }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
-    /**
-     * Start the dry run with the given macro ID
-     * 
-     * @param {string} macroId - ID of the macro to execute
-     * @param {Array} steps - Array of steps in the macro
-     */
-    start(macroId, steps) {
-        this.init();
-        this.macroId = macroId;
-        this.actions = steps;
-        this.currentActionIndex = -1;
-        
-        // Execute the macro in dry-run mode
-        fetch(`/api/automation/macros/${macroId}/execute`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ mode: 'dry-run' }),
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'running') {
-                this.isActive = true;
-                this.logPath = data.log_path;
-                
-                // Show the overlay
-                this.show();
-                
-                // Start polling for status and log updates
-                this.startPolling();
-            } else {
-                console.error('Failed to start macro in dry-run mode:', data);
-                alert('Failed to start dry-run mode: ' + (data.message || 'Unknown error'));
-            }
-        })
-        .catch(error => {
-            console.error('Error starting dry-run:', error);
-            alert('Error starting dry-run: ' + error.message);
-        });
-    }
-
-    /**
-     * Show the overlay
-     */
-    show() {
-        if (!this.overlay) {
-            this.init();
-        }
-        this.overlay.style.display = 'flex';
-    }
-
-    /**
-     * Hide the overlay
-     */
-    hide() {
-        if (this.overlay) {
-            this.overlay.style.display = 'none';
+    initialize() {
+        // Create the container if it doesn't exist
+        if (!document.getElementById(this.options.containerId)) {
+            const container = document.createElement('div');
+            container.id = this.options.containerId;
+            container.style.position = 'fixed';
+            container.style.top = '0';
+            container.style.left = '0';
+            container.style.width = '100%';
+            container.style.height = '100%';
+            container.style.pointerEvents = 'none'; // Allow clicks to pass through
+            container.style.zIndex = this.options.zIndex;
+            container.style.overflow = 'hidden';
+            document.body.appendChild(container);
         }
         
-        // Stop polling
-        this.stopPolling();
+        this.container = document.getElementById(this.options.containerId);
         
-        // If macro is still running, try to stop it
-        if (this.isActive && this.macroId) {
-            fetch(`/api/automation/macros/${this.macroId}/stop`, {
-                method: 'POST',
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Stopped macro:', data);
-            })
-            .catch(error => {
-                console.error('Error stopping macro:', error);
-            });
+        // Create the mouse indicator
+        this.mouseIndicator = document.createElement('div');
+        this.mouseIndicator.className = 'dry-run-mouse-indicator';
+        this.mouseIndicator.style.position = 'absolute';
+        this.mouseIndicator.style.width = `${this.options.mouseIndicatorSize}px`;
+        this.mouseIndicator.style.height = `${this.options.mouseIndicatorSize}px`;
+        this.mouseIndicator.style.borderRadius = '50%';
+        this.mouseIndicator.style.backgroundColor = this.options.mouseIndicatorColor;
+        this.mouseIndicator.style.transform = 'translate(-50%, -50%)';
+        this.mouseIndicator.style.opacity = '0.7';
+        this.mouseIndicator.style.display = 'none';
+        this.mouseIndicator.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
+        this.mouseIndicator.style.transition = 'all 0.2s ease-out';
+        this.container.appendChild(this.mouseIndicator);
+        
+        // Create the coordinates display
+        if (this.options.showCoordinates) {
+            this.coordinatesDisplay = document.createElement('div');
+            this.coordinatesDisplay.className = 'dry-run-coordinates';
+            this.coordinatesDisplay.style.position = 'absolute';
+            this.coordinatesDisplay.style.backgroundColor = 'rgba(0,0,0,0.7)';
+            this.coordinatesDisplay.style.color = 'white';
+            this.coordinatesDisplay.style.padding = '5px';
+            this.coordinatesDisplay.style.borderRadius = '3px';
+            this.coordinatesDisplay.style.fontSize = '12px';
+            this.coordinatesDisplay.style.fontFamily = 'monospace';
+            this.coordinatesDisplay.style.display = 'none';
+            this.container.appendChild(this.coordinatesDisplay);
         }
         
-        this.isActive = false;
-    }
-
-    /**
-     * Start polling for status and log updates
-     */
-    startPolling() {
-        // Poll for status every 500ms
-        this.pollingInterval = setInterval(() => {
-            fetch(`/api/automation/macros/${this.macroId}/status`)
-                .then(response => response.json())
-                .then(data => {
-                    // Update progress based on execution status
-                    this.updateExecution(data);
-                    
-                    // If execution is complete, stop polling
-                    if (data.status !== 'running') {
-                        setTimeout(() => {
-                            if (this.isActive) {
-                                // Show completion message
-                                this.actionDisplay.innerHTML = `
-                                    <div>
-                                        <span class="badge bg-${data.status === 'completed' ? 'success' : 'danger'} me-2">
-                                            ${data.status === 'completed' ? 'Completed' : 'Failed'}
-                                        </span>
-                                        <span>Macro execution ${data.status === 'completed' ? 'completed successfully' : 'failed'}</span>
-                                    </div>
-                                `;
-                                this.progressBar.style.width = '100%';
-                                
-                                // Stop polling after a delay
-                                setTimeout(() => this.stopPolling(), 5000);
-                            }
-                        }, 1000);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error polling macro status:', error);
-                });
-        }, 500);
+        // Create the keyboard indicator
+        this.keyboardIndicator = document.createElement('div');
+        this.keyboardIndicator.className = 'dry-run-keyboard-indicator';
+        this.keyboardIndicator.style.position = 'fixed';
+        this.keyboardIndicator.style.bottom = '20px';
+        this.keyboardIndicator.style.left = '50%';
+        this.keyboardIndicator.style.transform = 'translateX(-50%)';
+        this.keyboardIndicator.style.backgroundColor = 'rgba(0,0,0,0.8)';
+        this.keyboardIndicator.style.color = 'white';
+        this.keyboardIndicator.style.padding = '10px 20px';
+        this.keyboardIndicator.style.borderRadius = '5px';
+        this.keyboardIndicator.style.fontFamily = 'monospace';
+        this.keyboardIndicator.style.fontSize = '16px';
+        this.keyboardIndicator.style.maxWidth = '80%';
+        this.keyboardIndicator.style.textAlign = 'center';
+        this.keyboardIndicator.style.display = 'none';
+        this.keyboardIndicator.style.zIndex = this.options.zIndex + 1;
+        this.container.appendChild(this.keyboardIndicator);
         
-        // Update logs every 1s
-        this.logUpdateInterval = setInterval(() => {
-            if (this.logPath) {
-                fetch(`/api/automation/logs/${this.logPath}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === 'success') {
-                            this.updateLogs(data.content);
-                            
-                            // Try to determine current action from logs
-                            this.determineCurrentAction(data.content);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error fetching logs:', error);
-                    });
-            }
+        // Create the step indicator
+        this.stepIndicator = document.createElement('div');
+        this.stepIndicator.className = 'dry-run-step-indicator';
+        this.stepIndicator.style.position = 'fixed';
+        this.stepIndicator.style.top = '20px';
+        this.stepIndicator.style.right = '20px';
+        this.stepIndicator.style.backgroundColor = 'rgba(0,0,0,0.8)';
+        this.stepIndicator.style.color = 'white';
+        this.stepIndicator.style.padding = '10px 15px';
+        this.stepIndicator.style.borderRadius = '5px';
+        this.stepIndicator.style.fontFamily = 'sans-serif';
+        this.stepIndicator.style.fontSize = '14px';
+        this.stepIndicator.style.display = 'none';
+        this.stepIndicator.style.zIndex = this.options.zIndex + 1;
+        this.container.appendChild(this.stepIndicator);
+        
+        // Initialize active flag
+        this.active = false;
+    }
+    
+    /**
+     * Start the overlay
+     */
+    start() {
+        this.container.style.display = 'block';
+        this.active = true;
+        this.showStepIndicator('Starting Dry Run Simulation', 'info');
+        return this;
+    }
+    
+    /**
+     * Stop the overlay
+     */
+    stop() {
+        this.hideMouseIndicator();
+        this.hideKeyboardIndicator();
+        this.hideStepIndicator();
+        setTimeout(() => {
+            this.container.style.display = 'none';
+            this.active = false;
         }, 1000);
+        return this;
     }
-
+    
     /**
-     * Stop polling
+     * Simulate moving the mouse to a position
+     * @param {number} x - X coordinate
+     * @param {number} y - Y coordinate
+     * @param {number} duration - Duration of the movement in milliseconds
      */
-    stopPolling() {
-        if (this.pollingInterval) {
-            clearInterval(this.pollingInterval);
-            this.pollingInterval = null;
-        }
+    moveMouse(x, y, duration = 500) {
+        if (!this.active) return this;
         
-        if (this.logUpdateInterval) {
-            clearInterval(this.logUpdateInterval);
-            this.logUpdateInterval = null;
-        }
-    }
-
-    /**
-     * Update execution progress based on status data
-     * 
-     * @param {Object} statusData - Status data from API
-     */
-    updateExecution(statusData) {
-        // Display runtime
-        const runtime = statusData.runtime ? Math.round(statusData.runtime) : 0;
+        this.mouseIndicator.style.display = 'block';
         
-        // Check if we have current_step information from the server
-        if (statusData.current_step !== undefined && this.actions.length > 0) {
-            const currentStep = Math.min(statusData.current_step, this.actions.length);
+        // Create a smooth animation to the target position
+        const start = {
+            x: parseInt(this.mouseIndicator.style.left) || 0,
+            y: parseInt(this.mouseIndicator.style.top) || 0
+        };
+        
+        const end = { x, y };
+        const startTime = performance.now();
+        
+        const updatePosition = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
             
-            // Update current action index
-            if (currentStep > 0 && currentStep - 1 !== this.currentActionIndex) {
-                this.currentActionIndex = currentStep - 1;
-                
-                // Show the current action
-                if (this.currentActionIndex >= 0 && this.currentActionIndex < this.actions.length) {
-                    this.showAction(this.actions[this.currentActionIndex]);
-                }
+            // Easing function (ease-out cubic)
+            const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+            const easedProgress = easeOut(progress);
+            
+            const currentX = start.x + (end.x - start.x) * easedProgress;
+            const currentY = start.y + (end.y - start.y) * easedProgress;
+            
+            this.mouseIndicator.style.left = `${currentX}px`;
+            this.mouseIndicator.style.top = `${currentY}px`;
+            
+            if (this.options.showCoordinates) {
+                this.coordinatesDisplay.textContent = `X: ${Math.round(currentX)}, Y: ${Math.round(currentY)}`;
+                this.coordinatesDisplay.style.display = 'block';
+                this.coordinatesDisplay.style.left = `${currentX + 20}px`;
+                this.coordinatesDisplay.style.top = `${currentY}px`;
             }
             
-            // Update progress bar
-            const progress = (currentStep / this.actions.length) * 100;
-            this.progressBar.style.width = `${progress}%`;
+            if (progress < 1) {
+                requestAnimationFrame(updatePosition);
+            }
+        };
+        
+        requestAnimationFrame(updatePosition);
+        return this;
+    }
+    
+    /**
+     * Simulate a mouse click
+     * @param {number} x - X coordinate
+     * @param {number} y - Y coordinate
+     * @param {string} button - Mouse button ('left', 'right', 'middle')
+     */
+    clickMouse(x, y, button = 'left') {
+        if (!this.active) return this;
+        
+        // Move the mouse to the click position
+        this.moveMouse(x, y, 300);
+        
+        // Create a ripple effect
+        setTimeout(() => {
+            const ripple = document.createElement('div');
+            ripple.className = 'dry-run-click-ripple';
+            ripple.style.position = 'absolute';
+            ripple.style.left = `${x}px`;
+            ripple.style.top = `${y}px`;
+            ripple.style.width = '0';
+            ripple.style.height = '0';
+            ripple.style.borderRadius = '50%';
+            ripple.style.backgroundColor = this.options.clickRippleColor;
+            ripple.style.transform = 'translate(-50%, -50%)';
+            ripple.style.opacity = '0.7';
+            ripple.style.transition = `all ${this.options.clickRippleDuration / 1000}s ease-out`;
+            this.container.appendChild(ripple);
             
-            // Display step progress
-            const progressText = document.createElement('div');
-            progressText.className = 'mt-2 text-muted d-flex justify-content-between';
-            progressText.innerHTML = `
-                <span>Runtime: ${runtime}s</span>
-                <span>Step ${currentStep}/${this.actions.length}</span>
-            `;
+            // Show different styles for different buttons
+            let borderColor;
+            if (button === 'right') {
+                borderColor = '#2196F3'; // Blue for right click
+                this.showStepIndicator('Right Click', 'action');
+            } else if (button === 'middle') {
+                borderColor = '#4CAF50'; // Green for middle click
+                this.showStepIndicator('Middle Click', 'action');
+            } else {
+                borderColor = '#FF5722'; // Orange for left click
+                this.showStepIndicator('Left Click', 'action');
+            }
             
-            // Add to action display
-            const progressInfo = this.actionDisplay.querySelector('.progress-info');
-            if (progressInfo) {
-                progressInfo.remove();
-            }
-            progressText.classList.add('progress-info');
-            this.actionDisplay.appendChild(progressText);
-        } else {
-            // Fallback to the original progress calculation logic
-            if (this.currentActionIndex >= 0 && this.currentActionIndex < this.actions.length) {
-                const progress = ((this.currentActionIndex + 1) / this.actions.length) * 100;
-                this.progressBar.style.width = `${progress}%`;
+            // Highlight the mouse indicator
+            this.mouseIndicator.style.borderColor = borderColor;
+            this.mouseIndicator.style.borderWidth = '2px';
+            this.mouseIndicator.style.borderStyle = 'solid';
+            this.mouseIndicator.style.transform = 'translate(-50%, -50%) scale(1.2)';
+            
+            // Animate the ripple
+            setTimeout(() => {
+                ripple.style.width = '50px';
+                ripple.style.height = '50px';
+                ripple.style.opacity = '0';
                 
-                // Display runtime only
-                const runtimeDisplay = document.createElement('div');
-                runtimeDisplay.className = 'mt-2 text-muted progress-info';
-                runtimeDisplay.innerHTML = `Runtime: ${runtime}s`;
-                
-                // Add to action display
-                const progressInfo = this.actionDisplay.querySelector('.progress-info');
-                if (progressInfo) {
-                    progressInfo.remove();
-                }
-                this.actionDisplay.appendChild(runtimeDisplay);
-            }
-        }
+                // Reset the mouse indicator
+                setTimeout(() => {
+                    this.mouseIndicator.style.borderWidth = '0';
+                    this.mouseIndicator.style.transform = 'translate(-50%, -50%)';
+                    
+                    // Remove the ripple
+                    setTimeout(() => {
+                        this.container.removeChild(ripple);
+                    }, 100);
+                }, 300);
+            }, 10);
+        }, 300); // Wait for the mouse to move
+        
+        return this;
     }
-
+    
     /**
-     * Update the log display
-     * 
-     * @param {string} logContent - Content of the log
+     * Simulate keyboard input
+     * @param {string} text - Text or key to display
+     * @param {string} type - Type of keyboard input ('text', 'key')
      */
-    updateLogs(logContent) {
-        // Split log content into lines for better formatting
-        const logLines = logContent.split('\n');
+    simulateKeyboard(text, type = 'text') {
+        if (!this.active) return this;
         
-        // Take last 20 lines
-        const lastLines = logLines.slice(-20);
-        
-        // Update log display
-        this.logDisplay.textContent = lastLines.join('\n');
-        
-        // Scroll to bottom
-        this.logDisplay.scrollTop = this.logDisplay.scrollHeight;
-    }
-
-    /**
-     * Determine the current action from log content
-     * 
-     * @param {string} logContent - Content of the log
-     */
-    determineCurrentAction(logContent) {
-        // This function is only used as a fallback when we don't get step information from the API
-        // We now primarily rely on the step information provided by the backend
-        
-        // Try to determine the current step from log content
-        const logLines = logContent.split('\n');
-        const executingStepLines = logLines.filter(line => line.includes('Executing step'));
-        
-        if (executingStepLines.length > 0) {
-            // Extract step numbers if available
-            const stepMatches = executingStepLines[executingStepLines.length - 1].match(/Executing step (\d+)/);
-            if (stepMatches && stepMatches[1]) {
-                const stepNumber = parseInt(stepMatches[1], 10);
-                if (!isNaN(stepNumber) && stepNumber > 0 && stepNumber <= this.actions.length) {
-                    const newIndex = stepNumber - 1;
-                    if (newIndex !== this.currentActionIndex) {
-                        this.currentActionIndex = newIndex;
-                        this.showAction(this.actions[newIndex]);
-                    }
-                    return;
-                }
-            }
+        // Format the text for display
+        let displayText = text;
+        if (type === 'key') {
+            // Format special keys
+            const keyMap = {
+                'enter': '⏎ Enter',
+                'tab': '⇥ Tab',
+                'space': '␣ Space',
+                'backspace': '⌫ Backspace',
+                'escape': 'Esc',
+                'up': '↑ Up',
+                'down': '↓ Down',
+                'left': '← Left',
+                'right': '→ Right',
+            };
+            
+            displayText = keyMap[text.toLowerCase()] || text;
         }
         
-        // Fallback to simple incrementing (only use if API doesn't provide step info)
-        // This is only used for simulation in case the log format doesn't contain step information
-        // and should be removed in production when proper step tracking is implemented
-        if (!logContent.includes("currentStep") && Math.random() < 0.1) { // Only advance the step occasionally 
-            const nextIndex = this.currentActionIndex + 1;
-            if (nextIndex < this.actions.length) {
-                this.currentActionIndex = nextIndex;
-                this.showAction(this.actions[nextIndex]);
-            }
-        }
-    }
-
-    /**
-     * Show an action in the action display
-     * 
-     * @param {Object} action - Action to display
-     */
-    showAction(action) {
-        // Create action display
-        let actionHtml = '';
+        // Display the keyboard indicator
+        this.keyboardIndicator.textContent = type === 'text' ? `Typing: "${displayText}"` : `Pressing: ${displayText}`;
+        this.keyboardIndicator.style.display = 'block';
         
-        // Format based on action type
-        switch (action.type) {
-            case 'mouse_click':
-                actionHtml = `
-                    <div>
-                        <span class="badge bg-primary me-2">Click</span>
-                        <span>Position: (${action.params.x}, ${action.params.y})</span>
-                        <span class="ms-2 badge bg-secondary">${action.params.button} button</span>
-                    </div>
-                `;
+        // Show step indicator
+        this.showStepIndicator(type === 'text' ? `Typing text` : `Pressing ${displayText}`, 'action');
+        
+        // Auto-hide after a delay
+        clearTimeout(this.keyboardTimeout);
+        this.keyboardTimeout = setTimeout(() => {
+            this.hideKeyboardIndicator();
+        }, this.options.keyboardIndicatorDuration);
+        
+        return this;
+    }
+    
+    /**
+     * Simulate waiting
+     * @param {number} seconds - Seconds to wait
+     */
+    simulateWait(seconds) {
+        if (!this.active) return this;
+        
+        this.showStepIndicator(`Waiting for ${seconds} second${seconds !== 1 ? 's' : ''}`, 'wait');
+        
+        return this;
+    }
+    
+    /**
+     * Show a step indicator
+     * @param {string} text - Text to display
+     * @param {string} type - Type of step ('info', 'action', 'wait', 'error')
+     */
+    showStepIndicator(text, type = 'info') {
+        if (!this.active) return this;
+        
+        // Style based on type
+        let bgColor, icon;
+        switch (type) {
+            case 'action':
+                bgColor = 'rgba(33, 150, 243, 0.9)'; // Blue
+                icon = '▶';
                 break;
-                
-            case 'mouse_move':
-                actionHtml = `
-                    <div>
-                        <span class="badge bg-info me-2">Move</span>
-                        <span>Position: (${action.params.x}, ${action.params.y})</span>
-                    </div>
-                `;
-                break;
-                
-            case 'keyboard_type':
-                actionHtml = `
-                    <div>
-                        <span class="badge bg-success me-2">Type</span>
-                        <span>"${action.params.text}"</span>
-                    </div>
-                `;
-                break;
-                
-            case 'keyboard_press':
-                actionHtml = `
-                    <div>
-                        <span class="badge bg-warning me-2">Press</span>
-                        <span>Key: ${action.params.key}</span>
-                    </div>
-                `;
-                break;
-                
             case 'wait':
-                actionHtml = `
-                    <div>
-                        <span class="badge bg-secondary me-2">Wait</span>
-                        <span>${action.params.seconds} seconds</span>
-                    </div>
-                `;
+                bgColor = 'rgba(255, 152, 0, 0.9)'; // Orange
+                icon = '⏱';
                 break;
-                
-            case 'window_focus':
-                actionHtml = `
-                    <div>
-                        <span class="badge bg-dark me-2">Focus</span>
-                        <span>Window: "${action.params.title}"</span>
-                    </div>
-                `;
+            case 'error':
+                bgColor = 'rgba(244, 67, 54, 0.9)'; // Red
+                icon = '⚠';
                 break;
-                
+            case 'info':
             default:
-                actionHtml = `
-                    <div>
-                        <span class="badge bg-secondary me-2">${action.type}</span>
-                        <span>${JSON.stringify(action.params)}</span>
-                    </div>
-                `;
+                bgColor = 'rgba(0, 0, 0, 0.8)'; // Black
+                icon = 'ℹ';
+                break;
         }
         
-        // Update display
-        this.actionDisplay.innerHTML = actionHtml;
+        this.stepIndicator.style.backgroundColor = bgColor;
+        this.stepIndicator.innerHTML = `<span style="margin-right: 8px;">${icon}</span> ${text}`;
+        this.stepIndicator.style.display = 'block';
         
-        // Add highlight animation
-        this.actionDisplay.classList.remove('action-highlight');
-        void this.actionDisplay.offsetWidth; // Trigger reflow
-        this.actionDisplay.classList.add('action-highlight');
+        // Animate in
+        this.stepIndicator.style.opacity = '0';
+        this.stepIndicator.style.transform = 'translateY(-20px)';
+        this.stepIndicator.style.transition = 'all 0.3s ease-out';
+        
+        setTimeout(() => {
+            this.stepIndicator.style.opacity = '1';
+            this.stepIndicator.style.transform = 'translateY(0)';
+        }, 10);
+        
+        return this;
+    }
+    
+    /**
+     * Hide the mouse indicator
+     */
+    hideMouseIndicator() {
+        this.mouseIndicator.style.display = 'none';
+        if (this.options.showCoordinates) {
+            this.coordinatesDisplay.style.display = 'none';
+        }
+        return this;
+    }
+    
+    /**
+     * Hide the keyboard indicator
+     */
+    hideKeyboardIndicator() {
+        this.keyboardIndicator.style.display = 'none';
+        return this;
+    }
+    
+    /**
+     * Hide the step indicator
+     */
+    hideStepIndicator() {
+        // Animate out
+        this.stepIndicator.style.opacity = '0';
+        this.stepIndicator.style.transform = 'translateY(-20px)';
+        
+        setTimeout(() => {
+            this.stepIndicator.style.display = 'none';
+        }, 300);
+        
+        return this;
     }
 }
 
-// Create global instance
-window.dryRunOverlay = new DryRunOverlay();
+// Make available globally
+window.DryRunOverlay = DryRunOverlay;

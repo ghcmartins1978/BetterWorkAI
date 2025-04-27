@@ -1533,6 +1533,103 @@ def yaml_compiler():
     """UI for testing the YAML to TagUI compiler"""
     return render_template('yaml_compiler.html')
 
+# Dry Run Overlay test route
+@app.route('/dry-run-overlay')
+def dry_run_overlay():
+    """Test page for the Dry Run Overlay feature"""
+    return render_template('dry_run_overlay.html')
+
+# Test Macro Execution route
+@app.route('/test-macro-execution')
+def test_macro_execution():
+    """Test page for macro execution"""
+    # Load the sample macro from the test file
+    try:
+        from automation_macros import AutomationMacro
+        import yaml
+        
+        # Ensure the data directories exist
+        os.makedirs("data/macros", exist_ok=True)
+        os.makedirs("logs", exist_ok=True)
+        
+        # Check if the test macro exists
+        test_macro_path = "data/macros/test_macro.yaml"
+        if not os.path.exists(test_macro_path):
+            # Create the test macro if it doesn't exist
+            test_macro = {
+                "metadata": {
+                    "name": "Test Macro",
+                    "description": "A simple test macro for validating the execution process",
+                    "id": "test_macro",
+                    "tags": ["test", "demo"],
+                    "created_at": int(time.time()),
+                    "updated_at": int(time.time()),
+                },
+                "variables": {
+                    "text_to_type": "Hello from BettermanAI!",
+                    "wait_time": 1,
+                },
+                "steps": [
+                    {
+                        "action": "focus",
+                        "window": "Notepad",
+                    },
+                    {
+                        "action": "wait",
+                        "seconds": 1,
+                    },
+                    {
+                        "action": "click",
+                        "target": "100,100",
+                        "button": "left",
+                    },
+                    {
+                        "action": "type",
+                        "target": "page",
+                        "value": "${text_to_type}",
+                    },
+                    {
+                        "action": "keyboard",
+                        "keys": "enter",
+                    },
+                ],
+            }
+            
+            with open(test_macro_path, "w") as f:
+                yaml.dump(test_macro, f, default_flow_style=False)
+        
+        # Load the test macro
+        with open(test_macro_path, "r") as f:
+            yaml_data = yaml.safe_load(f)
+            
+        # Create an AutomationMacro object
+        metadata = yaml_data.get("metadata", {})
+        steps = []
+        
+        # Convert the steps to the internal format
+        for step in yaml_data.get("steps", []):
+            if "action" in step:
+                action_type = step["action"]
+                params = {k: v for k, v in step.items() if k != "action"}
+                steps.append({"type": action_type, "params": params})
+        
+        macro = AutomationMacro(
+            name=metadata.get("name", "Unnamed Macro"),
+            description=metadata.get("description", ""),
+            steps=steps,
+            macro_id=metadata.get("id"),
+            variables=yaml_data.get("variables", {}),
+            tags=metadata.get("tags", []),
+            created_at=metadata.get("created_at"),
+            updated_at=metadata.get("updated_at"),
+        )
+        
+        return render_template("test_macro_execution.html", macro=macro.to_dict())
+    except Exception as e:
+        logger.error(f"Error loading test macro: {e}")
+        flash(f"Error loading test macro: {e}", "danger")
+        return redirect(url_for("automation"))
+
 # TagUI Automation API Routes
 from automation_macros import (
     list_macros, get_macro, save_macro, delete_macro,
@@ -1663,6 +1760,25 @@ def api_get_log_content(log_path):
             'status': 'error',
             'message': str(e)
         })
+
+
+@app.route('/api/logs', methods=['GET'])
+def get_log_content_direct():
+    """API endpoint to get the content of a log file directly (for test pages)"""
+    try:
+        log_path = request.args.get('path')
+        if not log_path:
+            return "No log path provided", 400
+        
+        from automation_macros import get_log_content
+        content = get_log_content(log_path)
+        if content is None:
+            return "Log file not found", 404
+        
+        return content
+    except Exception as e:
+        logger.error(f"Error getting log content: {e}")
+        return f"Error getting log content: {e}", 500
 
 @app.route('/api/automation/sample', methods=['POST'])
 def api_create_sample_macro():

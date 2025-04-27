@@ -1,0 +1,222 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Dry Run Overlay Test
+{% endblock %}
+
+{% block head %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/dry-run-overlay.js') }}"></script>
+<style>
+    .demo-section {
+        margin-bottom: 30px;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: #f8f9fa;
+    }
+    
+    .demo-box {
+        width: 400px;
+        height: 300px;
+        border: 1px solid #ccc;
+        margin: 20px auto;
+        position: relative;
+        background-color: #fff;
+    }
+    
+    .demo-controls {
+        margin-top: 20px;
+    }
+    
+    pre {
+        background-color: #f5f5f5;
+        padding: 15px;
+        border-radius: 5px;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Dry Run Overlay Test (Ticket A3)</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <p>This page demonstrates the Dry Run Overlay feature, which provides visual feedback during macro execution in dry-run mode.</p>
+                        <p>The overlay displays indicators for mouse movements, clicks, keyboard input, and other actions to help users understand what the macro is doing.</p>
+                    </div>
+                    
+                    <div class="demo-section">
+                        <h5>Mouse Movement and Click Demo</h5>
+                        <div class="demo-box" id="mouse-demo-box">
+                            <div class="text-center text-muted position-absolute" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                                Mouse interaction area
+                            </div>
+                        </div>
+                        <div class="demo-controls text-center">
+                            <button class="btn btn-primary" id="demo-mouse-move">Demonstrate Mouse Move</button>
+                            <button class="btn btn-success" id="demo-mouse-click">Demonstrate Mouse Click</button>
+                            <button class="btn btn-info" id="demo-right-click">Demonstrate Right Click</button>
+                        </div>
+                    </div>
+                    
+                    <div class="demo-section">
+                        <h5>Keyboard Input Demo</h5>
+                        <div class="demo-controls text-center">
+                            <button class="btn btn-primary" id="demo-text-input">Demonstrate Text Input</button>
+                            <button class="btn btn-success" id="demo-key-press">Demonstrate Key Press</button>
+                        </div>
+                    </div>
+                    
+                    <div class="demo-section">
+                        <h5>Complete Macro Simulation</h5>
+                        <div class="demo-controls text-center">
+                            <button class="btn btn-danger" id="demo-full-macro">Run Full Macro Simulation</button>
+                        </div>
+                        <div class="mt-3">
+                            <h6>Sample Macro:</h6>
+                            <pre>
+metadata:
+  name: Test Macro
+  description: A simple test macro for validating the execution process
+  
+steps:
+  - action: focus
+    window: Notepad
+  - action: wait
+    seconds: 1
+  - action: click
+    target: 100,100
+    button: left
+  - action: type
+    target: page
+    value: Hello from BettermanAI!
+  - action: keyboard
+    keys: enter</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the overlay
+    const overlay = new DryRunOverlay();
+    
+    // Get demo elements
+    const mouseBox = document.getElementById('mouse-demo-box');
+    const mouseMoveBtn = document.getElementById('demo-mouse-move');
+    const mouseClickBtn = document.getElementById('demo-mouse-click');
+    const rightClickBtn = document.getElementById('demo-right-click');
+    const textInputBtn = document.getElementById('demo-text-input');
+    const keyPressBtn = document.getElementById('demo-key-press');
+    const fullMacroBtn = document.getElementById('demo-full-macro');
+    
+    // Get mouse box position for relative coordinates
+    function getBoxCoordinates() {
+        const rect = mouseBox.getBoundingClientRect();
+        return {
+            left: rect.left,
+            top: rect.top,
+            width: rect.width,
+            height: rect.height
+        };
+    }
+    
+    // Demonstrate mouse movement
+    mouseMoveBtn.addEventListener('click', function() {
+        overlay.start();
+        
+        const box = getBoxCoordinates();
+        const centerX = box.left + box.width / 2;
+        const centerY = box.top + box.height / 2;
+        
+        // Move in a square pattern
+        setTimeout(() => overlay.moveMouse(box.left + 50, box.top + 50), 500);
+        setTimeout(() => overlay.moveMouse(box.left + box.width - 50, box.top + 50), 1500);
+        setTimeout(() => overlay.moveMouse(box.left + box.width - 50, box.top + box.height - 50), 2500);
+        setTimeout(() => overlay.moveMouse(box.left + 50, box.top + box.height - 50), 3500);
+        setTimeout(() => overlay.moveMouse(centerX, centerY), 4500);
+        setTimeout(() => overlay.stop(), 5500);
+    });
+    
+    // Demonstrate mouse click
+    mouseClickBtn.addEventListener('click', function() {
+        overlay.start();
+        
+        const box = getBoxCoordinates();
+        const centerX = box.left + box.width / 2;
+        const centerY = box.top + box.height / 2;
+        
+        setTimeout(() => overlay.clickMouse(centerX, centerY), 500);
+        setTimeout(() => overlay.stop(), 2000);
+    });
+    
+    // Demonstrate right click
+    rightClickBtn.addEventListener('click', function() {
+        overlay.start();
+        
+        const box = getBoxCoordinates();
+        const centerX = box.left + box.width / 2;
+        const centerY = box.top + box.height / 2;
+        
+        setTimeout(() => overlay.clickMouse(centerX, centerY, 'right'), 500);
+        setTimeout(() => overlay.stop(), 2000);
+    });
+    
+    // Demonstrate text input
+    textInputBtn.addEventListener('click', function() {
+        overlay.start();
+        overlay.simulateKeyboard('Hello from BettermanAI!');
+        setTimeout(() => overlay.stop(), 3000);
+    });
+    
+    // Demonstrate key press
+    keyPressBtn.addEventListener('click', function() {
+        overlay.start();
+        overlay.simulateKeyboard('enter', 'key');
+        setTimeout(() => overlay.stop(), 3000);
+    });
+    
+    // Demonstrate full macro simulation
+    fullMacroBtn.addEventListener('click', function() {
+        overlay.start();
+        
+        const box = getBoxCoordinates();
+        const clickX = box.left + 100;
+        const clickY = box.top + 100;
+        
+        // Step 1: Focus on window
+        overlay.showStepIndicator('Focusing on "Notepad"', 'action');
+        
+        // Step 2: Wait 1 second
+        setTimeout(() => overlay.simulateWait(1), 1000);
+        
+        // Step 3: Mouse click
+        setTimeout(() => overlay.clickMouse(clickX, clickY), 2000);
+        
+        // Step 4: Type text
+        setTimeout(() => overlay.simulateKeyboard('Hello from BettermanAI!'), 3500);
+        
+        // Step 5: Press Enter
+        setTimeout(() => overlay.simulateKeyboard('enter', 'key'), 5000);
+        
+        // Complete
+        setTimeout(() => {
+            overlay.showStepIndicator('Macro execution completed', 'info');
+            setTimeout(() => overlay.stop(), 1000);
+        }, 6000);
+    });
+});
+</script>
+{% endblock %}

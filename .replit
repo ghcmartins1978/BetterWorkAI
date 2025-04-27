@@ -2,7 +2,7 @@ modules = ["python-3.11", "postgresql-16"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["openssl", "postgresql", "scrot", "xvfb-run"]
+packages = ["libsndfile", "openssl", "portaudio", "postgresql", "scrot", "xvfb-run"]
 
 [deployment]
 deploymentTarget = "autoscale"

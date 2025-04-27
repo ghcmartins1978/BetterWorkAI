@@ -1,0 +1,402 @@
+{% extends "layout.html" %}
+
+{% block title %}Audio Settings | BettermanAI{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Audio Settings</h1>
+            <p class="text-muted">Configure microphone capture and speech-to-text settings</p>
+        </div>
+        <div class="col-auto">
+            <div class="form-check form-switch mt-2">
+                <input class="form-check-input" type="checkbox" id="audioEnabledSwitch" {% if settings.get('audio_enabled', False) %}checked{% endif %}>
+                <label class="form-check-label" for="audioEnabledSwitch">Enable Audio Capture</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Microphone Settings</h5>
+        </div>
+        <div class="card-body">
+            <form id="audioSettingsForm">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="bufferSize" class="form-label">Audio Buffer Size (seconds)</label>
+                            <input type="number" class="form-control" id="bufferSize" 
+                                   value="{{ settings.get('audio_buffer_size', 15) }}" min="5" max="60">
+                            <div class="form-text">Maximum length of audio to keep in the ring buffer</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="captureMode" class="form-label">Capture Mode</label>
+                            <select class="form-select" id="captureMode">
+                                <option value="manual" {% if settings.get('audio_capture_mode') == 'manual' %}selected{% endif %}>Manual (On demand)</option>
+                                <option value="continuous" {% if settings.get('audio_capture_mode') == 'continuous' %}selected{% endif %}>Continuous (Always on)</option>
+                                <option value="trigger" {% if settings.get('audio_capture_mode') == 'trigger' %}selected{% endif %}>Keyword Triggered</option>
+                            </select>
+                            <div class="form-text">How audio should be captured and processed</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="sttEngine" class="form-label">Speech-to-Text Engine</label>
+                            <select class="form-select" id="sttEngine">
+                                <option value="openai" {% if settings.get('audio_stt_engine') == 'openai' %}selected{% endif %}>OpenAI Whisper</option>
+                                <option value="local" {% if settings.get('audio_stt_engine') == 'local' %}selected{% endif %}>Local Model</option>
+                            </select>
+                            <div class="form-text">Speech recognition engine to use</div>
+                        </div>
+                        
+                        <div class="mb-3" id="openaiApiKeyDiv" style="{% if settings.get('audio_stt_engine') != 'openai' %}display: none;{% endif %}">
+                            <label for="openaiApiKey" class="form-label">OpenAI API Key</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="openaiApiKey" placeholder="Enter OpenAI API Key">
+                                <button class="btn btn-outline-secondary" type="button" id="saveApiKey">Save</button>
+                            </div>
+                            <div class="form-text">Required for OpenAI Whisper. Will be stored securely.</div>
+                        </div>
+                        
+                        <div class="mb-3" id="localModelDiv" style="{% if settings.get('audio_stt_engine') != 'local' %}display: none;{% endif %}">
+                            <label for="localModelPath" class="form-label">Local STT Model Path</label>
+                            <input type="text" class="form-control" id="localModelPath" 
+                                   value="{{ settings.get('audio_local_model_path', '') }}" placeholder="/path/to/model">
+                            <div class="form-text">Path to local speech-to-text model</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="privacyMode" 
+                           {% if settings.get('audio_privacy_mode', True) %}checked{% endif %}>
+                    <label class="form-check-label" for="privacyMode">Privacy Mode</label>
+                    <div class="form-text">When enabled, audio is processed locally and not stored permanently</div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Save Settings</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Microphone Test</h5>
+        </div>
+        <div class="card-body">
+            <div class="d-flex justify-content-center mb-3">
+                <div class="btn-group">
+                    <button id="startCapture" class="btn btn-success" {% if not settings.get('audio_enabled', False) %}disabled{% endif %}>
+                        <i class="bi bi-mic-fill me-1"></i> Start Capture
+                    </button>
+                    <button id="stopCapture" class="btn btn-danger" disabled>
+                        <i class="bi bi-stop-fill me-1"></i> Stop
+                    </button>
+                    <button id="transcribeAudio" class="btn btn-primary" disabled>
+                        <i class="bi bi-chat-square-text-fill me-1"></i> Transcribe
+                    </button>
+                </div>
+            </div>
+            
+            <div class="progress mb-3" style="height: 30px;">
+                <div id="audioLevelBar" class="progress-bar progress-bar-striped" role="progressbar" style="width: 0%"></div>
+            </div>
+            
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">Transcription Result</h6>
+                    <div id="transcriptionResult" class="p-3 border rounded bg-white" style="min-height: 100px;">
+                        <p class="text-muted">No transcription available yet. Click "Transcribe" to convert speech to text.</p>
+                    </div>
+                    <div class="mt-2 text-end">
+                        <small class="text-muted" id="transcriptionDetails"></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle settings form
+        const audioSettingsForm = document.getElementById('audioSettingsForm');
+        const enabledSwitch = document.getElementById('audioEnabledSwitch');
+        const sttEngine = document.getElementById('sttEngine');
+        const openaiApiKeyDiv = document.getElementById('openaiApiKeyDiv');
+        const localModelDiv = document.getElementById('localModelDiv');
+        const saveApiKeyBtn = document.getElementById('saveApiKey');
+        const openaiApiKeyInput = document.getElementById('openaiApiKey');
+        
+        // Audio capture buttons
+        const startCaptureBtn = document.getElementById('startCapture');
+        const stopCaptureBtn = document.getElementById('stopCapture');
+        const transcribeBtn = document.getElementById('transcribeAudio');
+        const audioLevelBar = document.getElementById('audioLevelBar');
+        const transcriptionResult = document.getElementById('transcriptionResult');
+        const transcriptionDetails = document.getElementById('transcriptionDetails');
+        
+        // Handle showing/hiding STT engine specific settings
+        sttEngine.addEventListener('change', function() {
+            if (this.value === 'openai') {
+                openaiApiKeyDiv.style.display = 'block';
+                localModelDiv.style.display = 'none';
+            } else {
+                openaiApiKeyDiv.style.display = 'none';
+                localModelDiv.style.display = 'block';
+            }
+        });
+        
+        // Handle save API key button
+        saveApiKeyBtn.addEventListener('click', function() {
+            const apiKey = openaiApiKeyInput.value.trim();
+            if (!apiKey) {
+                showToast('Please enter an API key', 'error');
+                return;
+            }
+            
+            fetch('/api/settings/openai_api_key', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    api_key: apiKey
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('API key saved successfully');
+                    openaiApiKeyInput.value = '';
+                } else {
+                    showToast('Error saving API key', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error saving API key', 'error');
+            });
+        });
+        
+        // Handle enable/disable audio switch
+        enabledSwitch.addEventListener('change', function() {
+            const enabled = this.checked;
+            
+            fetch('/api/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    settings: {
+                        'audio_enabled': enabled
+                    }
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(enabled ? 'Audio capture enabled' : 'Audio capture disabled');
+                    startCaptureBtn.disabled = !enabled;
+                } else {
+                    showToast('Error updating setting', 'error');
+                    this.checked = !enabled;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error updating setting', 'error');
+                this.checked = !enabled;
+            });
+        });
+        
+        // Handle settings form submission
+        if (audioSettingsForm) {
+            audioSettingsForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const bufferSize = document.getElementById('bufferSize').value;
+                const captureMode = document.getElementById('captureMode').value;
+                const sttEngine = document.getElementById('sttEngine').value;
+                const localModelPath = document.getElementById('localModelPath').value;
+                const privacyMode = document.getElementById('privacyMode').checked;
+                
+                fetch('/api/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        settings: {
+                            'audio_buffer_size': parseInt(bufferSize),
+                            'audio_capture_mode': captureMode,
+                            'audio_stt_engine': sttEngine,
+                            'audio_local_model_path': localModelPath,
+                            'audio_privacy_mode': privacyMode
+                        }
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Audio settings updated');
+                    } else {
+                        showToast('Error updating settings', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error updating settings', 'error');
+                });
+            });
+        }
+        
+        // Handle audio capture buttons
+        startCaptureBtn.addEventListener('click', function() {
+            startCaptureBtn.disabled = true;
+            stopCaptureBtn.disabled = false;
+            transcribeBtn.disabled = true;
+            
+            fetch('/api/audio/start_capture', {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Audio capture started');
+                    // Start the audio level animation
+                    simulateAudioLevels();
+                } else {
+                    showToast('Error starting audio capture: ' + data.error, 'error');
+                    startCaptureBtn.disabled = false;
+                    stopCaptureBtn.disabled = true;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error starting audio capture', 'error');
+                startCaptureBtn.disabled = false;
+                stopCaptureBtn.disabled = true;
+            });
+        });
+        
+        stopCaptureBtn.addEventListener('click', function() {
+            stopCaptureBtn.disabled = true;
+            
+            fetch('/api/audio/stop_capture', {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Audio capture stopped');
+                    startCaptureBtn.disabled = false;
+                    transcribeBtn.disabled = false;
+                    
+                    // Stop the audio level animation
+                    stopAudioLevelAnimation();
+                } else {
+                    showToast('Error stopping audio capture: ' + data.error, 'error');
+                    stopCaptureBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error stopping audio capture', 'error');
+                stopCaptureBtn.disabled = false;
+            });
+        });
+        
+        transcribeBtn.addEventListener('click', function() {
+            transcribeBtn.disabled = true;
+            transcriptionResult.innerHTML = '<p class="text-muted"><i class="bi bi-hourglass-split me-2"></i>Transcribing audio...</p>';
+            
+            fetch('/api/audio/transcribe', {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    transcriptionResult.innerHTML = `<p>${data.text || "No speech detected"}</p>`;
+                    transcriptionDetails.textContent = `Engine: ${data.engine}, Duration: ${data.duration || "unknown"}, Timestamp: ${new Date(data.timestamp).toLocaleString()}`;
+                } else {
+                    transcriptionResult.innerHTML = `<p class="text-danger">Error: ${data.error}</p>`;
+                    transcriptionDetails.textContent = '';
+                }
+                transcribeBtn.disabled = false;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                transcriptionResult.innerHTML = '<p class="text-danger">Error transcribing audio</p>';
+                transcriptionDetails.textContent = '';
+                transcribeBtn.disabled = false;
+            });
+        });
+        
+        // Simulate audio levels for visualization
+        let animationInterval = null;
+        
+        function simulateAudioLevels() {
+            if (animationInterval) {
+                clearInterval(animationInterval);
+            }
+            
+            animationInterval = setInterval(() => {
+                const level = Math.floor(Math.random() * 100);
+                audioLevelBar.style.width = `${level}%`;
+                
+                if (level < 20) {
+                    audioLevelBar.className = 'progress-bar progress-bar-striped bg-info';
+                } else if (level < 60) {
+                    audioLevelBar.className = 'progress-bar progress-bar-striped bg-success';
+                } else if (level < 85) {
+                    audioLevelBar.className = 'progress-bar progress-bar-striped bg-warning';
+                } else {
+                    audioLevelBar.className = 'progress-bar progress-bar-striped bg-danger';
+                }
+            }, 200);
+        }
+        
+        function stopAudioLevelAnimation() {
+            if (animationInterval) {
+                clearInterval(animationInterval);
+                animationInterval = null;
+            }
+            audioLevelBar.style.width = '0%';
+        }
+    });
+    
+    // Show toast notification
+    function showToast(message, type = 'success') {
+        const toastEl = document.createElement('div');
+        toastEl.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0 position-fixed bottom-0 end-0 m-3`;
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+        
+        toastEl.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        
+        document.body.appendChild(toastEl);
+        const toast = new bootstrap.Toast(toastEl, { autohide: true, delay: 3000 });
+        toast.show();
+        
+        toastEl.addEventListener('hidden.bs.toast', function () {
+            toastEl.remove();
+        });
+    }
+</script>
+{% endblock %}

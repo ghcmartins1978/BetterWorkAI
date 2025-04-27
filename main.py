@@ -1038,6 +1038,114 @@ def privacy():
     """Privacy information"""
     return render_template('privacy.html')
 
+@app.route('/audio')
+def audio_settings():
+    """Audio settings page"""
+    all_settings = {}
+    for setting in db_session.query(Setting).all():
+        if setting.name.startswith('audio_'):
+            if setting.value_type == 'boolean':
+                all_settings[setting.name] = setting.value.lower() == 'true'
+            elif setting.value_type == 'number':
+                all_settings[setting.name] = float(setting.value)
+                if all_settings[setting.name].is_integer():
+                    all_settings[setting.name] = int(all_settings[setting.name])
+            else:
+                all_settings[setting.name] = setting.value
+    
+    # Check if we have an OpenAI API key
+    api_key_exists = bool(os.environ.get("OPENAI_API_KEY"))
+    all_settings['openai_api_key_exists'] = api_key_exists
+    
+    return render_template('audio_settings.html', settings=all_settings)
+
+@app.route('/api/audio/start_capture', methods=['POST'])
+def start_audio_capture():
+    """Start audio capture"""
+    from audio_capture import AudioCapture
+    
+    # Check if audio is enabled
+    if not settings.get_setting('audio_enabled', default=False):
+        return jsonify({'success': False, 'error': 'Audio capture is disabled in settings'})
+    
+    try:
+        # Initialize audio capture
+        audio_buffer_size = settings.get_setting('audio_buffer_size', default=15)
+        local_model = settings.get_setting('audio_local_model_path', default='')
+        
+        audio_capture = AudioCapture(settings, buffer_size=audio_buffer_size, 
+                               local_stt_model=local_model if local_model else None)
+        
+        # Store in app context for reuse
+        app.config['AUDIO_CAPTURE'] = audio_capture
+        
+        # Start capturing
+        audio_capture.start_capture()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error starting audio capture: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/audio/stop_capture', methods=['POST'])
+def stop_audio_capture():
+    """Stop audio capture"""
+    audio_capture = app.config.get('AUDIO_CAPTURE')
+    
+    if not audio_capture:
+        return jsonify({'success': False, 'error': 'No active audio capture'})
+    
+    try:
+        # Stop capturing
+        audio_capture.stop_capture()
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error stopping audio capture: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/audio/transcribe', methods=['POST'])
+def transcribe_audio():
+    """Transcribe captured audio"""
+    audio_capture = app.config.get('AUDIO_CAPTURE')
+    
+    if not audio_capture:
+        return jsonify({'success': False, 'error': 'No active audio capture'})
+    
+    try:
+        # Transcribe the audio in the buffer
+        result = audio_capture.transcribe_buffer()
+        
+        # Add success flag if not present
+        if 'success' not in result:
+            result['success'] = bool(result.get('text'))
+            
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error transcribing audio: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/settings/openai_api_key', methods=['POST'])
+def save_openai_api_key():
+    """Save the OpenAI API key as an environment variable"""
+    data = request.json
+    api_key = data.get('api_key')
+    
+    if not api_key:
+        return jsonify({'success': False, 'error': 'API key is required'})
+    
+    try:
+        # Store in environment variable
+        os.environ['OPENAI_API_KEY'] = api_key
+        
+        # We don't store the key in the database for security reasons
+        # Instead, we just store a flag that it's been set
+        settings.set_setting('audio_use_openai_whisper', True)
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error saving OpenAI API key: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
 @app.route('/api/stats')
 def api_stats():
     """API endpoint to get basic stats for dashboard updates"""
@@ -1213,7 +1321,16 @@ def init_default_settings():
         'rolling_pattern_detection_time_window': 2,  # days
         'nightly_pattern_analysis_time': '03:00',  # 3 AM
         'nightly_pattern_analysis_time_window': 7,  # days
-        'nightly_pattern_analysis_min_score': 0.7
+        'nightly_pattern_analysis_min_score': 0.7,
+        
+        # Audio capture settings
+        'audio_enabled': False,
+        'audio_buffer_size': 15,  # seconds
+        'audio_capture_mode': 'manual',  # manual, continuous, trigger
+        'audio_stt_engine': 'openai',  # openai, local
+        'audio_local_model_path': '',
+        'audio_privacy_mode': True,
+        'audio_use_openai_whisper': True
     }
     
     for name, value in default_settings.items():

@@ -1,0 +1,529 @@
+{% extends "layout.html" %}
+
+{% block title %}Automation Manager{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-4">Automation Manager</h1>
+    
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Available Macros</h5>
+                    <button id="create-sample-btn" class="btn btn-primary btn-sm">Create Sample Macro</button>
+                </div>
+                <div class="card-body">
+                    <div id="macros-list" class="list-group">
+                        <div class="text-center py-3 text-muted" id="no-macros-message">
+                            No macros available. Create a sample macro or record a new one.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Macro Details</h5>
+                </div>
+                <div class="card-body">
+                    <div id="macro-details-placeholder" class="text-center py-3 text-muted">
+                        Select a macro to view details
+                    </div>
+                    <div id="macro-details" class="d-none">
+                        <h4 id="macro-name" class="mb-3"></h4>
+                        <p id="macro-description" class="text-muted mb-4"></p>
+                        
+                        <div class="mb-3">
+                            <h5>Tags</h5>
+                            <div id="macro-tags" class="d-flex flex-wrap gap-2"></div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5>Steps</h5>
+                            <div id="macro-steps" class="list-group"></div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5>Variables</h5>
+                            <div id="macro-variables">
+                                <table class="table table-striped table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="variables-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button id="run-macro-btn" class="btn btn-success">Run Macro</button>
+                            <button id="run-dry-btn" class="btn btn-outline-success">Dry Run</button>
+                            <button id="delete-macro-btn" class="btn btn-danger">Delete Macro</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Execution Log</h5>
+                </div>
+                <div class="card-body">
+                    <div id="execution-log-placeholder" class="text-center py-3 text-muted">
+                        Run a macro to see execution logs
+                    </div>
+                    <div id="execution-log" class="d-none">
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 id="execution-macro-name" class="mb-0"></h5>
+                                <span id="execution-status" class="badge bg-secondary">Not running</span>
+                            </div>
+                            <div id="execution-controls" class="mb-3 d-none">
+                                <button id="stop-macro-btn" class="btn btn-danger btn-sm">Stop Execution</button>
+                                <button id="refresh-log-btn" class="btn btn-secondary btn-sm">Refresh Log</button>
+                            </div>
+                        </div>
+                        <pre id="log-content" class="bg-dark text-light p-3 rounded" style="max-height: 400px; overflow-y: auto;"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Global variables
+    let currentMacroId = null;
+    let executionStatus = null;
+    let logPath = null;
+    let pollInterval = null;
+
+    // DOM Ready
+    $(document).ready(function() {
+        loadMacros();
+        
+        // Event listeners
+        $('#create-sample-btn').click(createSampleMacro);
+        $('#run-macro-btn').click(() => runMacro('normal'));
+        $('#run-dry-btn').click(() => runMacro('dry-run'));
+        $('#delete-macro-btn').click(deleteMacro);
+        $('#stop-macro-btn').click(stopMacro);
+        $('#refresh-log-btn').click(refreshLog);
+    });
+    
+    // Load macros
+    function loadMacros() {
+        $.ajax({
+            url: '/api/automation/macros',
+            method: 'GET',
+            success: function(response) {
+                if (response.status === 'success') {
+                    displayMacros(response.macros);
+                } else {
+                    showAlert('Error', response.message);
+                }
+            },
+            error: function(xhr) {
+                showAlert('Error', 'Failed to load macros');
+                console.error('Error loading macros', xhr);
+            }
+        });
+    }
+    
+    // Display macros in the list
+    function displayMacros(macros) {
+        const $macrosList = $('#macros-list');
+        const $noMacrosMessage = $('#no-macros-message');
+        
+        $macrosList.empty();
+        
+        if (macros.length === 0) {
+            $noMacrosMessage.show();
+            return;
+        }
+        
+        $noMacrosMessage.hide();
+        
+        macros.forEach(macro => {
+            const $item = $(`
+                <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center macro-item" data-id="${macro.macro_id}">
+                    <div>
+                        <h5 class="mb-1">${macro.name}</h5>
+                        <p class="mb-1 text-muted">${macro.description}</p>
+                    </div>
+                    <span class="badge bg-${macro.color} rounded-pill">
+                        <i class="bi bi-${macro.icon}"></i>
+                    </span>
+                </a>
+            `);
+            
+            $item.click(function() {
+                $('.macro-item').removeClass('active');
+                $(this).addClass('active');
+                loadMacroDetails(macro.macro_id);
+            });
+            
+            $macrosList.append($item);
+        });
+    }
+    
+    // Load macro details
+    function loadMacroDetails(macroId) {
+        $.ajax({
+            url: `/api/automation/macros/${macroId}`,
+            method: 'GET',
+            success: function(response) {
+                if (response.status === 'success') {
+                    displayMacroDetails(response.macro);
+                    currentMacroId = macroId;
+                } else {
+                    showAlert('Error', response.message);
+                }
+            },
+            error: function(xhr) {
+                showAlert('Error', 'Failed to load macro details');
+                console.error('Error loading macro details', xhr);
+            }
+        });
+    }
+    
+    // Display macro details
+    function displayMacroDetails(macro) {
+        $('#macro-details-placeholder').hide();
+        $('#macro-details').removeClass('d-none');
+        
+        $('#macro-name').text(macro.name);
+        $('#macro-description').text(macro.description);
+        
+        // Display tags
+        const $tagsContainer = $('#macro-tags');
+        $tagsContainer.empty();
+        
+        if (macro.tags && macro.tags.length > 0) {
+            macro.tags.forEach(tag => {
+                $tagsContainer.append(`<span class="badge bg-info me-1">${tag}</span>`);
+            });
+        } else {
+            $tagsContainer.append('<span class="text-muted">No tags</span>');
+        }
+        
+        // Display steps
+        const $stepsContainer = $('#macro-steps');
+        $stepsContainer.empty();
+        
+        if (macro.steps && macro.steps.length > 0) {
+            macro.steps.forEach((step, index) => {
+                let stepDescription = '';
+                
+                switch (step.type) {
+                    case 'mouse_click':
+                        stepDescription = `Click at (${step.params.x}, ${step.params.y}) with ${step.params.button} button`;
+                        break;
+                    case 'mouse_move':
+                        stepDescription = `Move mouse to (${step.params.x}, ${step.params.y})`;
+                        break;
+                    case 'keyboard_type':
+                        stepDescription = `Type text: "${step.params.text}"`;
+                        break;
+                    case 'keyboard_press':
+                        stepDescription = `Press key: ${step.params.key}`;
+                        break;
+                    case 'wait':
+                        stepDescription = `Wait for ${step.params.seconds} seconds`;
+                        break;
+                    case 'window_focus':
+                        stepDescription = `Focus window: "${step.params.title}"`;
+                        break;
+                    default:
+                        stepDescription = `${step.type}: ${JSON.stringify(step.params)}`;
+                }
+                
+                $stepsContainer.append(`
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">Step ${index + 1}</h6>
+                            <small class="text-muted">${step.type}</small>
+                        </div>
+                        <p class="mb-1">${stepDescription}</p>
+                    </div>
+                `);
+            });
+        } else {
+            $stepsContainer.append('<div class="text-muted">No steps defined</div>');
+        }
+        
+        // Display variables
+        const $variablesBody = $('#variables-tbody');
+        $variablesBody.empty();
+        
+        if (macro.variables && Object.keys(macro.variables).length > 0) {
+            Object.entries(macro.variables).forEach(([name, value]) => {
+                $variablesBody.append(`
+                    <tr>
+                        <td>${name}</td>
+                        <td>${value}</td>
+                    </tr>
+                `);
+            });
+        } else {
+            $variablesBody.append('<tr><td colspan="2" class="text-center text-muted">No variables defined</td></tr>');
+        }
+    }
+    
+    // Create a sample macro
+    function createSampleMacro() {
+        $.ajax({
+            url: '/api/automation/sample',
+            method: 'POST',
+            success: function(response) {
+                if (response.status === 'success') {
+                    showAlert('Success', 'Sample macro created successfully');
+                    loadMacros();
+                } else {
+                    showAlert('Error', response.message);
+                }
+            },
+            error: function(xhr) {
+                showAlert('Error', 'Failed to create sample macro');
+                console.error('Error creating sample macro', xhr);
+            }
+        });
+    }
+    
+    // Run a macro
+    function runMacro(mode) {
+        if (!currentMacroId) {
+            showAlert('Error', 'No macro selected');
+            return;
+        }
+        
+        $.ajax({
+            url: `/api/automation/macros/${currentMacroId}/execute`,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ mode: mode }),
+            success: function(response) {
+                if (response.status === 'running') {
+                    showAlert('Success', 'Macro execution started');
+                    setupExecutionMonitoring(currentMacroId, response);
+                } else {
+                    showAlert('Error', response.message || 'Failed to start macro execution');
+                }
+            },
+            error: function(xhr) {
+                showAlert('Error', 'Failed to run macro');
+                console.error('Error running macro', xhr);
+            }
+        });
+    }
+    
+    // Stop a running macro
+    function stopMacro() {
+        if (!currentMacroId || executionStatus !== 'running') {
+            showAlert('Error', 'No macro is currently running');
+            return;
+        }
+        
+        $.ajax({
+            url: `/api/automation/macros/${currentMacroId}/stop`,
+            method: 'POST',
+            success: function(response) {
+                if (response.status === 'stopped') {
+                    showAlert('Success', 'Macro execution stopped');
+                    executionStatus = 'stopped';
+                    updateExecutionStatus();
+                    refreshLog();
+                } else {
+                    showAlert('Error', response.message || 'Failed to stop macro execution');
+                }
+            },
+            error: function(xhr) {
+                showAlert('Error', 'Failed to stop macro');
+                console.error('Error stopping macro', xhr);
+            }
+        });
+    }
+    
+    // Delete a macro
+    function deleteMacro() {
+        if (!currentMacroId) {
+            showAlert('Error', 'No macro selected');
+            return;
+        }
+        
+        if (!confirm('Are you sure you want to delete this macro?')) {
+            return;
+        }
+        
+        $.ajax({
+            url: `/api/automation/macros/${currentMacroId}`,
+            method: 'DELETE',
+            success: function(response) {
+                if (response.status === 'deleted') {
+                    showAlert('Success', 'Macro deleted successfully');
+                    loadMacros();
+                    resetMacroDetails();
+                } else {
+                    showAlert('Error', response.message);
+                }
+            },
+            error: function(xhr) {
+                showAlert('Error', 'Failed to delete macro');
+                console.error('Error deleting macro', xhr);
+            }
+        });
+    }
+    
+    // Setup execution monitoring
+    function setupExecutionMonitoring(macroId, executionData) {
+        // Clear any existing polling
+        if (pollInterval) {
+            clearInterval(pollInterval);
+        }
+        
+        // Set up execution log display
+        $('#execution-log-placeholder').hide();
+        $('#execution-log').removeClass('d-none');
+        $('#execution-controls').removeClass('d-none');
+        
+        // Get the macro name
+        const macroName = $('.macro-item.active h5').text();
+        $('#execution-macro-name').text(macroName);
+        
+        // Store execution data
+        executionStatus = 'running';
+        logPath = executionData.log_path;
+        
+        // Update status display
+        updateExecutionStatus();
+        
+        // Load initial log content
+        refreshLog();
+        
+        // Set up polling for updates
+        pollInterval = setInterval(() => {
+            pollMacroStatus(macroId);
+        }, 1000);
+    }
+    
+    // Poll for macro execution status
+    function pollMacroStatus(macroId) {
+        $.ajax({
+            url: `/api/automation/macros/${macroId}/status`,
+            method: 'GET',
+            success: function(response) {
+                executionStatus = response.status;
+                updateExecutionStatus();
+                
+                if (executionStatus !== 'running') {
+                    // Execution has completed or failed, stop polling
+                    clearInterval(pollInterval);
+                    pollInterval = null;
+                    
+                    // Final log refresh
+                    refreshLog();
+                }
+            },
+            error: function(xhr) {
+                console.error('Error polling macro status', xhr);
+            }
+        });
+    }
+    
+    // Update execution status display
+    function updateExecutionStatus() {
+        const $statusBadge = $('#execution-status');
+        
+        $statusBadge.removeClass('bg-secondary bg-success bg-danger bg-warning');
+        
+        switch (executionStatus) {
+            case 'running':
+                $statusBadge.addClass('bg-warning').text('Running');
+                break;
+            case 'completed':
+                $statusBadge.addClass('bg-success').text('Completed');
+                break;
+            case 'failed':
+                $statusBadge.addClass('bg-danger').text('Failed');
+                break;
+            case 'stopped':
+                $statusBadge.addClass('bg-secondary').text('Stopped');
+                break;
+            default:
+                $statusBadge.addClass('bg-secondary').text('Not running');
+        }
+        
+        // Show/hide controls based on status
+        if (executionStatus === 'running') {
+            $('#execution-controls').removeClass('d-none');
+        } else {
+            $('#execution-controls').addClass('d-none');
+        }
+    }
+    
+    // Refresh log content
+    function refreshLog() {
+        if (!logPath) {
+            return;
+        }
+        
+        $.ajax({
+            url: `/api/automation/logs/${logPath}`,
+            method: 'GET',
+            success: function(response) {
+                if (response.status === 'success') {
+                    $('#log-content').text(response.content);
+                    // Scroll to bottom
+                    const logElement = document.getElementById('log-content');
+                    logElement.scrollTop = logElement.scrollHeight;
+                } else {
+                    $('#log-content').text('Error loading log: ' + response.message);
+                }
+            },
+            error: function(xhr) {
+                $('#log-content').text('Error loading log');
+                console.error('Error loading log', xhr);
+            }
+        });
+    }
+    
+    // Reset macro details
+    function resetMacroDetails() {
+        currentMacroId = null;
+        $('#macro-details').addClass('d-none');
+        $('#macro-details-placeholder').show();
+    }
+    
+    // Show a Bootstrap alert
+    function showAlert(title, message) {
+        const alertHtml = `
+            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                <strong>${title}:</strong> ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `;
+        
+        const $alert = $(alertHtml);
+        $('.container').prepend($alert);
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            $alert.alert('close');
+        }, 5000);
+    }
+</script>
+{% endblock %}

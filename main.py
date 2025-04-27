@@ -1501,6 +1501,160 @@ def init_default_settings():
     
     db_session.commit()
 
+# Automation manager route
+@app.route('/automation')
+def automation_manager():
+    """UI for managing automation macros"""
+    return render_template('automation_manager.html')
+
+# TagUI Automation API Routes
+from automation_macros import (
+    list_macros, get_macro, save_macro, delete_macro,
+    execute_macro, get_macro_status, stop_macro, get_log_content, create_sample_macro
+)
+
+@app.route('/api/automation/macros', methods=['GET'])
+def api_list_macros():
+    """API endpoint to list all macros"""
+    try:
+        macros = list_macros()
+        return jsonify({
+            'status': 'success',
+            'macros': macros
+        })
+    except Exception as e:
+        logger.error(f"Error listing macros: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        })
+
+@app.route('/api/automation/macros/<macro_id>', methods=['GET'])
+def api_get_macro(macro_id):
+    """API endpoint to get a macro by ID"""
+    try:
+        macro = get_macro(macro_id)
+        if macro:
+            return jsonify({
+                'status': 'success',
+                'macro': macro
+            })
+        return jsonify({
+            'status': 'error',
+            'message': f"Macro with ID {macro_id} not found"
+        }), 404
+    except Exception as e:
+        logger.error(f"Error getting macro {macro_id}: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        })
+
+@app.route('/api/automation/macros', methods=['POST'])
+def api_save_macro():
+    """API endpoint to save a macro"""
+    try:
+        macro_data = request.json
+        result = save_macro(macro_data)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error saving macro: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        })
+
+@app.route('/api/automation/macros/<macro_id>', methods=['DELETE'])
+def api_delete_macro(macro_id):
+    """API endpoint to delete a macro by ID"""
+    try:
+        result = delete_macro(macro_id)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error deleting macro {macro_id}: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        })
+
+@app.route('/api/automation/macros/<macro_id>/execute', methods=['POST'])
+def api_execute_macro(macro_id):
+    """API endpoint to execute a macro"""
+    try:
+        mode = request.json.get('mode', 'normal')
+        result = execute_macro(macro_id, mode)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error executing macro {macro_id}: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        })
+
+@app.route('/api/automation/macros/<macro_id>/status', methods=['GET'])
+def api_get_macro_status(macro_id):
+    """API endpoint to get the status of a running macro"""
+    try:
+        result = get_macro_status(macro_id)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error getting status for macro {macro_id}: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        })
+
+@app.route('/api/automation/macros/<macro_id>/stop', methods=['POST'])
+def api_stop_macro(macro_id):
+    """API endpoint to stop a running macro"""
+    try:
+        result = stop_macro(macro_id)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error stopping macro {macro_id}: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        })
+
+@app.route('/api/automation/logs/<path:log_path>', methods=['GET'])
+def api_get_log_content(log_path):
+    """API endpoint to get the content of a log file"""
+    try:
+        content = get_log_content(log_path)
+        if content is not None:
+            return jsonify({
+                'status': 'success',
+                'content': content
+            })
+        return jsonify({
+            'status': 'error',
+            'message': f"Log file {log_path} not found"
+        }), 404
+    except Exception as e:
+        logger.error(f"Error getting log content for {log_path}: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        })
+
+@app.route('/api/automation/sample', methods=['POST'])
+def api_create_sample_macro():
+    """API endpoint to create a sample macro for testing"""
+    try:
+        macro_id = create_sample_macro()
+        return jsonify({
+            'status': 'success',
+            'macro_id': macro_id,
+            'message': 'Sample macro created successfully'
+        })
+    except Exception as e:
+        logger.error(f"Error creating sample macro: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        })
+
 def start_monitoring_components():
     """Initialize and start the monitoring components"""
     from settings import Settings

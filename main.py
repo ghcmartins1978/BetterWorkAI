@@ -1978,6 +1978,54 @@ def api_get_macro_status(macro_id):
             }
         })
 
+def stop_macro(macro_id):
+    """
+    Stop a running macro
+    
+    Args:
+        macro_id: ID of the macro to stop
+        
+    Returns:
+        Dictionary with result status
+    """
+    macro = db_session.query(Macro).get(macro_id)
+    if not macro:
+        return {'status': 'error', 'message': 'Macro not found'}
+    
+    # In a real implementation, this would send a stop signal to the automation server
+    # Here we just update the status
+    if macro.status == 'running':
+        macro.status = 'stopped'
+        db_session.commit()
+        
+        # Add stop message to log if exists
+        log_dir = os.path.join(os.getcwd(), 'logs', 'macros', str(macro_id))
+        if os.path.exists(log_dir):
+            log_files = [f for f in os.listdir(log_dir) if f.startswith('execution_')]
+            if log_files:
+                # Get the most recent log file
+                log_files.sort(reverse=True)
+                log_path = os.path.join(log_dir, log_files[0])
+                try:
+                    with open(log_path, 'a') as f:
+                        f.write(f"\nExecution stopped manually at {datetime.now().isoformat()}\n")
+                except Exception as e:
+                    logger.error(f"Error updating log file: {e}")
+        
+        return {
+            'status': 'stopped',
+            'macro_id': macro_id,
+            'name': macro.name,
+            'message': 'Macro execution stopped successfully'
+        }
+    else:
+        return {
+            'status': 'not_running',
+            'macro_id': macro_id,
+            'name': macro.name,
+            'message': 'Macro was not running'
+        }
+
 @app.route('/api/automation/macros/<macro_id>/stop', methods=['POST'])
 def api_stop_macro(macro_id):
     """API endpoint to stop a running macro"""
@@ -1999,6 +2047,37 @@ def api_stop_macro(macro_id):
                 'automation_server_url': os.environ.get('AUTOMATION_SERVER_URL', 'Not set')
             }
         })
+
+def get_log_content(log_path):
+    """
+    Get the content of a log file
+    
+    Args:
+        log_path: Path to the log file
+        
+    Returns:
+        String content of the log file or None if not found
+    """
+    try:
+        # Sanitize and validate the log path to prevent directory traversal
+        abs_path = os.path.abspath(log_path)
+        base_logs_dir = os.path.abspath(os.path.join(os.getcwd(), 'logs'))
+        
+        # Verify that the requested path is within the logs directory
+        if not abs_path.startswith(base_logs_dir):
+            logger.warning(f"Attempted access to log file outside logs directory: {log_path}")
+            return None
+        
+        if not os.path.exists(abs_path) or not os.path.isfile(abs_path):
+            logger.warning(f"Log file does not exist: {abs_path}")
+            return None
+        
+        # Read and return the log file content
+        with open(abs_path, 'r') as f:
+            return f.read()
+    except Exception as e:
+        logger.error(f"Error reading log file {log_path}: {e}")
+        return None
 
 @app.route('/api/automation/logs/<path:log_path>', methods=['GET'])
 def api_get_log_content(log_path):
@@ -2030,7 +2109,7 @@ def get_log_content_direct():
         if not log_path:
             return "No log path provided", 400
         
-        from automation_macros import get_log_content
+        # Use our own get_log_content function defined above
         content = get_log_content(log_path)
         if content is None:
             return "Log file not found", 404
@@ -2039,6 +2118,52 @@ def get_log_content_direct():
     except Exception as e:
         logger.error(f"Error getting log content: {e}")
         return f"Error getting log content: {e}", 500
+
+def create_sample_macro():
+    """
+    Create a sample macro for testing purposes
+    
+    Returns:
+        ID of the created macro
+    """
+    # Create a sample macro with basic steps
+    sample_steps = [
+        {
+            "type": "mouse_move",
+            "params": {"x": 100, "y": 100}
+        },
+        {
+            "type": "mouse_click",
+            "params": {"button": "left", "clicks": 1}
+        },
+        {
+            "type": "keyboard_type",
+            "params": {"text": "Hello, world!"}
+        },
+        {
+            "type": "keyboard_press",
+            "params": {"key": "enter"}
+        },
+        {
+            "type": "wait",
+            "params": {"seconds": 2}
+        }
+    ]
+    
+    # Create the macro in the database
+    macro = Macro(
+        name="Sample Test Macro",
+        description="A sample macro for testing the execution system",
+        steps=json.dumps(sample_steps),
+        status='recorded',
+        step_count=len(sample_steps),
+        execution_count=0
+    )
+    
+    db_session.add(macro)
+    db_session.commit()
+    
+    return macro.id
 
 @app.route('/api/automation/sample', methods=['POST'])
 def api_create_sample_macro():

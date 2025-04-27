@@ -11,7 +11,8 @@ import sys
 import random
 
 from database import init_db, db_session
-from models import Event, EventSequence, Pattern, Suggestion, Macro, MacroStep, Setting, AIAnalysisReport
+from models import Event, EventSequence, Pattern, Suggestion, Macro, MacroStep, Setting, AIAnalysisReport, MacroVariable
+import variable_detector
 from settings import Settings
 
 # Configure logging
@@ -2396,6 +2397,84 @@ def api_compile_yaml():
     except Exception as e:
         logger.error(f"Error compiling YAML: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)})
+
+# Variable detection and management API endpoints
+@app.route('/api/automation/macros/<macro_id>/detect-variables', methods=['POST'])
+def api_detect_variables(macro_id):
+    """API endpoint to detect variables in a macro"""
+    try:
+        variables = variable_detector.detect_variables_in_macro(macro_id)
+        return jsonify({
+            'status': 'success',
+            'variables': variables
+        })
+    except Exception as e:
+        logger.error(f"Error detecting variables in macro {macro_id}: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        })
+
+@app.route('/api/automation/macros/<macro_id>/register-variables', methods=['POST'])
+def api_register_variables(macro_id):
+    """API endpoint to register detected variables in the database"""
+    try:
+        variables = variable_detector.register_variables_for_macro(macro_id)
+        return jsonify({
+            'status': 'success',
+            'variables': variables
+        })
+    except Exception as e:
+        logger.error(f"Error registering variables for macro {macro_id}: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        })
+
+@app.route('/api/automation/macros/<macro_id>/variables', methods=['GET'])
+def api_get_variables(macro_id):
+    """API endpoint to get all variables for a macro"""
+    try:
+        variables = variable_detector.get_variables_for_macro(macro_id)
+        return jsonify({
+            'status': 'success',
+            'variables': variables
+        })
+    except Exception as e:
+        logger.error(f"Error getting variables for macro {macro_id}: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        })
+
+@app.route('/api/automation/variables/<variable_id>', methods=['PUT'])
+def api_update_variable(variable_id):
+    """API endpoint to update a variable's value"""
+    try:
+        data = request.json
+        value = data.get('value')
+        if value is None:
+            return jsonify({
+                'status': 'error',
+                'message': 'No value provided'
+            })
+        
+        success = variable_detector.update_variable_value(variable_id, value)
+        if success:
+            return jsonify({
+                'status': 'success',
+                'message': 'Variable updated successfully'
+            })
+        return jsonify({
+            'status': 'error',
+            'message': f'Failed to update variable {variable_id}'
+        })
+    except Exception as e:
+        logger.error(f"Error updating variable {variable_id}: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        })
 
 def start_monitoring_components():
     """Initialize and start the monitoring components"""

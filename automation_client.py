@@ -34,17 +34,42 @@ class AutomationClient:
         else:
             logger.info(f"Automation client initialized with server URL: {self.server_url}")
     
+    def set_server_url(self, url):
+        """Update the server URL"""
+        self.server_url = url
+        logger.info(f"Updated automation server URL to: {self.server_url}")
+        return self.is_connected()
+    
     def is_connected(self):
         """Check if the remote server is accessible"""
         if not self.server_url:
             return False
             
         try:
+            # First, try a simple status check
+            response = requests.get(f"{self.server_url}/api/status", timeout=3)
+            if response.status_code == 200:
+                return True
+                
+            # Fallback to window list check
             response = requests.get(f"{self.server_url}/api/window/list", timeout=3)
             return response.status_code == 200
         except Exception as e:
             logger.error(f"Failed to connect to automation server: {e}")
             return False
+            
+    def _handle_response(self, response):
+        """Handle a response from the server, with proper error checking"""
+        if response.status_code != 200:
+            return {'status': 'error', 'message': f'Server returned status code {response.status_code}'}
+            
+        # Check if response is JSON
+        try:
+            # Try to parse as JSON first
+            return response.json()
+        except:
+            # If not JSON, return the text with a success status
+            return {'status': 'success', 'message': 'Command executed', 'response': response.text}
     
     # Mouse actions
     def mouse_move(self, x, y):

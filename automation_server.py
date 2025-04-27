@@ -8,8 +8,11 @@ import time
 import logging
 import json
 import os
+import base64
+from io import BytesIO
 from datetime import datetime
 import threading
+from PIL import Image
 
 # Configure logging
 logging.basicConfig(level=logging.INFO,
@@ -22,11 +25,13 @@ CORS(app)  # Enable CORS for all routes
 
 # Global variables to track state
 monitoring_active = False
+screenshot_enabled = True  # Enable screenshots by default
 mouse_listener = None
 keyboard_listener = None
 window_checker = None
 events_log = []  # In-memory event log
 max_events = 1000  # Maximum number of events to keep in memory
+screenshot_dir = os.path.join(os.getcwd(), 'logs', 'screenshots')
 
 # Initialize controllers
 mouse_controller = mouse.Controller()
@@ -104,14 +109,44 @@ def on_mouse_move(x, y):
     if monitoring_active:
         EventLogger.log_event('mouse_move', x=x, y=y)
 
+def capture_screenshot():
+    """Capture a screenshot and return as base64 encoded string"""
+    try:
+        # Ensure screenshot directory exists
+        os.makedirs(screenshot_dir, exist_ok=True)
+        
+        # Take a screenshot using PyAutoGUI
+        screenshot = pyautogui.screenshot()
+        
+        # Convert to base64
+        buffered = BytesIO()
+        screenshot.save(buffered, format="JPEG", quality=70)  # Lower quality to reduce size
+        screenshot_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+        
+        logger.debug("Screenshot captured")
+        return screenshot_base64
+    except Exception as e:
+        logger.error(f"Failed to capture screenshot: {e}")
+        return None
+
 def on_mouse_click(x, y, button, pressed):
     """Handle mouse clicks"""
     if monitoring_active:
         button_name = getattr(button, 'name', str(button))
-        EventLogger.log_event('mouse_click', 
-                             x=x, y=y, 
-                             button=button_name, 
-                             pressed=pressed)
+        event_data = {
+            'x': x, 
+            'y': y, 
+            'button': button_name, 
+            'pressed': pressed
+        }
+        
+        # Only capture screenshot on press (not release) to avoid duplicates
+        if pressed and screenshot_enabled:
+            screenshot_base64 = capture_screenshot()
+            if screenshot_base64:
+                event_data['screenshot'] = screenshot_base64
+        
+        EventLogger.log_event('mouse_click', **event_data)
 
 def on_mouse_scroll(x, y, dx, dy):
     """Handle mouse scrolling"""

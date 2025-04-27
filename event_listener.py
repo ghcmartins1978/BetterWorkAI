@@ -6,6 +6,7 @@ from datetime import datetime
 
 from monitor_controller import MonitorController
 import logger as event_logger
+from screenshot_manager import ScreenshotManager
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,7 @@ class EventListener:
         self.last_check_time = datetime.now()
         self.check_interval = 5  # seconds
         self.last_event_id = None
+        self.screenshot_manager = ScreenshotManager(settings)
         
     def set_analyzer(self, analyzer):
         """Set the context analyzer that will process events"""
@@ -104,6 +106,35 @@ class EventListener:
             # Add timestamp if not present
             if 'timestamp' not in event_data:
                 event_data['timestamp'] = datetime.now().isoformat()
+                
+            # Process screenshots if present
+            if 'screenshot' in event_data and event_data.get('type') == 'mouse_click':
+                try:
+                    screenshot_base64 = event_data['screenshot']
+                    # Save screenshot
+                    screenshot_path = self.screenshot_manager.save_screenshot(
+                        screenshot_base64=screenshot_base64,
+                        event_data=event_data
+                    )
+                    
+                    # Analyze screenshot with AI if available
+                    if screenshot_path:
+                        analysis = self.screenshot_manager.analyze_screenshot(
+                            screenshot_path=screenshot_path,
+                            event_data=event_data
+                        )
+                        
+                        if analysis:
+                            # Add analysis to event data
+                            event_data['screenshot_analysis'] = analysis
+                            logger.info(f"Added AI analysis to event data")
+                    
+                    # Remove the large base64 data from the event to save space
+                    # Keep a flag indicating a screenshot was captured
+                    event_data['screenshot'] = True
+                    
+                except Exception as screenshot_error:
+                    logger.error(f"Error processing screenshot: {screenshot_error}")
                 
             # Log event
             event_logger.log_event(event_data)

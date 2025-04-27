@@ -259,39 +259,237 @@ def _infer_variable_type(occurrences: List[Dict[str, Any]]) -> str:
     return inferred_type
 
 
-def replace_variables_in_params(params: Dict[str, Any], variables: Dict[str, str]) -> Dict[str, Any]:
+def replace_variables_in_params(params: Dict[str, Any], variables: Dict[str, Any], settings=None) -> Dict[str, Any]:
     """
     Replace variable placeholders in parameters with their values.
     
     Args:
         params: Dictionary of parameters
-        variables: Dictionary mapping variable names to their values
+        variables: Dictionary mapping variable names to their values or information dictionaries
+        settings: Optional settings dict to control variable processing behavior
         
     Returns:
         Dictionary with variables replaced by their values
     """
+    # If settings is not provided, use defaults
+    if settings is None:
+        from settings import Settings
+        settings_obj = Settings()
+        settings = {
+            'allow_variable_formatting': settings_obj.get_setting('allow_variable_formatting', 'true') == 'true',
+            'allow_conditional_variables': settings_obj.get_setting('allow_conditional_variables', 'true') == 'true'
+        }
+    
     result = {}
     
     for key, value in params.items():
         if isinstance(value, str):
-            # Replace all variables in the string
-            new_value = value
-            for var_name, var_value in variables.items():
-                placeholder = f"{{{{{var_name}}}}}"
-                new_value = new_value.replace(placeholder, str(var_value))
-            
-            # Try to convert to number if it looks like one
-            if new_value.isdigit():
-                new_value = int(new_value)
-            elif _is_float(new_value):
-                new_value = float(new_value)
-                
+            # Process the string to replace variables
+            new_value = process_variable_string(value, variables, settings)
             result[key] = new_value
         else:
             # Non-string values don't contain variables
             result[key] = value
     
     return result
+
+
+def process_variable_string(text: str, variables: Dict[str, Any], settings: Dict[str, bool]) -> Any:
+    """
+    Process a string containing variable placeholders and replace them with their values.
+    
+    Args:
+        text: The input string with variable placeholders
+        variables: Dictionary mapping variable names to their values or information dictionaries
+        settings: Settings dict to control variable processing behavior
+        
+    Returns:
+        The processed string with variables replaced, or a non-string value if conversion is appropriate
+    """
+    # Extract just the values from variables if they are in dictionary form
+    var_values = {}
+    for name, var in variables.items():
+        if isinstance(var, dict):
+            # If it's a variable info dictionary
+            var_values[name] = var.get('current_value', '')
+        else:
+            # If it's just a value
+            var_values[name] = var
+    
+    # Start with the original text
+    result = text
+    
+    # Process conditional expressions if enabled
+    if settings.get('allow_conditional_variables', True):
+        # Find all conditional expressions
+        conditional_matches = list(re.finditer(CONDITIONAL_VARIABLE_PATTERN, text))
+        
+        # Process them in reverse order to avoid messing up string positions
+        for match in reversed(conditional_matches):
+            var_name = match.group(1)
+            then_value = match.group(2)
+            else_value = match.group(3)
+            
+            # Get the variable value (empty string if not found)
+            var_value = str(var_values.get(var_name, '')).lower()
+            
+            # Evaluate the condition (true if value is 'true', '1', 'yes', or 'y')
+            is_true = var_value in ('true', '1', 'yes', 'y', 'on')
+            
+            # Replace with the appropriate value
+            replacement = then_value if is_true else else_value
+            
+            # Replace in the string
+            result = result[:match.start()] + replacement + result[match.end():]
+    
+    # Process formatted variables if enabled
+    if settings.get('allow_variable_formatting', True):
+        # Find all formatted variables
+        formatted_matches = list(re.finditer(FORMATTED_VARIABLE_PATTERN, text))
+        
+        # Process them in reverse order
+        for match in reversed(formatted_matches):
+            var_name = match.group(1)
+            format_spec = match.group(2)
+            
+            # Skip if it's part of a conditional expression
+            if f"{{if:{var_name}:" in text:
+                continue
+            
+            # Get the variable value (empty string if not found)
+            var_value = var_values.get(var_name, '')
+            
+            # Apply formatting based on the format specifier
+            replacement = apply_variable_format(var_value, format_spec)
+            
+            # Replace in the string
+            result = result[:match.start()] + replacement + result[match.end():]
+    
+    # Process basic variables (always enabled)
+    basic_matches = list(re.finditer(VARIABLE_PATTERN, text))
+    
+    # Process them in reverse order
+    for match in reversed(basic_matches):
+        var_name = match.group(1)
+        
+        # Skip if it's part of a complex pattern
+        if f"{{{{{var_name}:" in text or f"{{if:{var_name}:" in text:
+            continue
+        
+        # Get the variable value (empty string if not found)
+        var_value = str(var_values.get(var_name, ''))
+        
+        # Replace in the string
+        result = result[:match.start()] + var_value + result[match.end():]
+    
+    # Try to convert to appropriate type if the entire string was replaced
+    if result != text and not any(pattern in result for pattern in ['{{', '}}', '{if:']):
+        # Try to convert to number if it looks like one
+        if result.isdigit():
+            return int(result)
+        elif _is_float(result):
+            return float(result)
+    
+    return result
+
+
+def apply_variable_format(value: Any, format_spec: str) -> str:
+    """
+    Apply formatting to a variable value according to a format specification.
+    
+    Args:
+        value: The value to format
+        format_spec: The format specification string
+        
+    Returns:
+        The formatted value as a string
+    """
+    # Handle numeric formatting with standard Python format specs
+    try:
+        # Try to convert to number if we're applying numeric formatting
+        if any(c in format_spec for c in 'dfxXobneEgG.'):
+            if isinstance(value, str):
+                if value.isdigit():
+                    value = int(value)
+                elif _is_float(value):
+                    value = float(value)
+        
+        # Apply Python's standard formatting
+        if format_spec.startswith('py:'):
+            # Using Python's format specification language
+            format_str = format_spec[3:]  # Remove 'py:' prefix
+            return format(value, format_str)
+        
+        # Apply padding for numbers
+        elif format_spec.startswith('pad:'):
+            # Padding format like "pad:3" (pad to 3 digits with leading zeros)
+            try:
+                pad_length = int(format_spec[4:])
+                if isinstance(value, (int, float)):
+                    return str(value).zfill(pad_length)
+                else:
+                    return str(value).ljust(pad_length)
+            except (ValueError, IndexError):
+                return str(value)
+        
+        # Apply calculation
+        elif format_spec.startswith('calc:'):
+            # Simple calculation like "calc:+10" or "calc:*2"
+            try:
+                if not isinstance(value, (int, float)):
+                    if isinstance(value, str) and (_is_float(value) or value.isdigit()):
+                        value = float(value) if '.' in value else int(value)
+                    else:
+                        return str(value)  # Can't perform calculation on non-numeric
+                
+                calc_op = format_spec[5:6]  # Get operation ('+', '-', '*', '/')
+                calc_val = float(format_spec[6:])
+                
+                if calc_op == '+':
+                    result = value + calc_val
+                elif calc_op == '-':
+                    result = value - calc_val
+                elif calc_op == '*':
+                    result = value * calc_val
+                elif calc_op == '/':
+                    if calc_val == 0:
+                        return str(value)  # Avoid division by zero
+                    result = value / calc_val
+                else:
+                    return str(value)
+                
+                # Return integer if result is a whole number
+                if isinstance(result, float) and result.is_integer():
+                    return str(int(result))
+                return str(result)
+            except (ValueError, IndexError):
+                return str(value)
+        
+        # Date/time formatting
+        elif format_spec.startswith('date:'):
+            # Date format like "date:%Y-%m-%d"
+            from datetime import datetime
+            date_format = format_spec[5:]
+            
+            if isinstance(value, (int, float)):
+                # Treat as timestamp
+                return datetime.fromtimestamp(value).strftime(date_format)
+            elif isinstance(value, str):
+                # Try to parse as a date string
+                try:
+                    dt = datetime.fromisoformat(value)
+                    return dt.strftime(date_format)
+                except (ValueError, TypeError):
+                    return value
+            else:
+                return str(value)
+        
+        # Default: just convert to string
+        return str(value)
+        
+    except Exception as e:
+        logger.error(f"Error formatting variable: {e}")
+        return str(value)
 
 
 def _is_float(value: str) -> bool:

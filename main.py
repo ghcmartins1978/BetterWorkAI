@@ -1621,6 +1621,13 @@ def init_default_settings():
         'automation_use_ai': True,
         'automation_execution_confirmation': True,
         
+        # Variable handling settings
+        'prompt_required_variables': True,
+        'variable_prompt_timeout': 30,
+        'allow_variable_formatting': True,
+        'allow_conditional_variables': True,
+        'save_variable_values': True,
+        
         # Sequence and adaptive timeout settings
         'sequence_adaptive_timeout_enabled': True,
         'sequence_min_timeout': 5,

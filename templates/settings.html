@@ -354,6 +354,49 @@
                         </div>
                     </form>
                 </div>
+                
+                <!-- Variable Settings -->
+                <div class="mb-4">
+                    <h5 class="mb-3">Variable Handling</h5>
+                    
+                    <form id="variableSettingsForm">
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="promptRequiredVariables" name="prompt_required_variables" {% if settings.prompt_required_variables %}checked{% endif %}>
+                            <label class="form-check-label" for="promptRequiredVariables">Prompt for required variables</label>
+                            <small class="form-text text-muted d-block">If enabled, the system will prompt for required variable values before executing macros</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label" for="variablePromptTimeout">Variable prompt timeout (seconds)</label>
+                            <input type="number" class="form-control" id="variablePromptTimeout" name="variable_prompt_timeout" value="{{ settings.variable_prompt_timeout|default(30) }}" min="5" max="300">
+                            <small class="form-text text-muted">How long to wait for variable input before using default values</small>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="allowVariableFormatting" name="allow_variable_formatting" {% if settings.allow_variable_formatting %}checked{% endif %}>
+                            <label class="form-check-label" for="allowVariableFormatting">Enable formatted variables</label>
+                            <small class="form-text text-muted d-block">Allow format specifiers in variables: {{variable:format}}</small>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="allowConditionalVariables" name="allow_conditional_variables" {% if settings.allow_conditional_variables %}checked{% endif %}>
+                            <label class="form-check-label" for="allowConditionalVariables">Enable conditional expressions</label>
+                            <small class="form-text text-muted d-block">Allow conditional expressions in variables: {{if:variable:then:else}}</small>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="saveVariableValues" name="save_variable_values" {% if settings.save_variable_values %}checked{% endif %}>
+                            <label class="form-check-label" for="saveVariableValues">Remember variable values</label>
+                            <small class="form-text text-muted d-block">Save variable values for reuse in future executions</small>
+                        </div>
+                        
+                        <div class="d-flex justify-content-end mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save me-2"></i> Save Variable Settings
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
             
             <!-- AI Settings -->

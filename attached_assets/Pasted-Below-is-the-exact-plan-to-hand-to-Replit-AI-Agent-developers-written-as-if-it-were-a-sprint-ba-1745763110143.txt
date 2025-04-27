@@ -1,0 +1,151 @@
+Below is the **exact plan to hand to Replit AI-Agent developers**, written as if it were a sprint backlog.  
+It contains: (a) overall context, (b) architecture snapshot, (c) ticket list in exact order, (d) “Definition of Done” for every ticket, and (e) safety / coding guidelines.  
+Feel free to paste it verbatim into Replit’s planning board.
+
+---
+
+# 📜 BettermanAI Copilot – “Automate” Phase  
+*(Sprint window: **4 weeks**, two 2-week iterations)*
+
+## 🔰 Context for Replit Agents
+BettermanAI already:
+- Logs mouse/keyboard/window events → SQLite  
+- Detects patterns → asks user if a task is recurring  
+- Provides mic toggle + STT transcript on idle  
+
+**Goal of this phase:** convert confirmed patterns into **reliable, sandboxed automations** (macros) that users can schedule or fire with a hot-key.  
+Automations must be transparent, reversible, and counted toward a “Hours Saved” KPI.
+
+### Key Technical Decisions (already agreed)
+| Item | Choice | Why |
+|------|--------|-----|
+| Macro engine | **TagUI** CLI runner | Cross-platform, can click/type/JS/OCR, <40 MB |
+| Script format | **YAML DSL** → compiled to TagUI | Readable diff, easy rollback |
+| Runner | Rust helper spawns TagUI in sandbox | Keeps UI responsive, isolates failure |
+| Safety | Dry-run (visual overlay) + screenshot diff + timeout | Prevent rogue clicks |
+| Scheduler | Cron-style (rust-cron + Win `schtasks`) + hot-key trigger | Covers daily & ad-hoc |
+
+---
+
+## 🗂 Ticket Backlog (DO IN ORDER)
+
+### **Ticket A1 – TagUI Binary & Wrapper**
+**Task:**  
+1. Add TagUI binaries (`tagui/src/tagui` on macOS/Linux, `tagui.exe` on Win) into `resources/`.  
+2. Implement Rust helper (`src/macro_runner.rs`) that:  
+   - Receives `{yaml_path, mode}` via REST `POST /run_macro`.  
+   - Compiles YAML → temp `.tag` file → spawns TagUI.  
+   - Captures stdout/stderr to `/logs/macro_<id>.log`.  
+3. Return JSON `{status:"running", pid, log}`.
+
+**Done when:** helper returns 200, logs path, and TagUI prints “DONE” at end of stdout for basic “hello.tag” test.
+
+---
+
+### **Ticket A2 – YAML DSL Compiler**
+**Task:**  
+1. YAML schema:  
+   ```yml
+   steps:
+     - click: selector|x,y
+     - type: "Hello"
+     - wait: 500
+   ```  
+2. Translate to TagUI syntax lines in Rust.  
+3. Unit tests: YAML → expected `.tag` string.
+
+**Done when:** `cargo test` passes and “minimal.yaml” → TagUI script that echoes typed text.
+
+---
+
+### **Ticket A3 – Dry-Run Overlay (Tauri)**
+**Task:**  
+1. New front-end window `Overlay.svelte`, frameless, 20 % opacity, pointer-events “none”.  
+2. Rust → UI websocket sends rectangles `[ {x,y,w,h}, ... ]` one per step.  
+3. On dry-run, TagUI is called with `-n` (no action) & emits coordinates; overlay highlights sequentially.
+
+**Done when:** pressing “Preview” shows translucent boxes over targets and **does NOT** click anything.
+
+---
+
+### **Ticket A4 – Macro Library UI**
+**Task:**  
+1. In sidebar, new “Automations” route.  
+2. Table columns: Name • Last Run • Success % • Hours Saved • Toggle enable.  
+3. “Create from Pattern” button opens YAML editor pre-filled by pattern detector.
+
+**Done when:** user can save YAML; file stored under `~/BettermanAI/macros/<slug>.yaml`.
+
+---
+
+### **Ticket A5 – Variable Detection & Parameter UI**
+**Task:**  
+1. After pattern detector offers “Build Macro”, run function:  
+   - Pass sequence details to GPT-4-turbo with prompt: *“Detect variable fields (dates, numbers, IDs) and output JSON field list.”*  
+   - Present UI modal listing suggested vars; user edits types (text, number, date).  
+2. Compiler replaces detected literals with `{{var}}` template tags.  
+
+**Done when:** user sees fields, confirms, YAML shows `type: {{comment_text}}` etc.
+
+---
+
+### **Ticket A6 – Scheduler & Hot-key Trigger**
+**Task:**  
+1. Add “Schedule” dialog to each macro (cron expression helper).  
+2. Rust helper uses:  
+   - Linux/mac: `rust-cron` thread + `at` fallback  
+   - Windows: create `schtasks /create /tn BettermanAI_<macro> /tr .. /sc DAILY ...`  
+3. Hot-key global listener (existing pynput) maps `Ctrl+Shift+Alt+<digit>` to run macro.
+
+**Done when:** macro fires at scheduled time & via hot-key; log records run.
+
+---
+
+### **Ticket A7 – Safety Nets & Rollback**
+**Task:**  
+1. Add `--timeout` param to runner (default 90 s).  
+2. On failure (non-zero exit or timeout) → send OS notification and mark `run_status = failed`.  
+3. Screenshot diff: before first click & after last click; if diff area < 3 % ⇒ warn “Nothing changed”.
+
+**Done when:** failing script triggers notification + DB log entry.
+
+---
+
+### **Ticket A8 – KPI Counter & Metrics**
+**Task:**  
+1. Compute `duration_original_seq * run_successes – runner_runtime`.  
+2. Update `metrics` table: `hours_saved_total`.  
+3. Expose `/metrics` JSON & Tauri dashboard card.
+
+**Done when:** dashboard shows live “Hours Saved” growing after successful macro runs.
+
+---
+
+### **Ticket A9 – Feedback Loop on Failures**
+**Task:**  
+1. If macro fail rate >10 % over last 10 runs, trigger “Relearn?” prompt linking to re-record overlay.  
+2. Store user answer (yes/later/never) to `macro_preferences`.
+
+**Done when:** failing macro pops suggestion; user can re-record.
+
+---
+
+## 🛡 Safety / Coding Guidelines
+1. **Never store credentials** inside YAML; use OS keyring (Keychain/DPAPI).  
+2. All TagUI spawns **must** pass `--nobrowser` if URL reveals PII.  
+3. Respect global kill hot-key `Ctrl+Shift+Esc` → sends SIGTERM to helper + TagUI.
+
+---
+
+## 🎯 Acceptance Criteria for Whole Phase
+- User can turn a detected pattern into a macro in ≤ 3 clicks.  
+- At least one reference automation (“Copy Excel → paste Salesforce”) runs end-to-end.  
+- Core app idle RAM ≤ 180 MB on Windows 10 64-bit.  
+- All tickets have unit / e2e tests where applicable; no failing `cargo test` or UI Cypress suite.
+
+---
+
+> **Important for Replit agents:** work strictly ticket-by-ticket, deliver Pull Requests with descriptive README updates and short usage demo GIFs for UI work.  
+> Use the branch prefix `feat/macro_<ticket-id>` so we can track progress.
+
+---

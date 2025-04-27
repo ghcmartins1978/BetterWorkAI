@@ -285,6 +285,67 @@
                             </label>
                         </div>
                         
+                        <hr class="my-4">
+                        
+                        <h5 class="mb-3">Variable Handling</h5>
+                        
+                        <div class="alert alert-info bg-info bg-opacity-10" role="alert">
+                            <div class="d-flex">
+                                <div class="me-3">
+                                    <i class="bi bi-info-circle-fill fs-4"></i>
+                                </div>
+                                <div>
+                                    <h5 class="alert-heading">About Variables</h5>
+                                    <p class="mb-0">
+                                        Variables allow your automations to be more flexible by replacing placeholders with actual values at runtime.
+                                        Use the format <code>{{variable_name}}</code> in your macros.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="promptRequiredVariables" name="prompt_for_required_variables" 
+                                {% if settings.prompt_for_required_variables != 'false' %}checked{% endif %}>
+                            <label class="form-check-label" for="promptRequiredVariables">
+                                Prompt for required variables when executing macros
+                            </label>
+                            <div class="form-text">
+                                If disabled, macros with missing required variables will not be executed
+                            </div>
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="saveVariableValues" name="save_variable_values" 
+                                {% if settings.save_variable_values != 'false' %}checked{% endif %}>
+                            <label class="form-check-label" for="saveVariableValues">
+                                Save variable values between executions
+                            </label>
+                            <div class="form-text">
+                                If enabled, the last used value for each variable will be remembered
+                            </div>
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="autoDetectVariables" name="auto_detect_variables" 
+                                {% if settings.auto_detect_variables != 'false' %}checked{% endif %}>
+                            <label class="form-check-label" for="autoDetectVariables">
+                                Automatically detect variables in macros
+                            </label>
+                            <div class="form-text">
+                                If enabled, variables in macro steps will be detected and registered automatically
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Variable Prompt Timeout (seconds)</label>
+                            <input type="number" class="form-control" id="variablePromptTimeout" name="variable_prompt_timeout" 
+                                value="{{ settings.variable_prompt_timeout or '30' }}" min="5" max="300">
+                            <div class="form-text">
+                                If no input is provided within this time, the macro execution will be aborted
+                            </div>
+                        </div>
+                        
                         <div class="d-flex justify-content-end">
                             <button type="submit" class="btn btn-primary" id="saveAutomationSettings">
                                 <i class="bi bi-check-circle me-1"></i>

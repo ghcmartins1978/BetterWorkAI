@@ -350,14 +350,58 @@ class DryRunOverlay {
     updateExecution(statusData) {
         // Display runtime
         const runtime = statusData.runtime ? Math.round(statusData.runtime) : 0;
-        const runtimeDisplay = document.createElement('div');
-        runtimeDisplay.className = 'mt-2 text-muted';
-        runtimeDisplay.innerHTML = `Runtime: ${runtime}s`;
         
-        // Update progress if we have a new action
-        if (this.currentActionIndex >= 0 && this.currentActionIndex < this.actions.length) {
-            const progress = ((this.currentActionIndex + 1) / this.actions.length) * 100;
+        // Check if we have current_step information from the server
+        if (statusData.current_step !== undefined && this.actions.length > 0) {
+            const currentStep = Math.min(statusData.current_step, this.actions.length);
+            
+            // Update current action index
+            if (currentStep > 0 && currentStep - 1 !== this.currentActionIndex) {
+                this.currentActionIndex = currentStep - 1;
+                
+                // Show the current action
+                if (this.currentActionIndex >= 0 && this.currentActionIndex < this.actions.length) {
+                    this.showAction(this.actions[this.currentActionIndex]);
+                }
+            }
+            
+            // Update progress bar
+            const progress = (currentStep / this.actions.length) * 100;
             this.progressBar.style.width = `${progress}%`;
+            
+            // Display step progress
+            const progressText = document.createElement('div');
+            progressText.className = 'mt-2 text-muted d-flex justify-content-between';
+            progressText.innerHTML = `
+                <span>Runtime: ${runtime}s</span>
+                <span>Step ${currentStep}/${this.actions.length}</span>
+            `;
+            
+            // Add to action display
+            const progressInfo = this.actionDisplay.querySelector('.progress-info');
+            if (progressInfo) {
+                progressInfo.remove();
+            }
+            progressText.classList.add('progress-info');
+            this.actionDisplay.appendChild(progressText);
+        } else {
+            // Fallback to the original progress calculation logic
+            if (this.currentActionIndex >= 0 && this.currentActionIndex < this.actions.length) {
+                const progress = ((this.currentActionIndex + 1) / this.actions.length) * 100;
+                this.progressBar.style.width = `${progress}%`;
+                
+                // Display runtime only
+                const runtimeDisplay = document.createElement('div');
+                runtimeDisplay.className = 'mt-2 text-muted progress-info';
+                runtimeDisplay.innerHTML = `Runtime: ${runtime}s`;
+                
+                // Add to action display
+                const progressInfo = this.actionDisplay.querySelector('.progress-info');
+                if (progressInfo) {
+                    progressInfo.remove();
+                }
+                this.actionDisplay.appendChild(runtimeDisplay);
+            }
         }
     }
 
@@ -386,20 +430,38 @@ class DryRunOverlay {
      * @param {string} logContent - Content of the log
      */
     determineCurrentAction(logContent) {
-        // Look for execution markers in the log
-        // This is a simple heuristic and might need to be adjusted based on actual log format
+        // This function is only used as a fallback when we don't get step information from the API
+        // We now primarily rely on the step information provided by the backend
         
-        // Increment action index if we find a marker for the next action
-        // For now, just increment periodically to simulate action progression
+        // Try to determine the current step from log content
+        const logLines = logContent.split('\n');
+        const executingStepLines = logLines.filter(line => line.includes('Executing step'));
         
-        // If we don't have a reliable way to determine the current action from logs,
-        // we might need to modify the TagUI wrapper to output structured logs
+        if (executingStepLines.length > 0) {
+            // Extract step numbers if available
+            const stepMatches = executingStepLines[executingStepLines.length - 1].match(/Executing step (\d+)/);
+            if (stepMatches && stepMatches[1]) {
+                const stepNumber = parseInt(stepMatches[1], 10);
+                if (!isNaN(stepNumber) && stepNumber > 0 && stepNumber <= this.actions.length) {
+                    const newIndex = stepNumber - 1;
+                    if (newIndex !== this.currentActionIndex) {
+                        this.currentActionIndex = newIndex;
+                        this.showAction(this.actions[newIndex]);
+                    }
+                    return;
+                }
+            }
+        }
         
-        const nextIndex = this.currentActionIndex + 1;
-        if (nextIndex < this.actions.length) {
-            // Move to next action (in a real implementation, this would be based on log content)
-            this.currentActionIndex = nextIndex;
-            this.showAction(this.actions[nextIndex]);
+        // Fallback to simple incrementing (only use if API doesn't provide step info)
+        // This is only used for simulation in case the log format doesn't contain step information
+        // and should be removed in production when proper step tracking is implemented
+        if (!logContent.includes("currentStep") && Math.random() < 0.1) { // Only advance the step occasionally 
+            const nextIndex = this.currentActionIndex + 1;
+            if (nextIndex < this.actions.length) {
+                this.currentActionIndex = nextIndex;
+                this.showAction(this.actions[nextIndex]);
+            }
         }
     }
 

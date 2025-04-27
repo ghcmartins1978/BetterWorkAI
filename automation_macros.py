@@ -493,12 +493,27 @@ class AutomationMacroManager:
         # Check if the process is still running
         if process.poll() is None:
             # Process is still running
+            # Get the current step index from the log file if available
+            current_step = 0
+            try:
+                log_content = self.get_log_content(process_info["log_path"])
+                if log_content:
+                    # Try to determine the current step from the log
+                    # This is a simple approach and could be improved
+                    lines = log_content.strip().split('\n')
+                    step_lines = [i for i, line in enumerate(lines) if "Executing step" in line]
+                    if step_lines:
+                        current_step = len(step_lines)
+            except Exception as e:
+                logger.warning(f"Error determining current step: {e}")
+            
             return {
                 "status": "running",
                 "macro_id": macro_id,
                 "pid": process.pid,
                 "log_path": process_info["log_path"],
                 "runtime": time.time() - process_info["start_time"],
+                "current_step": current_step,
             }
         else:
             # Process has finished
@@ -508,12 +523,22 @@ class AutomationMacroManager:
             # Clean up
             del self.running_processes[macro_id]
 
+            # When the process is finished, we assume all steps are complete
+            # Get the total step count from the macro
+            try:
+                macro = self.load_macro(macro_id)
+                total_steps = len(macro.steps) if macro else 0
+            except Exception as e:
+                logger.warning(f"Error getting total steps: {e}")
+                total_steps = 0
+                
             return {
                 "status": status,
                 "macro_id": macro_id,
                 "exit_code": exit_code,
                 "log_path": process_info["log_path"],
                 "runtime": time.time() - process_info["start_time"],
+                "current_step": total_steps,  # All steps are complete when the process is finished
             }
 
     def stop_macro(self, macro_id: str) -> Dict[str, Any]:

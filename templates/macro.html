@@ -232,12 +232,13 @@
 
 {% block head %}
 {{ super() }}
-<!-- Load dry run overlay scripts -->
-<script src="{{ url_for('static', filename='js/dry-run-overlay.js') }}"></script>
-<script src="{{ url_for('static', filename='js/dry-run-manager.js') }}"></script>
 {% endblock %}
 
 {% block scripts %}
+<!-- Load dry run overlay scripts -->
+<script src="{{ url_for('static', filename='js/dry-run-overlay.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dry-run-manager.js') }}"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Format code blocks with JSON parameters

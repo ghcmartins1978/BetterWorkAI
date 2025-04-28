@@ -19,21 +19,29 @@ class DryRunManager {
      * This helps avoid DOM-related errors during page load
      */
     _initializeOverlay() {
-        if (!this.overlay) {
+        const initWhenDomReady = () => {
             try {
-                this.overlay = new DryRunOverlay();
-                console.log('Dry run overlay initialized successfully');
+                if (!this.overlay) {
+                    this.overlay = new DryRunOverlay();
+                    console.log('Dry run overlay initialized successfully');
+                }
+                return this.overlay;
             } catch (error) {
                 console.error('Failed to initialize dry run overlay:', error);
-                // Try again when document is fully loaded
-                if (document.readyState !== 'complete') {
-                    window.addEventListener('load', () => {
-                        this._initializeOverlay();
-                    });
-                }
+                return null;
             }
+        };
+        
+        // Only initialize when DOM is ready
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            return initWhenDomReady();
+        } else {
+            // Schedule initialization for when DOM is ready
+            window.addEventListener('DOMContentLoaded', () => {
+                initWhenDomReady();
+            });
+            return null;
         }
-        return this.overlay;
     }
     
     /**
@@ -47,34 +55,47 @@ class DryRunManager {
             return;
         }
         
-        // Make sure overlay is initialized
-        this._initializeOverlay();
-        
-        // Check if overlay initialization failed
-        if (!this.overlay) {
-            console.error('Cannot start dry run: overlay not initialized');
-            return;
-        }
-        
-        this.running = true;
+        const executeWithSteps = (stepsToExecute) => {
+            // Ensure we have a valid overlay
+            if (!this.overlay) {
+                this.overlay = this._initializeOverlay();
+            }
+            
+            // If overlay is still not initialized, try one last time
+            if (!this.overlay) {
+                try {
+                    this.overlay = new DryRunOverlay();
+                } catch (e) {
+                    console.error('Final attempt to create overlay failed:', e);
+                    alert('Could not initialize the dry run visualization. Please try again or refresh the page.');
+                    this.running = false;
+                    return;
+                }
+            }
+            
+            this.running = true;
+            this._executeDryRun(stepsToExecute);
+        };
         
         // If steps are provided, use them
         if (steps && Array.isArray(steps)) {
-            this._executeDryRun(steps);
+            executeWithSteps(steps);
         } else {
             // Fetch the macro steps from the server
             fetch(`/api/automation/macros/${macroId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
-                        this._executeDryRun(data.macro.steps);
+                        executeWithSteps(data.macro.steps);
                     } else {
                         console.error('Failed to load macro:', data.message);
+                        alert('Failed to load macro details. Please try again.');
                         this.running = false;
                     }
                 })
                 .catch(error => {
                     console.error('Error loading macro:', error);
+                    alert('Error communicating with the server. Please try again.');
                     this.running = false;
                 });
         }

@@ -27,10 +27,29 @@ class DryRunOverlay {
      * Initialize the overlay
      */
     initialize() {
-        // Use a safer initialization approach that waits for the DOM to be ready
-        const initContainer = () => {
-            // Create the container if it doesn't exist
-            if (!document.getElementById(this.options.containerId)) {
+        // Defer initialization until the DOM is fully loaded
+        const ensureDomReady = () => {
+            if (document.readyState === 'complete' || document.readyState === 'interactive') {
+                this._createContainer();
+            } else {
+                // Wait for the DOM to be ready
+                document.addEventListener('DOMContentLoaded', () => {
+                    this._createContainer();
+                });
+            }
+        };
+        
+        ensureDomReady();
+    }
+    
+    /**
+     * Create the container for the overlay elements
+     * Private method called by initialize
+     */
+    _createContainer() {
+        // Create the container if it doesn't exist
+        if (!document.getElementById(this.options.containerId)) {
+            try {
                 const container = document.createElement('div');
                 container.id = this.options.containerId;
                 container.style.position = 'fixed';
@@ -43,29 +62,18 @@ class DryRunOverlay {
                 container.style.overflow = 'hidden';
                 container.style.display = 'none'; // Initially hidden
                 
-                // Only append to body if it exists
-                if (document.body) {
-                    document.body.appendChild(container);
-                } else {
-                    console.error('Document body not available for dry-run overlay initialization');
-                    // Try again when DOM is ready
-                    window.addEventListener('DOMContentLoaded', () => {
-                        if (document.body) {
-                            document.body.appendChild(container);
-                            this._setupOverlayElements();
-                        }
-                    });
-                    return false;
-                }
+                document.body.appendChild(container);
+                this.container = container;
+                this._setupOverlayElements();
+                return true;
+            } catch (error) {
+                console.error('Error creating dry-run overlay container:', error);
+                return false;
             }
-            
+        } else {
             this.container = document.getElementById(this.options.containerId);
-            return true;
-        };
-        
-        // If container initialization is successful, setup the overlay elements
-        if (initContainer()) {
             this._setupOverlayElements();
+            return true;
         }
     }
     

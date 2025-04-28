@@ -80,6 +80,24 @@
         </div>
     </div>
     
+    <!-- Time Saved Chart -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Time Saved Trend</h5>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-outline-secondary time-range-btn active" data-range="weekly">Weekly</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary time-range-btn" data-range="monthly">Monthly</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <canvas id="timeChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Macro Performance Table -->
     <div class="row mb-4">
         <div class="col-md-12">
@@ -110,12 +128,66 @@
             </div>
         </div>
     </div>
+    
+    <!-- Feedback Loop -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Automation Feedback Loop</h5>
+                    <span class="badge bg-info">New Feature</span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-4">
+                        BettermanAI continuously monitors the performance of your automations and suggests re-learning 
+                        when success rates drop below optimal levels. This ensures your macros adapt to changing 
+                        interfaces and workflows over time.
+                    </p>
+                    
+                    <div id="relearn-suggestions">
+                        <div class="d-flex justify-content-center my-4" id="no-relearn-msg">
+                            <div class="text-center py-4 text-muted">
+                                <i class="bi bi-check-circle text-success fs-1"></i>
+                                <p class="mt-3">All your macros are performing well! No re-learning needed at this time.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="row" id="relearn-cards-container">
+                            <!-- Dynamically populated via JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+    let timeChart;
+    let currentTimeRange = 'weekly';
+    
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialize chart
+        initializeTimeChart();
+        
+        // Add event listeners to time range buttons
+        document.querySelectorAll('.time-range-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const range = this.dataset.range;
+                currentTimeRange = range;
+                
+                // Update active button
+                document.querySelectorAll('.time-range-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Update chart data
+                updateTimeChart();
+            });
+        });
+        
+        // Fetch initial data
         fetchMetrics();
         fetchMacroMetrics();
         
@@ -131,6 +203,7 @@
             .then(response => response.json())
             .then(data => {
                 updateDashboard(data);
+                updateTimeChart();
             })
             .catch(error => {
                 console.error('Error fetching metrics:', error);
@@ -146,6 +219,128 @@
             .catch(error => {
                 console.error('Error fetching macro metrics:', error);
             });
+    }
+    
+    function initializeTimeChart() {
+        const ctx = document.getElementById('timeChart').getContext('2d');
+        
+        // Create a new chart instance
+        timeChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Hours Saved',
+                    data: [],
+                    backgroundColor: 'rgba(13, 202, 240, 0.2)',
+                    borderColor: 'rgba(13, 202, 240, 1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgba(13, 202, 240, 1)',
+                    pointBorderColor: '#fff',
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: ${context.parsed.y.toFixed(2)} hours`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value.toFixed(1) + 'h';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    function updateTimeChart() {
+        // In a real application, we would fetch historical data from an API endpoint
+        // For demo purposes, we'll generate some sample data based on the current time range
+        const today = new Date();
+        const labels = [];
+        const data = [];
+        
+        if (currentTimeRange === 'weekly') {
+            // Generate data for the past 7 days
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                
+                // Format date as 'Mon DD'
+                const label = date.toLocaleDateString('en-US', { 
+                    weekday: 'short', 
+                    day: 'numeric' 
+                });
+                
+                labels.push(label);
+                
+                // Generate some demo data with an upward trend plus noise
+                // Base is 0.5, increasing by 0.2 per day, with some randomness
+                const baseValue = 0.5 + (0.2 * (6 - i));
+                const randomFactor = 0.3;
+                const value = baseValue + (Math.random() * randomFactor);
+                
+                data.push(parseFloat(value.toFixed(2)));
+            }
+        } else if (currentTimeRange === 'monthly') {
+            // Generate data for the past 30 days, grouped by week
+            for (let i = 4; i >= 0; i--) {
+                const weekStart = new Date(today);
+                weekStart.setDate(weekStart.getDate() - (i * 7) - 6);
+                
+                const weekEnd = new Date(today);
+                weekEnd.setDate(weekEnd.getDate() - (i * 7));
+                
+                // Format as "MMM DD - MMM DD"
+                const label = `${weekStart.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric'
+                })} - ${weekEnd.toLocaleDateString('en-US', {
+                    month: 'short', 
+                    day: 'numeric'
+                })}`;
+                
+                labels.push(label);
+                
+                // Generate increasing demo data with a bit of randomness
+                const baseValue = 2.0 + (0.8 * (4 - i));
+                const randomFactor = 0.6;
+                const value = baseValue + (Math.random() * randomFactor);
+                
+                data.push(parseFloat(value.toFixed(2)));
+            }
+        }
+        
+        // Update chart data
+        timeChart.data.labels = labels;
+        timeChart.data.datasets[0].data = data;
+        timeChart.update();
     }
     
     function updateDashboard(data) {
@@ -206,6 +401,65 @@
         });
         
         tableBody.innerHTML = tableHtml;
+        
+        // Check for macros that need relearning
+        updateRelearnSuggestions(macros);
+    }
+    
+    function updateRelearnSuggestions(macros) {
+        // Get containers
+        const noRelearnMsg = document.getElementById('no-relearn-msg');
+        const relearnContainer = document.getElementById('relearn-cards-container');
+        
+        // Find macros that need relearning (success rate below 75% with at least 5 executions)
+        const macrosNeedingRelearn = macros.filter(macro => 
+            macro.execution_count >= 5 && 
+            macro.success_rate < 75
+        );
+        
+        // Sort by success rate (ascending)
+        macrosNeedingRelearn.sort((a, b) => a.success_rate - b.success_rate);
+        
+        // Update UI
+        if (macrosNeedingRelearn.length === 0) {
+            noRelearnMsg.classList.remove('d-none');
+            relearnContainer.innerHTML = '';
+            return;
+        }
+        
+        // Hide the "no relearn needed" message
+        noRelearnMsg.classList.add('d-none');
+        
+        // Create cards for each macro that needs relearning
+        let cardsHtml = '';
+        
+        macrosNeedingRelearn.forEach(macro => {
+            const failureRate = 100 - macro.success_rate;
+            
+            cardsHtml += `
+                <div class="col-md-6 mb-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <h5 class="card-title mb-0">${macro.name}</h5>
+                                <span class="badge bg-${failureRate > 40 ? 'danger' : 'warning'}">${Math.round(failureRate)}% Failure Rate</span>
+                            </div>
+                            <p class="card-text text-muted small mb-3">
+                                This macro has failed ${macro.failure_count} out of ${macro.execution_count} executions. 
+                                Relearning will help adapt to interface changes and increase success rate.
+                            </p>
+                            <div class="d-flex justify-content-end">
+                                <a href="/macro/${macro.id}/edit" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-arrow-repeat me-1"></i> Relearn
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        relearnContainer.innerHTML = cardsHtml;
     }
     
     function getSuccessRateColorClass(rate) {

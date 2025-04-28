@@ -504,6 +504,52 @@ def seed_demo_data():
                 
                 logger.info(f"Added {len(reports)} demo AI analysis reports")
             
+            # Create macro execution records
+            for macro in created_macros:
+                if macro.execution_count > 0:
+                    # Create execution records for each macro
+                    success_executions = macro.success_count or 0
+                    failure_executions = macro.failure_count or 0
+                    
+                    # Create success records
+                    for i in range(min(10, success_executions)):  # Limit to 10 demo records
+                        execution_time = datetime.now() - timedelta(days=random.randint(0, 5), 
+                                                                   hours=random.randint(1, 23), 
+                                                                   minutes=random.randint(0, 59))
+                        duration = (macro.original_sequence_duration or 0) * 0.9  # Slightly faster than manual
+                        
+                        execution = MacroExecution(
+                            macro_id=macro.id,
+                            start_time=execution_time - timedelta(seconds=duration),
+                            end_time=execution_time,
+                            status='success',
+                            original_sequence_duration=macro.original_sequence_duration,
+                            execution_duration=duration,
+                            time_saved=(macro.original_sequence_duration or 0) - duration,
+                            log_path=f"/logs/execution_{macro.id}_{i}.log"
+                        )
+                        db_session.add(execution)
+                    
+                    # Create failure records
+                    for i in range(min(5, failure_executions)):  # Limit to 5 demo records
+                        execution_time = datetime.now() - timedelta(days=random.randint(0, 5), 
+                                                                   hours=random.randint(1, 23), 
+                                                                   minutes=random.randint(0, 59))
+                        duration = (macro.original_sequence_duration or 0) * 0.5  # Failed halfway through
+                        
+                        execution = MacroExecution(
+                            macro_id=macro.id,
+                            start_time=execution_time - timedelta(seconds=duration),
+                            end_time=execution_time,
+                            status='failed',
+                            original_sequence_duration=macro.original_sequence_duration,
+                            execution_duration=duration,
+                            time_saved=0,  # No time saved on failure
+                            error_message="Element not found at expected position",
+                            log_path=f"/logs/execution_{macro.id}_failed_{i}.log"
+                        )
+                        db_session.add(execution)
+                        
             db_session.commit()
             logger.info("Demo data seeded successfully")
     except Exception as e:

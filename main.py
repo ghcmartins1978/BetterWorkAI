@@ -56,13 +56,20 @@ def utility_processor():
                     elif execution.status == 'running':
                         status_color = 'primary'
                         
+                    # Calculate duration if not available
+                    duration = None
+                    if hasattr(execution, 'duration'):
+                        duration = execution.duration
+                    elif hasattr(execution, 'start_time') and hasattr(execution, 'end_time') and execution.start_time and execution.end_time:
+                        duration = (execution.end_time - execution.start_time).total_seconds()
+                        
                     execution_dict = {
                         'id': execution.id,
                         'macro_id': execution.macro_id,
                         'status': execution.status,
                         'start_time': execution.start_time,
                         'end_time': execution.end_time,
-                        'duration': execution.duration,
+                        'duration': duration,
                         'status_color': status_color
                     }
                     executions_data.append(execution_dict)
@@ -2350,6 +2357,8 @@ def execute_macro(macro_id, mode='normal'):
     Returns:
         Dictionary with execution result
     """
+    # Import the session_scope context manager for database transactions
+    from database import session_scope
     # Check if the macro_id is 'test_macro' which is a special case for the test page
     if macro_id == 'test_macro':
         # Try to load the YAML file and create a temporary macro object for execution
@@ -2412,11 +2421,37 @@ def execute_macro(macro_id, mode='normal'):
     except (ValueError, TypeError):
         pass  # Keep as is if not convertible
     
-    # Now get the macro from the database
+    # Now get the macro from the database using session_scope
+    macro_data = None
     try:
-        macro = db_session.query(Macro).get(macro_id)
-        if not macro:
-            return {'status': 'error', 'message': f'Macro not found with ID {macro_id}'}
+        with session_scope() as db:
+            macro = db.query(Macro).get(macro_id)
+            if not macro:
+                return {'status': 'error', 'message': f'Macro not found with ID {macro_id}'}
+            
+            # Create a copy of the macro data as a dictionary to avoid detached session issues
+            macro_data = {
+                'id': macro.id,
+                'name': macro.name,
+                'description': macro.description,
+                'steps': []
+            }
+            
+            # Get the steps in this session
+            for step in macro.steps:
+                step_params = json.loads(step.parameters) if isinstance(step.parameters, str) else step.parameters
+                macro_data['steps'].append({
+                    'id': step.id,
+                    'step_number': step.step_number,
+                    'action_type': step.action_type,
+                    'parameters': step_params
+                })
+            
+            # Update the macro in the database
+            macro.status = 'running'
+            macro.last_execution_time = datetime.now()
+            macro.execution_count = (macro.execution_count or 0) + 1
+            # No need to commit - session_scope will handle it
         
         # Log the execution attempt
         logger.info(f"Executing macro {macro_id} in {mode} mode")
@@ -2430,21 +2465,14 @@ def execute_macro(macro_id, mode='normal'):
         }
     
     try:
-        # In a real implementation, this would execute the macro
-        # Here we just update the execution count and time
-        macro.status = 'running'
-        macro.last_execution_time = datetime.now()  # Use last_execution_time instead of last_execution
-        macro.execution_count += 1
-        db_session.commit()
-        
-        # Prepare the result
+        # Prepare the result using the copied data
         result = {
             'status': 'running',
             'macro_id': macro_id,
             'mode': mode,
-            'name': macro.name,
-            'description': macro.description,
-            'started_at': macro.last_execution_time.isoformat() if hasattr(macro, 'last_execution_time') and macro.last_execution_time else None,
+            'name': macro_data['name'],
+            'description': macro_data['description'],
+            'started_at': datetime.now().isoformat(),
         }
         
         # For normal execution, connect to the local automation server
@@ -2474,15 +2502,14 @@ def execute_macro(macro_id, mode='normal'):
             
             # Record the log path for later retrieval
             with open(log_path, 'w') as f:
-                f.write(f"Starting execution of macro {macro.name} (ID: {macro_id}) at {datetime.now().isoformat()}\n")
+                f.write(f"Starting execution of macro {macro_data['name']} (ID: {macro_id}) at {datetime.now().isoformat()}\n")
                 f.write(f"Mode: {mode}\n")
                 f.write(f"Server URL: {server_url}\n")
                 f.write("Steps to execute:\n")
                 
                 # Write the steps to the log
-                for i, step in enumerate(macro.steps):
-                    step_params = json.loads(step.parameters) if isinstance(step.parameters, str) else step.parameters
-                    f.write(f"  {i+1}. {step.action_type}: {json.dumps(step_params)}\n")
+                for i, step in enumerate(macro_data['steps']):
+                    f.write(f"  {i+1}. {step['action_type']}: {json.dumps(step['parameters'])}\n")
                 
                 f.write("\nExecution log:\n")
         
@@ -2490,12 +2517,15 @@ def execute_macro(macro_id, mode='normal'):
     except Exception as e:
         logger.error(f"Error executing macro {macro_id}: {e}")
         
-        # Update the macro status
+        # Update the macro status using session_scope
         try:
-            macro.status = 'failed'
-            db_session.commit()
-        except:
-            pass
+            with session_scope() as db:
+                macro = db.query(Macro).get(macro_id)
+                if macro:
+                    macro.status = 'failed'
+                    # No need to commit - session_scope handles it
+        except Exception as update_error:
+            logger.error(f"Error updating macro status: {update_error}")
             
         # Return the error
         return {
@@ -2537,6 +2567,9 @@ def get_macro_status(macro_id):
     Returns:
         Dictionary with status information
     """
+    # Import the session_scope context manager for database transactions
+    from database import session_scope
+    
     # Check if the macro ID is numeric (from database)
     try:
         # Try to convert to int if it's a string representing a number
@@ -2545,10 +2578,23 @@ def get_macro_status(macro_id):
     except (ValueError, TypeError):
         pass  # Keep as is if not convertible
     
+    # Use the session_scope to safely access the database
+    macro_data = None
     try:
-        macro = db_session.query(Macro).get(macro_id)
-        if not macro:
-            return {'status': 'error', 'message': 'Macro not found'}
+        with session_scope() as db:
+            macro = db.query(Macro).get(macro_id)
+            if not macro:
+                return {'status': 'error', 'message': 'Macro not found'}
+            
+            # Copy the macro data we need while the session is open
+            macro_data = {
+                'id': macro.id,
+                'name': macro.name,
+                'description': macro.description,
+                'status': macro.status,
+                'execution_count': macro.execution_count if hasattr(macro, 'execution_count') else 0,
+                'last_execution_time': macro.last_execution_time if hasattr(macro, 'last_execution_time') else None
+            }
     except Exception as e:
         logger.error(f"Database error while getting macro status for {macro_id}: {e}")
         return {
@@ -2557,12 +2603,13 @@ def get_macro_status(macro_id):
             'error_type': 'database_connection'
         }
     
+    # Now use the safely copied data
     # In a real implementation, this would check the actual execution status
     # Here we just return the stored status
     status = 'completed'  # Default to completed for this example
-    if macro.status == 'running':
+    if macro_data['status'] == 'running':
         status = 'running'
-    elif macro.status == 'failed':
+    elif macro_data['status'] == 'failed':
         status = 'failed'
     
     # Find any log files for this macro
@@ -2578,10 +2625,10 @@ def get_macro_status(macro_id):
     return {
         'status': status,
         'macro_id': macro_id,
-        'name': macro.name,
-        'description': macro.description,
-        'execution_count': macro.execution_count,
-        'last_execution': macro.last_execution_time.isoformat() if hasattr(macro, 'last_execution_time') and macro.last_execution_time else None,
+        'name': macro_data['name'],
+        'description': macro_data['description'],
+        'execution_count': macro_data['execution_count'],
+        'last_execution': macro_data['last_execution_time'].isoformat() if macro_data['last_execution_time'] else None,
         'log_path': log_path
     }
 
@@ -2617,6 +2664,9 @@ def stop_macro(macro_id):
     Returns:
         Dictionary with result status
     """
+    # Import the session_scope context manager for database transactions
+    from database import session_scope
+    
     # Check if the macro ID is numeric (from database)
     try:
         # Try to convert to int if it's a string representing a number
@@ -2625,10 +2675,28 @@ def stop_macro(macro_id):
     except (ValueError, TypeError):
         pass  # Keep as is if not convertible
     
+    # Get the macro data with session_scope
+    macro_data = None
     try:
-        macro = db_session.query(Macro).get(macro_id)
-        if not macro:
-            return {'status': 'error', 'message': f'Macro not found with ID {macro_id}'}
+        with session_scope() as db:
+            macro = db.query(Macro).get(macro_id)
+            if not macro:
+                return {'status': 'error', 'message': f'Macro not found with ID {macro_id}'}
+            
+            # Copy macro data we need
+            macro_data = {
+                'id': macro.id,
+                'name': macro.name,
+                'status': macro.status
+            }
+            
+            # In a real implementation, this would send a stop signal to the automation server
+            # Here we just update the status
+            if macro.status == 'running':
+                macro.status = 'stopped'
+                # No need to commit - session_scope does this automatically
+            
+        # If we got here, the transaction completed successfully
     except Exception as e:
         logger.error(f"Database error while stopping macro {macro_id}: {e}")
         return {
@@ -2637,12 +2705,8 @@ def stop_macro(macro_id):
             'error_type': 'database_connection'
         }
     
-    # In a real implementation, this would send a stop signal to the automation server
-    # Here we just update the status
-    if macro.status == 'running':
-        macro.status = 'stopped'
-        db_session.commit()
-        
+    # Now use the safely copied data
+    if macro_data['status'] == 'running':
         # Add stop message to log if exists
         log_dir = os.path.join(os.getcwd(), 'logs', 'macros', str(macro_id))
         if os.path.exists(log_dir):
@@ -2660,14 +2724,14 @@ def stop_macro(macro_id):
         return {
             'status': 'stopped',
             'macro_id': macro_id,
-            'name': macro.name,
+            'name': macro_data['name'],
             'message': 'Macro execution stopped successfully'
         }
     else:
         return {
             'status': 'not_running',
             'macro_id': macro_id,
-            'name': macro.name,
+            'name': macro_data['name'],
             'message': 'Macro was not running'
         }
 

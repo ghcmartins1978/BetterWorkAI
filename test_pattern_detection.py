@@ -591,7 +591,7 @@ class TestPatternGenerator:
             return []
 
 def main():
-    server_url = os.environ.get('AUTOMATION_SERVER_URL', '')
+    server_url = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400')
     
     if len(sys.argv) < 2:
         print("Usage: python test_pattern_detection.py <command> [args]")

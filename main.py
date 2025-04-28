@@ -2877,7 +2877,7 @@ def api_execute_macro(macro_id):
             'message': str(e),
             'details': stack_trace,
             'server_diagnostics': {
-                'automation_server_url': os.environ.get('AUTOMATION_SERVER_URL', 'Not set')
+                'automation_server_url': os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400')
             }
         })
 
@@ -2974,7 +2974,7 @@ def api_get_macro_status(macro_id):
             'message': str(e),
             'details': stack_trace,
             'server_diagnostics': {
-                'automation_server_url': os.environ.get('AUTOMATION_SERVER_URL', 'Not set')
+                'automation_server_url': os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400')
             }
         })
 
@@ -3077,7 +3077,7 @@ def api_stop_macro(macro_id):
             'message': str(e),
             'details': stack_trace,
             'server_diagnostics': {
-                'automation_server_url': os.environ.get('AUTOMATION_SERVER_URL', 'Not set')
+                'automation_server_url': os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400')
             }
         })
 

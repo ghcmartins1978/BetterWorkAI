@@ -1,28 +1,30 @@
 {% extends 'layout.html' %}
 
-{% block title %}Error{% endblock %}
+{% block title %}Error - BettermanAI{% endblock %}
 
 {% block content %}
-<div class="container my-4 p-4 bg-dark rounded shadow">
-    <div class="row">
-        <div class="col-12">
-            <div class="alert alert-danger">
-                <h4 class="alert-heading">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                    {{ error }}
-                </h4>
-                <hr>
-                <p class="mb-0">{{ details }}</p>
-            </div>
-            
-            <div class="mt-4">
-                <a href="javascript:window.close();" class="btn btn-secondary">
-                    <i class="bi bi-x-circle me-2"></i>Close Window
-                </a>
-                
-                <a href="/" class="btn btn-primary ms-2">
-                    <i class="bi bi-house-fill me-2"></i>Return to Dashboard
-                </a>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">{{ error_title }}</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <p>{{ error_message }}</p>
+                    </div>
+                    
+                    {% if back_link %}
+                    <a href="{{ back_link }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-home"></i> Go to Dashboard
+                    </a>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>

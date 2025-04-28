@@ -808,38 +808,54 @@ def macro_library():
 @app.route('/macro/<int:macro_id>')
 def view_macro(macro_id):
     """View a specific macro"""
-    macro = db_session.query(Macro).get(macro_id)
-    if not macro:
-        flash('Macro not found', 'error')
-        return redirect(url_for('macros'))
-    
-    steps = db_session.query(MacroStep).filter_by(macro_id=macro.id).order_by(MacroStep.step_number).all()
-    
-    return render_template('macro.html', macro=macro, steps=steps)
+    try:
+        macro = db_session.query(Macro).get(macro_id)
+        if not macro:
+            flash('Macro not found', 'error')
+            return redirect(url_for('macros'))
+        
+        steps = db_session.query(MacroStep).filter_by(macro_id=macro.id).order_by(MacroStep.step_number).all()
+        
+        return render_template('macro.html', macro=macro, steps=steps)
+    except Exception as e:
+        logger.error(f"Database error while viewing macro {macro_id}: {e}")
+        flash('Database connection error. Please try again later.', 'error')
+        return render_template('error.html', 
+                               error_title="Database Connection Error",
+                               error_message="Unable to connect to the database. Please try again later.",
+                               back_link=url_for('macros'))
     
 @app.route('/execution/<int:execution_id>')
 def view_execution(execution_id):
     """View details of a specific macro execution"""
-    execution = db_session.query(MacroExecution).get(execution_id)
-    if not execution:
-        flash('Execution record not found', 'error')
-        return redirect(url_for('macros'))
-    
-    macro = db_session.query(Macro).get(execution.macro_id)
-    if not macro:
-        flash('Associated macro not found', 'error')
-        return redirect(url_for('macros'))
-    
-    # Determine status color for badge display
-    status_color = 'secondary'
-    if execution.status == 'success':
-        status_color = 'success'
-    elif execution.status == 'failed':
-        status_color = 'danger'
-    elif execution.status == 'timeout':
-        status_color = 'warning'
-    elif execution.status == 'running':
-        status_color = 'primary'
+    try:
+        execution = db_session.query(MacroExecution).get(execution_id)
+        if not execution:
+            flash('Execution record not found', 'error')
+            return redirect(url_for('macros'))
+        
+        macro = db_session.query(Macro).get(execution.macro_id)
+        if not macro:
+            flash('Associated macro not found', 'error')
+            return redirect(url_for('macros'))
+        
+        # Determine status color for badge display
+        status_color = 'secondary'
+        if execution.status == 'success':
+            status_color = 'success'
+        elif execution.status == 'failed':
+            status_color = 'danger'
+        elif execution.status == 'timeout':
+            status_color = 'warning'
+        elif execution.status == 'running':
+            status_color = 'primary'
+    except Exception as e:
+        logger.error(f"Database error while viewing execution {execution_id}: {e}")
+        flash('Database connection error. Please try again later.', 'error')
+        return render_template('error.html', 
+                              error_title="Database Connection Error",
+                              error_message="Unable to connect to the database. Please try again later.",
+                              back_link=url_for('macros'))
     
     # Parse execution data if available
     execution_data = None

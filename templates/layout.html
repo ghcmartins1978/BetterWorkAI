@@ -40,122 +40,149 @@
         <div class="row">
             <!-- Left Sidebar Navigation -->
             <div class="col-lg-2 col-md-3 bg-dark sidebar pt-3 pb-3" style="min-height: calc(100vh - 100px);">
+                <!-- Dashboard Group -->
+                <div class="nav-group mb-4">
+                    <a class="nav-link" href="/">
+                        <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                    </a>
+                </div>
+                
                 <!-- Timeline Group -->
                 <div class="nav-group mb-4">
-                    <h6 class="nav-group-title"><i class="bi bi-clock-history me-2"></i>Timeline</h6>
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="/">
-                                <i class="bi bi-house-door me-2"></i>Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/patterns">
-                                <i class="bi bi-repeat me-2"></i>Patterns
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/monitor">
-                                <i class="bi bi-activity me-2"></i>Monitoring
-                            </a>
-                        </li>
-                    </ul>
+                    <h6 class="nav-group-title" data-bs-toggle="collapse" data-bs-target="#timelineSubmenu">
+                        <span><i class="bi bi-clock-history me-2"></i>Timeline</span>
+                        <i class="bi bi-chevron-down chevron"></i>
+                    </h6>
+                    <div id="timelineSubmenu" class="submenu">
+                        <ul class="nav flex-column">
+                            <li class="nav-item">
+                                <a class="nav-link" href="/events">
+                                    <i class="bi bi-activity me-2"></i>Raw Events
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/patterns">
+                                    <i class="bi bi-repeat me-2"></i>Patterns
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/monitor">
+                                    <i class="bi bi-display me-2"></i>Monitoring
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
                 
                 <!-- Automations Group -->
                 <div class="nav-group mb-4">
-                    <h6 class="nav-group-title"><i class="bi bi-robot me-2"></i>Automations</h6>
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="/macros">
-                                <i class="bi bi-play-btn me-2"></i>Macros
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/suggestions">
-                                <i class="bi bi-lightbulb me-2"></i>Suggestions
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/macro-library">
-                                <i class="bi bi-collection-play me-2"></i>Macro Library
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/automation">
-                                <i class="bi bi-rocket-takeoff me-2"></i>Automation
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/dry-run-overlay">
-                                <i class="bi bi-display me-2"></i>Dry Run Overlay
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/test-macro-execution">
-                                <i class="bi bi-play-circle me-2"></i>Test Execution
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/yaml-compiler">
-                                <i class="bi bi-code-square me-2"></i>YAML Compiler
-                            </a>
-                        </li>
-                    </ul>
+                    <h6 class="nav-group-title" data-bs-toggle="collapse" data-bs-target="#automationsSubmenu">
+                        <span><i class="bi bi-robot me-2"></i>Automations</span>
+                        <i class="bi bi-chevron-down chevron"></i>
+                    </h6>
+                    <div id="automationsSubmenu" class="submenu">
+                        <ul class="nav flex-column">
+                            <li class="nav-item">
+                                <a class="nav-link" href="/macros">
+                                    <i class="bi bi-play-btn me-2"></i>My Macros
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/macro-editor">
+                                    <i class="bi bi-pencil-square me-2"></i>Create / Edit
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/suggestions">
+                                    <i class="bi bi-lightbulb me-2"></i>Suggestions
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/macro-library">
+                                    <i class="bi bi-collection-play me-2"></i>Macro Library
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/dry-run-overlay">
+                                    <i class="bi bi-display me-2"></i>Dry Run
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/yaml-compiler">
+                                    <i class="bi bi-code-square me-2"></i>YAML Compiler
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
                 
                 <!-- Metrics Group -->
                 <div class="nav-group mb-4">
-                    <h6 class="nav-group-title"><i class="bi bi-bar-chart me-2"></i>Metrics</h6>
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="/metrics">
-                                <i class="bi bi-speedometer2 me-2"></i>Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/statistics">
-                                <i class="bi bi-graph-up me-2"></i>Statistics
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/ai_reports">
-                                <i class="bi bi-file-earmark-text me-2"></i>AI Reports
-                            </a>
-                        </li>
-                    </ul>
+                    <h6 class="nav-group-title" data-bs-toggle="collapse" data-bs-target="#metricsSubmenu">
+                        <span><i class="bi bi-bar-chart me-2"></i>Metrics</span>
+                        <i class="bi bi-chevron-down chevron"></i>
+                    </h6>
+                    <div id="metricsSubmenu" class="submenu">
+                        <ul class="nav flex-column">
+                            <li class="nav-item">
+                                <a class="nav-link" href="/statistics">
+                                    <i class="bi bi-graph-up me-2"></i>Usage Stats
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/metrics">
+                                    <i class="bi bi-speedometer2 me-2"></i>Performance
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/ai_reports">
+                                    <i class="bi bi-file-earmark-text me-2"></i>AI Reports
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
                 
                 <!-- Settings Group -->
                 <div class="nav-group">
-                    <h6 class="nav-group-title"><i class="bi bi-gear me-2"></i>Settings</h6>
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="/settings">
-                                <i class="bi bi-sliders me-2"></i>General
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/server-url-manager">
-                                <i class="bi bi-link-45deg me-2"></i>Server URL
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/scheduled_jobs">
-                                <i class="bi bi-calendar-check me-2"></i>Scheduled Jobs
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/audio">
-                                <i class="bi bi-mic me-2"></i>Audio Capture
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/webcam">
-                                <i class="bi bi-camera-video me-2"></i>Webcam
-                            </a>
-                        </li>
-                    </ul>
+                    <h6 class="nav-group-title" data-bs-toggle="collapse" data-bs-target="#settingsSubmenu">
+                        <span><i class="bi bi-gear me-2"></i>Settings</span>
+                        <i class="bi bi-chevron-down chevron"></i>
+                    </h6>
+                    <div id="settingsSubmenu" class="submenu">
+                        <ul class="nav flex-column">
+                            <li class="nav-item">
+                                <a class="nav-link" href="/settings">
+                                    <i class="bi bi-sliders me-2"></i>Privacy & Data
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/audio">
+                                    <i class="bi bi-mic me-2"></i>Microphone
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/webcam">
+                                    <i class="bi bi-camera-video me-2"></i>Webcam
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/scheduled_jobs">
+                                    <i class="bi bi-calendar-check me-2"></i>Scheduler
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/server-url-manager">
+                                    <i class="bi bi-link-45deg me-2"></i>Server URL
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/about">
+                                    <i class="bi bi-info-circle me-2"></i>About
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
             
@@ -248,6 +275,8 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/kpi-cards.js') }}"></script>
     
     <script>
         $(document).ready(function() {

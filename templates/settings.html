@@ -170,9 +170,10 @@
                             <div>
                                 <h5 class="alert-heading">About Local Connection</h5>
                                 <p class="mb-0">
-                                    BettermanAI needs to connect to a local server running on your computer to perform system-level
-                                    automation. Follow the instructions in <a href="local_setup_instructions.md" target="_blank">local_setup_instructions.md</a> 
-                                    to set up the local server and ngrok tunnel.
+                                    BettermanAI needs to connect to the Rust helper running on your computer to perform system-level
+                                    automation. The Rust helper runs a REST API locally at <strong>http://127.0.0.1:17400</strong>.
+                                    Follow the instructions in <a href="local_setup_instructions.md" target="_blank">local_setup_instructions.md</a> 
+                                    to set up the Rust helper on your system.
                                 </p>
                             </div>
                         </div>
@@ -180,10 +181,10 @@
                     
                     <form id="connectionSettingsForm">
                         <div class="mb-3">
-                            <label for="automationServerUrl" class="form-label">Automation Server URL (ngrok URL)</label>
+                            <label for="automationServerUrl" class="form-label">Rust Helper URL</label>
                             <div class="input-group">
                                 <input type="url" class="form-control" id="automationServerUrl" name="automation_server_url" 
-                                    placeholder="https://your-ngrok-url.ngrok.io" value="{{ settings.automation_server_url }}">
+                                    placeholder="http://127.0.0.1:17400" value="{{ settings.automation_server_url or 'http://127.0.0.1:17400' }}">
                                 <button class="btn btn-outline-secondary" type="button" id="testConnection">
                                     <i class="bi bi-check2-circle me-1"></i>
                                     Test Connection

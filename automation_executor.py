@@ -186,26 +186,31 @@ class AutomationExecutor:
                     diff_img.save(diff_img_path)
                     logger.info(f"Saved screenshot diff to {diff_img_path}")
                 
+                # Always store screenshot and diff data in execution_data
+                execution_data = {
+                    "screen_change_percentage": diff_percentage,
+                    "before_screenshot": before_img_path,
+                    "after_screenshot": after_img_path,
+                    "diff_screenshot": diff_img_path
+                }
+                
                 # If less than 3% of the screen changed, add a warning
                 if diff_percentage < 3.0:
                     warning_message = f"Warning: Screen changed only {diff_percentage:.2f}% after execution. Automation may not have had the expected effect."
                     logger.warning(warning_message)
                     
-                    # Store the warning in the execution record execution_data
-                    execution.execution_data = json.dumps({
-                        "screen_change_percentage": diff_percentage,
-                        "warning": warning_message,
-                        "before_screenshot": before_img_path,
-                        "after_screenshot": after_img_path,
-                        "diff_screenshot": diff_img_path
-                    })
-                    db_session.commit()
+                    # Add warning to execution data
+                    execution_data["warning"] = warning_message
                     
                     # Show a notification about the warning
                     self._show_notification(
                         "Automation Warning", 
                         f"Macro '{macro.name}' completed, but screen changed only {diff_percentage:.2f}%"
                     )
+                
+                # Store the execution data
+                execution.execution_data = json.dumps(execution_data)
+                db_session.commit()
             
             # Update macro status and metrics
             if all_steps_successful and not self.abort_requested:

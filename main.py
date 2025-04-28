@@ -2006,6 +2006,45 @@ def detect_webcam_faces():
         logger.error(f"Error detecting faces: {e}")
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/api/context')
+def api_context():
+    """API endpoint to get context information from context enrichers"""
+    try:
+        # Lazy import to avoid circular dependencies
+        from src.context_enrich.context_manager import ContextManager
+        
+        # Check if context enrichment is enabled in settings
+        context_enabled = settings.get_setting('context_enrichment_enabled', default=True)
+        
+        if not context_enabled:
+            return jsonify({
+                'status': 'disabled',
+                'message': 'Context enrichment is disabled in settings',
+                'context': {}
+            })
+        
+        # Initialize context manager with settings
+        manager = ContextManager(settings)
+        
+        # Force refresh if requested
+        force_refresh = request.args.get('refresh', 'false').lower() == 'true'
+        
+        # Get context information
+        context = manager.get_context(force_refresh=force_refresh)
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Context information retrieved successfully',
+            'context': context
+        })
+    except Exception as e:
+        logger.error(f"Error getting context information: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Error getting context information: {str(e)}',
+            'context': {}
+        })
+
 @app.route('/api/stats')
 def api_stats():
     """API endpoint to get basic stats for dashboard updates"""

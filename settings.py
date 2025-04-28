@@ -160,7 +160,16 @@ class Settings:
             'prompt_for_required_variables': True,
             'save_variable_values': True,
             'auto_detect_variables': True,
-            'variable_prompt_timeout': 30  # seconds to wait for variable input before aborting
+            'variable_prompt_timeout': 30,  # seconds to wait for variable input before aborting
+            
+            # Context enrichment settings
+            'context_enrichment_enabled': True,
+            'context_enricher_browser_enabled': True,
+            'context_enricher_explorer_enabled': True,
+            'context_enricher_office_enabled': True,
+            'context_enricher_clipboard_enabled': True,
+            'context_cache_lifetime': 10,  # seconds
+            'clipboard_max_length': 200  # max characters to capture from clipboard
         }
         
         # Set default settings if they don't exist

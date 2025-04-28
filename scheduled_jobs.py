@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 from database import db_session
 from models import ScheduledJob, EventSequence, Pattern
-from ai_analysis_script import analyze_pattern_with_openai, store_analysis_in_database
+from ai_llm import ai_llm
 
 logger = logging.getLogger(__name__)
 
@@ -448,10 +448,15 @@ class NightlyPatternAnalysisJob:
                 
                 # Analyze with OpenAI
                 try:
-                    analysis_data = analyze_pattern_with_openai(pattern_data, sequences_data)
+                    # Use the new ai_llm module for pattern analysis
+                    analysis_data = ai_llm.analyze_pattern(
+                        pattern_name=pattern_data['name'],
+                        sequences=sequences_data,
+                        score=pattern_data['score']
+                    )
                     
-                    # Store analysis results
-                    store_analysis_in_database(pattern.id, analysis_data)
+                    # Store analysis results using ai_llm
+                    ai_llm.store_analysis_in_database(pattern.id, analysis_data)
                     
                     # Update pattern status
                     pattern.status = 'evaluated'

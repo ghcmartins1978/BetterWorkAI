@@ -215,8 +215,7 @@ class AutomationExecutor:
             # Update macro status and metrics
             if all_steps_successful and not self.abort_requested:
                 macro.status = 'recorded'  # Reset to recorded state
-                macro.execution_count = (macro.execution_count or 0) + 1
-                macro.success_count = (macro.success_count or 0) + 1
+                # Note: execution_count and success_count will be updated in _update_execution_record
                 
                 # Calculate time saved - if original duration is not set, use a default estimate
                 # based on the number of steps (e.g., 5 seconds per step)
@@ -244,7 +243,7 @@ class AutomationExecutor:
                 result = True
             else:
                 macro.status = 'recorded'  # Reset to recorded state
-                macro.failure_count = (macro.failure_count or 0) + 1
+                # Note: failure_count will be updated in _update_execution_record
                 
                 # Update execution record
                 self._update_execution_record(
@@ -268,7 +267,7 @@ class AutomationExecutor:
             try:
                 macro = db_session.query(Macro).get(macro_id)
                 macro.status = 'recorded'  # Reset to recorded state
-                macro.failure_count = (macro.failure_count or 0) + 1
+                # Note: failure_count will be updated in _update_execution_record
                 db_session.commit()
                 
                 # Update execution record
@@ -905,8 +904,33 @@ class AutomationExecutor:
                 
             if error_message:
                 execution.error_message = error_message
+            
+            # Get the macro to update success/failure counts    
+            macro = db_session.query(Macro).get(execution.macro_id)
+            if macro:
+                # Update total execution count
+                macro.execution_count = (macro.execution_count or 0) + 1
+                
+                # Ticket A9: Update macro execution statistics
+                if status == 'success':
+                    macro.success_count = (macro.success_count or 0) + 1
+                elif status == 'failed':
+                    macro.failure_count = (macro.failure_count or 0) + 1
+                
+                # After updating counts, check if relearn criteria are met
+                # But only do this after commit so we have accurate counts
+                need_relearn_check = True
+            else:
+                need_relearn_check = False
                 
             db_session.commit()
+            
+            # Check relearn criteria after committing the transaction
+            # to ensure we have the most up-to-date stats
+            if need_relearn_check and status == 'failed':
+                # For failed executions, check if the failure rate is high enough to prompt relearn
+                self._check_relearn_criteria(execution.macro_id)
+            
             logger.info(f"Updated execution record {execution_id} with status {status}")
             
         except Exception as e:

@@ -1,0 +1,145 @@
+{% extends "layout.html" %}
+
+{% block title %}Relearn Macro: {{ macro.name }}{% endblock %}
+
+{% block content %}
+<div class="container pt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-warning shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        Automation Reliability Alert
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <h4 class="card-title">This automation needs your attention</h4>
+                    <p class="lead">
+                        <strong>"{{ macro.name }}"</strong> has been failing <span class="badge bg-danger">{{ failure_percent }}%</span> of the time.
+                    </p>
+                    
+                    <p>To improve reliability, we recommend re-recording this automation. Would you like to do this now?</p>
+                    
+                    <div class="alert alert-info">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-info-circle-fill fs-4 me-2"></i>
+                            <div>
+                                <strong>Why is this happening?</strong>
+                                <p class="mb-0">
+                                    Applications may have updated, screen layouts changed, or the timing of steps might need adjustments.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if recent_executions %}
+                    <div class="mt-4">
+                        <h5>Recent execution history</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Status</th>
+                                        <th>Duration</th>
+                                        <th>Error</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for exec in recent_executions %}
+                                    <tr class="{% if exec.status == 'success' %}table-success{% elif exec.status == 'failed' %}table-danger{% endif %}">
+                                        <td>{{ exec.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>
+                                            <span class="badge {% if exec.status == 'success' %}bg-success{% elif exec.status == 'failed' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                                {{ exec.status }}
+                                            </span>
+                                        </td>
+                                        <td>{{ exec.execution_duration|round(1) if exec.execution_duration else 'N/A' }} sec</td>
+                                        <td class="text-truncate" style="max-width: 250px;">{{ exec.error_message or 'None' }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <button id="btn-never" class="btn btn-outline-secondary" data-action="never">
+                            <i class="bi bi-x-circle me-1"></i>Never ask again
+                        </button>
+                        <button id="btn-later" class="btn btn-outline-primary" data-action="later">
+                            <i class="bi bi-clock me-1"></i>Remind me later
+                        </button>
+                        <button id="btn-yes" class="btn btn-success" data-action="yes">
+                            <i class="bi bi-check-circle me-1"></i>Yes, relearn now
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get all action buttons
+    const actionButtons = document.querySelectorAll('[data-action]');
+    
+    // Add click event to each button
+    actionButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const action = this.getAttribute('data-action');
+            handleAction(action);
+        });
+    });
+    
+    // Handle action function
+    function handleAction(action) {
+        // Disable all buttons while processing
+        actionButtons.forEach(btn => btn.disabled = true);
+        
+        // Show loading state on the clicked button
+        const clickedButton = document.querySelector(`[data-action="${action}"]`);
+        const originalText = clickedButton.innerHTML;
+        clickedButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...`;
+        
+        // Create form data
+        const formData = new FormData();
+        formData.append('action', action);
+        
+        // Send AJAX request
+        fetch('/relearn-prompt/{{ macro.id }}/{{ suggestion.id }}/action', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (data.redirect) {
+                    // Redirect to the specified URL
+                    window.location.href = data.redirect;
+                } else if (data.message) {
+                    // Show success message and redirect to macros page
+                    alert(data.message);
+                    window.location.href = '/macros';
+                }
+            } else {
+                // Show error and reset buttons
+                alert(data.error || 'An error occurred. Please try again.');
+                actionButtons.forEach(btn => btn.disabled = false);
+                clickedButton.innerHTML = originalText;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again.');
+            actionButtons.forEach(btn => btn.disabled = false);
+            clickedButton.innerHTML = originalText;
+        });
+    }
+});
+</script>
+{% endblock %}

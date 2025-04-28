@@ -3,21 +3,21 @@ import requests
 import logging
 import json
 
-# This module acts as a client to a remote automation server running on the user's machine
-# It translates local automation calls to API requests to the remote server
+# This module acts as a client to the Rust helper's REST API running on the user's machine
+# It translates local automation calls to API requests to the local Rust helper service
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# The ngrok URL should be provided as an environment variable
+# The helper URL should be provided as an environment variable
 AUTOMATION_SERVER_URL = os.environ.get('AUTOMATION_SERVER_URL', '')
 
 class AutomationClient:
     """
-    Client for remote automation server. This allows the application to
+    Client for the Rust helper's REST API. This allows the application to
     control mouse, keyboard, and window actions on the user's computer
-    by sending requests to a Flask server running locally with ngrok tunnel.
+    by sending requests to the Rust helper's Actix-Web API running on 127.0.0.1:17400.
     """
     
     def __init__(self, server_url=None):
@@ -25,7 +25,7 @@ class AutomationClient:
         Initialize the automation client
         
         Args:
-            server_url: URL of the automation server (ngrok URL)
+            server_url: URL of the Rust helper's REST API (typically http://127.0.0.1:17400)
         """
         self.server_url = server_url or AUTOMATION_SERVER_URL
         
@@ -41,7 +41,7 @@ class AutomationClient:
         return self.is_connected()
     
     def is_connected(self):
-        """Check if the remote server is accessible"""
+        """Check if the Rust helper's REST API is accessible"""
         if not self.server_url:
             return False
             

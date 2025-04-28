@@ -1648,16 +1648,16 @@ def privacy():
     return render_template('privacy.html')
 
 
-@app.route('/server-url-manager')
-def server_url_manager():
-    """Server URL Manager page"""
+@app.route('/helper-api-manager')
+def helper_api_manager():
+    """Helper API Manager page"""
     server_url = os.environ.get('AUTOMATION_SERVER_URL', '')
     return render_template('server_url_manager.html', server_url=server_url)
 
 
 @app.route('/api/update-server-url', methods=['POST'])
 def update_server_url():
-    """API endpoint to test and update the automation server URL"""
+    """API endpoint to test and update the Rust Helper API URL"""
     try:
         data = request.json
         server_url = data.get('server_url', '')
@@ -1680,19 +1680,19 @@ def update_server_url():
             status_response = requests.get(f"{server_url}/api/status", timeout=3)
             if status_response.status_code == 200:
                 tests.append({
-                    'name': 'Basic API Connectivity',
+                    'name': 'Rust Helper API Connectivity',
                     'status': 'success',
-                    'message': 'Successfully connected to the server API'
+                    'message': 'Successfully connected to the Helper API'
                 })
             else:
                 tests.append({
-                    'name': 'Basic API Connectivity',
+                    'name': 'Rust Helper API Connectivity',
                     'status': 'failed',
-                    'message': f'Server returned status code {status_response.status_code}'
+                    'message': f'Helper returned status code {status_response.status_code}'
                 })
         except Exception as e:
             tests.append({
-                'name': 'Basic API Connectivity',
+                'name': 'Rust Helper API Connectivity',
                 'status': 'failed',
                 'message': f'Failed to connect: {str(e)}'
             })
@@ -1704,19 +1704,19 @@ def update_server_url():
             window_list = client.get_window_list()
             if isinstance(window_list, list):
                 tests.append({
-                    'name': 'Window List API',
+                    'name': 'Rust Helper Window API',
                     'status': 'success',
                     'message': f'Retrieved window list with {len(window_list)} windows'
                 })
             else:
                 tests.append({
-                    'name': 'Window List API',
+                    'name': 'Rust Helper Window API',
                     'status': 'failed',
                     'message': 'Failed to get window list'
                 })
         except Exception as e:
             tests.append({
-                'name': 'Window List API',
+                'name': 'Rust Helper Window API',
                 'status': 'failed',
                 'message': f'Error getting window list: {str(e)}'
             })
@@ -1737,13 +1737,13 @@ def update_server_url():
             
             return jsonify({
                 'status': 'success',
-                'message': 'Successfully connected to the automation server',
+                'message': 'Successfully connected to the Rust Helper API',
                 'tests': tests
             })
         else:
             return jsonify({
                 'status': 'error',
-                'message': 'Failed to connect to the automation server',
+                'message': 'Failed to connect to the Rust Helper API',
                 'tests': tests
             })
     except Exception as e:

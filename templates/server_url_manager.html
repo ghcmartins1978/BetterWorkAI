@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block title %}
-Server URL Manager
+Helper API Manager
 {% endblock %}
 
 {% block content %}
@@ -10,19 +10,19 @@ Server URL Manager
         <div class="col-12">
             <div class="card">
                 <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">Automation Server URL Manager</h4>
+                    <h4 class="mb-0">Rust Helper API URL Manager</h4>
                 </div>
                 <div class="card-body">
                     <div class="alert alert-info">
-                        <p>The automation server URL is the ngrok URL of your locally running automation server. This URL changes every time you restart ngrok, so you'll need to update it here when that happens.</p>
-                        <p>Current automation server URL: <code id="current-url">{{ server_url }}</code></p>
+                        <p>The Rust Helper API URL connects to your locally running Rust helper application. By default, this should be <code>http://127.0.0.1:17400</code> for direct local connections.</p>
+                        <p>Current Helper API URL: <code id="current-url">{{ server_url }}</code></p>
                     </div>
 
                     <form id="server-url-form">
                         <div class="mb-3">
-                            <label for="server-url-input" class="form-label">New Automation Server URL</label>
-                            <input type="text" class="form-control" id="server-url-input" placeholder="https://your-ngrok-url.ngrok.io" value="{{ server_url }}">
-                            <div class="form-text">Paste the new ngrok URL here, including the https:// prefix.</div>
+                            <label for="server-url-input" class="form-label">Helper API URL</label>
+                            <input type="text" class="form-control" id="server-url-input" placeholder="http://127.0.0.1:17400" value="{{ server_url }}">
+                            <div class="form-text">Enter the Helper API URL, usually <code>http://127.0.0.1:17400</code> for local connections.</div>
                         </div>
                         
                         <div class="mb-3 form-check">

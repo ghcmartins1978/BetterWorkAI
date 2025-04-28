@@ -1,72 +1,107 @@
-# Rust Helper Setup Guide
+# BettermanAI Rust Helper Setup Guide
 
-BettermanAI uses a local Rust helper application to execute automation tasks on your computer. This guide explains how to set up and connect to the Rust helper.
+This document provides step-by-step instructions for setting up the BettermanAI Rust Helper on your local machine. The Rust Helper is a critical component that enables system-level monitoring and automation execution.
 
-## Architecture Overview
+## What is the Rust Helper?
 
-The BettermanAI application consists of two main components:
+The Rust Helper is a local application written in Rust that provides:
 
-1. **Web Application (Replit-hosted)**: The main interface where you manage automations, view patterns, and access metrics.
+1. System-level event monitoring (mouse, keyboard, window changes)
+2. Macro execution through TagUI integration
+3. Screenshot capture and analysis
+4. REST API for the web interface to communicate with
 
-2. **Rust Helper (Local)**: A lightweight Rust application running on your local machine that:
-   - Controls mouse and keyboard actions
-   - Manages window focus
-   - Executes TagUI automation scripts
-   - Captures screenshots
-   - Monitors system events
+## Prerequisites
 
-## Setting Up the Rust Helper
+- Windows 10/11, macOS, or Linux
+- Administrator/sudo privileges for installation
+- Internet connection for downloading the helper
 
-### Prerequisites
-- Rust installed on your system (rust 1.76.0 or later recommended)
-- TagUI installed for automation script execution
+## Installation Steps
 
-### Installation Steps
+### Step 1: Download the Rust Helper
 
-1. Clone the Rust helper repository:
-   ```
-   git clone https://github.com/bettermanai/automation-helper
-   cd automation-helper
-   ```
+Download the appropriate version for your operating system from the [releases page](https://github.com/betterman-ai/rust-helper/releases/latest).
 
-2. Build the helper application:
-   ```
-   cargo build --release
-   ```
+- Windows: `betterman_helper-windows-x64.zip`
+- macOS: `betterman_helper-macos.dmg`
+- Linux: `betterman_helper-linux-x64.tar.gz`
 
-3. Run the helper application:
-   ```
-   ./target/release/automation-helper
-   ```
+### Step 2: Install the Helper
 
-The helper will start an Actix-Web server on `http://127.0.0.1:17400`.
+#### Windows
+1. Extract the ZIP file to a folder of your choice
+2. Right-click on `betterman_helper.exe` and select "Run as Administrator" for the first run
+3. If prompted by Windows Defender or antivirus, allow the application to run
 
-## Connecting BettermanAI to the Rust Helper
+#### macOS
+1. Open the DMG file
+2. Drag the BettermanHelper app to your Applications folder
+3. When first launching, right-click the app and select "Open" to bypass Gatekeeper
+4. In System Preferences > Security & Privacy, allow the app under Accessibility and Input Monitoring
 
-1. In the BettermanAI web interface, click the **Helper API** button in the top navigation bar.
+#### Linux
+1. Extract the tar.gz file: `tar -xzf betterman_helper-linux-x64.tar.gz`
+2. Make the binary executable: `chmod +x betterman_helper`
+3. Install required dependencies: `sudo apt install libxtst-dev libxdo-dev` (for Debian/Ubuntu)
 
-2. Enter the URL of your local Rust helper: `http://127.0.0.1:17400`
+### Step 3: Configure the Helper
 
-3. Click **Test & Save Connection**.
+1. The first time you run the helper, it will create a configuration file in:
+   - Windows: `%APPDATA%\BettermanAI\config.toml`
+   - macOS: `~/Library/Application Support/BettermanAI/config.toml`
+   - Linux: `~/.config/bettermanai/config.toml`
 
-4. If the connection is successful, you'll see a green confirmation message, and the application will reload.
+2. The default configuration should work in most cases, but you can customize settings like:
+   - Port number (default: 17400)
+   - Logging level
+   - TagUI installation path
+
+### Step 4: Connect the Web Interface
+
+1. Launch the helper application if it's not already running
+2. On the BettermanAI web interface, navigate to Settings
+3. Under "Helper Connection", enter: `http://127.0.0.1:17400`
+4. Click "Test Connection" to verify
+5. If successful, you'll see a green checkmark and system information
 
 ## Troubleshooting
 
-If the connection test fails:
+### Connection Issues
+- Ensure the helper is running (look for the icon in system tray)
+- Check if the port 17400 is not blocked by firewall
+- Verify the URL is exactly `http://127.0.0.1:17400` (no trailing slash)
 
-1. **Check if the helper is running**: Make sure the Rust helper is running on your local machine.
+### Permission Issues
+- On Windows and macOS, the helper needs elevated permissions for monitoring
+- On Linux, ensure the helper has access to X11 events: `xhost +local:` may help
 
-2. **Verify the URL**: The default URL is `http://127.0.0.1:17400`. Make sure you entered it correctly.
+### TagUI Integration
+- The helper will attempt to find TagUI automatically
+- If it can't find TagUI, set the path manually in the config file
 
-3. **Check for firewall issues**: Your firewall may be blocking the connection. Check your firewall settings and allow the helper application.
+## API Reference
 
-4. **Check the logs**: Look at the terminal where the Rust helper is running for any error messages.
+The Rust Helper exposes the following REST API endpoints:
 
-## Additional Information
+- `GET /api/status` - Get current status and system information
+- `POST /api/monitoring` - Enable/disable monitoring
+- `GET /api/events` - Get recent system events
+- `POST /api/execute` - Execute a macro
 
-- The Rust helper's REST API provides endpoints for controlling mouse, keyboard, and window actions.
-- All automation commands sent from the web interface are executed locally by the Rust helper.
-- The web interface and Rust helper communicate over HTTP, so they can be run on different machines if needed.
+For developers, full API documentation is available at [http://127.0.0.1:17400/docs](http://127.0.0.1:17400/docs) when the helper is running.
 
-For more detailed information, see the [Rust Helper API Documentation](https://github.com/bettermanai/automation-helper/docs/api.md).
+## Support
+
+If you encounter any issues with the Rust Helper, please:
+
+1. Check the logs at:
+   - Windows: `%APPDATA%\BettermanAI\logs\`
+   - macOS: `~/Library/Logs/BettermanAI/`
+   - Linux: `~/.local/share/bettermanai/logs/`
+
+2. Report issues on the [GitHub repository](https://github.com/betterman-ai/rust-helper/issues) with:
+   - Your operating system and version
+   - Helper version
+   - Steps to reproduce
+   - Log files if possible

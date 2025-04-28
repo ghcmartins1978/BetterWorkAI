@@ -2,6 +2,139 @@
     Custom styles for BettermanAI
 */
 
+:root {
+    /* Brand Colors */
+    --betterman-navy: #0E1B27;
+    --betterman-cyan: #00C4FF;  
+    --betterman-slate: #D9E1E8;
+    --betterman-green: #45E19F;
+    --betterman-amber: #FFB547;
+}
+
+/* Set brand colors as primary, secondary, etc. */
+body {
+    --bs-primary: var(--betterman-cyan);
+    --bs-primary-rgb: 0, 196, 255;
+    
+    --bs-body-bg: var(--betterman-navy);
+    --bs-body-color: var(--betterman-slate);
+    
+    background-color: var(--betterman-navy);
+    color: var(--betterman-slate);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+}
+
+/* Sidebar Styling */
+.sidebar {
+    background-color: rgba(0, 0, 0, 0.15) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.nav-group-title {
+    color: var(--betterman-slate);
+    opacity: 0.7;
+    text-transform: uppercase;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 0.5rem 1rem;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 80ms ease-in-out;
+}
+
+.nav-group-title:hover {
+    opacity: 1;
+}
+
+.nav-group-title .chevron {
+    transition: all 80ms ease-in-out;
+}
+
+.nav-group-title.collapsed .chevron {
+    transform: rotate(-90deg);
+}
+
+.sidebar .nav-link {
+    color: var(--betterman-slate);
+    opacity: 0.85;
+    padding: 0.4rem 1rem;
+    border-radius: 4px;
+    margin: 2px 0.5rem;
+    transition: all 80ms ease-in-out;
+}
+
+.sidebar .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    opacity: 1;
+}
+
+.sidebar .nav-link.active {
+    background-color: rgba(0, 196, 255, 0.15);
+    color: var(--betterman-cyan);
+    opacity: 1;
+}
+
+.submenu {
+    margin-left: 1rem;
+    max-height: 100vh;
+    transition: max-height 200ms ease-out;
+    overflow: hidden;
+}
+
+.submenu.collapsed {
+    max-height: 0;
+}
+
+/* KPI Cards */
+.kpi-card {
+    background-color: rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+    padding: 0.5rem;
+}
+
+.kpi-card small {
+    font-size: 11px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.kpi-card h5 {
+    color: var(--betterman-cyan);
+}
+
+.highlight-change {
+    animation: highlight-flash 1s ease-out;
+}
+
+@keyframes highlight-flash {
+    0% { 
+        color: var(--betterman-cyan);
+    }
+    50% { 
+        color: white;
+    }
+    100% { 
+        color: var(--betterman-cyan);
+    }
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+    font-weight: 600; /* SemiBold */
+    font-size: 16px;
+}
+
+/* Ensure animation times are short */
+.transition-animation {
+    transition: all 80ms ease-in-out;
+}
+
 /* Timeline styling for step guides */
 .timeline {
     position: relative;

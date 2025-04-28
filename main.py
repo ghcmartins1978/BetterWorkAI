@@ -2286,37 +2286,134 @@ from automation_macros import (
 def api_list_macros():
     """API endpoint to list all macros"""
     try:
-        macros = list_macros()
-        return jsonify({
-            'status': 'success',
-            'macros': macros
-        })
+        # Import the session_scope context manager for database transactions
+        from database import session_scope
+        
+        # Use session_scope to safely access the database
+        try:
+            with session_scope() as db:
+                macro_list = []
+                macros = db.query(Macro).all()
+                
+                for macro in macros:
+                    macro_data = {
+                        'id': macro.id,
+                        'name': macro.name,
+                        'description': macro.description,
+                        'status': macro.status,
+                        'step_count': macro.step_count if hasattr(macro, 'step_count') else len(macro.steps) if hasattr(macro, 'steps') else 0,
+                        'creation_time': macro.creation_time.isoformat() if hasattr(macro, 'creation_time') and macro.creation_time else None,
+                        'last_execution_time': macro.last_execution_time.isoformat() if hasattr(macro, 'last_execution_time') and macro.last_execution_time else None,
+                        'execution_count': macro.execution_count if hasattr(macro, 'execution_count') else 0,
+                        'is_favorite': macro.is_favorite if hasattr(macro, 'is_favorite') else False
+                    }
+                    macro_list.append(macro_data)
+                
+                return jsonify({
+                    'status': 'success',
+                    'macros': macro_list
+                })
+                
+        except Exception as db_error:
+            logger.error(f"Database error listing macros: {db_error}")
+            return jsonify({
+                'status': 'error',
+                'message': 'Database connection error. Please try again later.',
+                'error_type': 'database_connection'
+            })
+            
     except Exception as e:
         logger.error(f"Error listing macros: {e}")
+        import traceback
+        stack_trace = traceback.format_exc()
+        logger.error(f"Stack trace: {stack_trace}")
+        
         return jsonify({
             'status': 'error',
-            'message': str(e)
+            'message': str(e),
+            'details': stack_trace
         })
 
 @app.route('/api/automation/macros/<macro_id>', methods=['GET'])
 def api_get_macro(macro_id):
     """API endpoint to get a macro by ID"""
     try:
-        macro = get_macro(macro_id)
-        if macro:
+        # Import the session_scope context manager for database transactions
+        from database import session_scope
+        
+        # Use session_scope to safely access the database
+        try:
+            # Try to convert to int if possible (for database IDs)
+            if isinstance(macro_id, str) and macro_id.isdigit():
+                macro_id = int(macro_id)
+        except (ValueError, TypeError):
+            pass  # Keep as is if not convertible
+            
+        try:
+            with session_scope() as db:
+                macro = db.query(Macro).get(macro_id)
+                if not macro:
+                    return jsonify({
+                        'status': 'error',
+                        'message': f"Macro with ID {macro_id} not found"
+                    }), 404
+                
+                # Get the steps for this macro
+                steps = []
+                for step in macro.steps:
+                    # Parse the parameters to handle both string and JSON
+                    step_params = step.parameters
+                    if isinstance(step_params, str):
+                        try:
+                            step_params = json.loads(step_params)
+                        except json.JSONDecodeError:
+                            # Keep as is if not valid JSON
+                            pass
+                    
+                    steps.append({
+                        'id': step.id,
+                        'step_number': step.step_number,
+                        'action_type': step.action_type,
+                        'parameters': step_params,
+                        'delay_before': step.delay_before if hasattr(step, 'delay_before') else 0.0
+                    })
+                
+                # Create a macro data dictionary
+                macro_data = {
+                    'id': macro.id,
+                    'name': macro.name,
+                    'description': macro.description,
+                    'status': macro.status,
+                    'creation_time': macro.creation_time.isoformat() if hasattr(macro, 'creation_time') and macro.creation_time else None,
+                    'last_execution_time': macro.last_execution_time.isoformat() if hasattr(macro, 'last_execution_time') and macro.last_execution_time else None,
+                    'execution_count': macro.execution_count if hasattr(macro, 'execution_count') else 0,
+                    'is_favorite': macro.is_favorite if hasattr(macro, 'is_favorite') else False,
+                    'steps': steps
+                }
+                
+                return jsonify({
+                    'status': 'success',
+                    'macro': macro_data
+                })
+                
+        except Exception as db_error:
+            logger.error(f"Database error getting macro {macro_id}: {db_error}")
             return jsonify({
-                'status': 'success',
-                'macro': macro
+                'status': 'error',
+                'message': 'Database connection error. Please try again later.',
+                'error_type': 'database_connection'
             })
-        return jsonify({
-            'status': 'error',
-            'message': f"Macro with ID {macro_id} not found"
-        }), 404
+            
     except Exception as e:
         logger.error(f"Error getting macro {macro_id}: {e}")
+        import traceback
+        stack_trace = traceback.format_exc()
+        logger.error(f"Stack trace: {stack_trace}")
+        
         return jsonify({
             'status': 'error',
-            'message': str(e)
+            'message': str(e),
+            'details': stack_trace
         })
 
 @app.route('/api/automation/macros', methods=['POST'])
@@ -2539,8 +2636,39 @@ def api_execute_macro(macro_id):
     """API endpoint to execute a macro"""
     try:
         mode = request.json.get('mode', 'normal')
-        result = execute_macro(macro_id, mode)
-        return jsonify(result)
+        # For dry-run mode, we handle it slightly differently
+        if mode == 'dry-run':
+            # For dry-run, we don't need to execute the macro, just validate it exists
+            # This endpoint is used by the dry-run overlay JavaScript
+            from database import session_scope
+            
+            try:
+                with session_scope() as db:
+                    macro = db.query(Macro).get(macro_id)
+                    if not macro:
+                        return jsonify({
+                            'status': 'error',
+                            'message': f'Macro not found with ID {macro_id}'
+                        })
+                    
+                    # Return success for dry-run mode
+                    return jsonify({
+                        'status': 'success',
+                        'message': 'Dry run mode initiated',
+                        'macro_id': macro_id,
+                        'mode': mode
+                    })
+            except Exception as db_error:
+                logger.error(f"Database error in dry-run mode for macro {macro_id}: {db_error}")
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Database connection error. Please try again later.',
+                    'error_type': 'database_connection'
+                })
+        else:
+            # For normal execution, use the standard execute_macro function
+            result = execute_macro(macro_id, mode)
+            return jsonify(result)
     except Exception as e:
         logger.error(f"Error executing macro {macro_id}: {e}")
         # Include the stack trace in the response for debugging

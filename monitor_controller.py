@@ -48,7 +48,7 @@ class MonitorController:
             return {'monitoring': False, 'error': str(e)}
     
     def start_monitoring(self):
-        """Start monitoring on the local server"""
+        """Start monitoring on the Rust helper"""
         if not self.server_url:
             return {'success': False, 'error': 'No server URL provided'}
             
@@ -68,7 +68,7 @@ class MonitorController:
             return {'success': False, 'error': str(e)}
     
     def stop_monitoring(self):
-        """Stop monitoring on the local server"""
+        """Stop monitoring on the Rust helper"""
         if not self.server_url:
             return {'success': False, 'error': 'No server URL provided'}
             
@@ -88,7 +88,7 @@ class MonitorController:
             return {'success': False, 'error': str(e)}
     
     def get_events(self, count=100, event_type=None):
-        """Get events from the local server"""
+        """Get events from the Rust helper"""
         if not self.server_url:
             return []
             

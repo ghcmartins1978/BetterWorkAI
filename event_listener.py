@@ -84,7 +84,7 @@ class EventListener:
                     
                 self.last_check_time = now
                 
-                # Fetch events from automation server
+                # Fetch events from Rust helper
                 events = self._fetch_events()
                 
                 if events:

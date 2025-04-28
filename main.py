@@ -801,11 +801,35 @@ def macros():
         # Use the session_scope context manager for a clean transaction
         from database import session_scope
         
+        # Create an empty list for macro data
+        macros_data = []
+        
         with session_scope() as db:
             # Get all macros in a single database transaction
             all_macros = db.query(Macro).all()
             
-        return render_template('macros.html', macros=all_macros)
+            # Convert ORM objects to dictionaries while session is open
+            for macro in all_macros:
+                macro_dict = {
+                    'id': macro.id,
+                    'name': macro.name,
+                    'description': macro.description,
+                    'status': macro.status,
+                    'creation_time': macro.creation_time,
+                    'last_execution_time': macro.last_execution_time,
+                    'execution_count': macro.execution_count,
+                    'step_count': macro.step_count,
+                    'success_count': macro.success_count,
+                    'failure_count': macro.failure_count,
+                    'tags': macro.tags,
+                    'color': macro.color or 'secondary',
+                    'icon': macro.icon or 'robot',
+                    'is_favorite': macro.is_favorite or False
+                }
+                macros_data.append(macro_dict)
+            
+        # Use the copied data for rendering, not the ORM objects
+        return render_template('macros.html', macros=macros_data)
     except Exception as e:
         logger.error(f"Database error while accessing macros list: {e}")
         flash('Database connection error. Please try again later.', 'error')
@@ -826,6 +850,10 @@ def view_macro(macro_id):
         # Use the session_scope context manager for a clean transaction
         from database import session_scope
         
+        # Initialize variables outside to ensure they're in scope
+        macro_data = None
+        steps_data = None
+        
         with session_scope() as db:
             # Query the macro
             macro = db.query(Macro).get(macro_id)
@@ -835,8 +863,42 @@ def view_macro(macro_id):
             
             # Query related steps
             steps = db.query(MacroStep).filter_by(macro_id=macro.id).order_by(MacroStep.step_number).all()
+            
+            # Copy all data from the ORM objects to dictionaries while the session is still open
+            macro_data = {
+                'id': macro.id,
+                'name': macro.name,
+                'description': macro.description,
+                'status': macro.status,
+                'creation_time': macro.creation_time,
+                'last_execution_time': macro.last_execution_time,
+                'execution_count': macro.execution_count,
+                'step_count': macro.step_count,
+                'success_count': macro.success_count,
+                'failure_count': macro.failure_count,
+                'tags': macro.tags,
+                'color': macro.color or 'secondary',
+                'icon': macro.icon or 'robot',
+                'is_favorite': macro.is_favorite or False
+            }
+            
+            steps_data = []
+            for step in steps:
+                step_data = {
+                    'id': step.id,
+                    'macro_id': step.macro_id,
+                    'step_number': step.step_number,
+                    'action_type': step.action_type,
+                    'parameters': step.parameters,
+                    'delay_before': step.delay_before
+                }
+                steps_data.append(step_data)
         
-        return render_template('macro.html', macro=macro, steps=steps)
+        # Use the copied data for rendering, not the ORM objects
+        return render_template('macro.html', 
+                               macro=macro_data, 
+                               steps=steps_data, 
+                               macro_id=macro_id)
     except Exception as e:
         logger.error(f"Database error while viewing macro {macro_id}: {e}")
         flash('Database connection error. Please try again later.', 'error')
@@ -852,6 +914,11 @@ def view_execution(execution_id):
         # Use the session_scope context manager for a clean transaction
         from database import session_scope
         
+        # Initialize variables outside to ensure they're in scope
+        execution_obj = None
+        macro_data = None
+        status_color = 'secondary'
+        
         with session_scope() as db:
             # Query the execution
             execution = db.query(MacroExecution).get(execution_id)
@@ -866,7 +933,6 @@ def view_execution(execution_id):
                 return redirect(url_for('macros'))
                 
             # Determine status color for badge display
-            status_color = 'secondary'
             if execution.status == 'success':
                 status_color = 'success'
             elif execution.status == 'failed':
@@ -875,6 +941,26 @@ def view_execution(execution_id):
                 status_color = 'warning'
             elif execution.status == 'running':
                 status_color = 'primary'
+                
+            # Copy execution data to a dictionary
+            execution_obj = {
+                'id': execution.id,
+                'macro_id': execution.macro_id,
+                'status': execution.status,
+                'start_time': execution.start_time,
+                'end_time': execution.end_time,
+                'duration': execution.duration,
+                'execution_data': execution.execution_data
+            }
+            
+            # Copy macro data to a dictionary
+            macro_data = {
+                'id': macro.id,
+                'name': macro.name,
+                'description': macro.description,
+                'status': macro.status
+            }
+            
     except Exception as e:
         logger.error(f"Database error while viewing execution {execution_id}: {e}")
         flash('Database connection error. Please try again later.', 'error')
@@ -885,9 +971,9 @@ def view_execution(execution_id):
     
     # Parse execution data if available
     execution_data = None
-    if execution.execution_data:
+    if execution_obj['execution_data']:
         try:
-            execution_data = json.loads(execution.execution_data)
+            execution_data = json.loads(execution_obj['execution_data'])
             
             # Create symlinks to screenshots in static folder if needed
             if 'before_screenshot' in execution_data and execution_data['before_screenshot']:
@@ -925,8 +1011,8 @@ def view_execution(execution_id):
             logger.error(f"Error parsing execution data: {e}")
     
     return render_template('execution_detail.html', 
-                          execution=execution, 
-                          macro=macro, 
+                          execution=execution_obj, 
+                          macro=macro_data, 
                           status_color=status_color,
                           execution_data=execution_data)
 
@@ -963,13 +1049,35 @@ def edit_macro(macro_id):
         # Use the session_scope context manager for a clean transaction
         from database import session_scope
         
+        # Initialize variable outside to ensure it's in scope
+        macro_data = None
+        
         with session_scope() as db:
             macro = db.query(Macro).get(macro_id)
             if not macro:
                 flash('Macro not found', 'error')
                 return redirect(url_for('macros'))
+                
+            # Copy macro data to a dictionary while session is open
+            macro_data = {
+                'id': macro.id,
+                'name': macro.name,
+                'description': macro.description,
+                'status': macro.status,
+                'creation_time': macro.creation_time,
+                'last_execution_time': macro.last_execution_time,
+                'execution_count': macro.execution_count,
+                'step_count': macro.step_count,
+                'success_count': macro.success_count,
+                'failure_count': macro.failure_count,
+                'tags': macro.tags,
+                'color': macro.color or 'secondary',
+                'icon': macro.icon or 'robot',
+                'is_favorite': macro.is_favorite or False
+            }
         
-        return render_template('edit_macro.html', macro=macro)
+        # Use the copied data for rendering, not the ORM object
+        return render_template('edit_macro.html', macro=macro_data)
     except Exception as e:
         logger.error(f"Database error while editing macro {macro_id}: {e}")
         flash('Database connection error. Please try again later.', 'error')

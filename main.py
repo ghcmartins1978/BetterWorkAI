@@ -797,8 +797,18 @@ def view_pattern(pattern_id):
 @app.route('/macros')
 def macros():
     """View recorded macros"""
-    all_macros = db_session.query(Macro).all()
-    return render_template('macros.html', macros=all_macros)
+    try:
+        # Try to get a fresh session in case there's a stale transaction
+        db_session.rollback()  # Roll back any potential failed transactions
+        all_macros = db_session.query(Macro).all()
+        return render_template('macros.html', macros=all_macros)
+    except Exception as e:
+        logger.error(f"Database error while accessing macros list: {e}")
+        flash('Database connection error. Please try again later.', 'error')
+        return render_template('error.html', 
+                              error_title="Database Connection Error",
+                              error_message="Unable to connect to the database. Please try again later.",
+                              back_link=url_for('index'))
 
 @app.route('/macro-library')
 def macro_library():
@@ -809,6 +819,9 @@ def macro_library():
 def view_macro(macro_id):
     """View a specific macro"""
     try:
+        # Rollback any stale transactions before attempting to query
+        db_session.rollback()
+        
         macro = db_session.query(Macro).get(macro_id)
         if not macro:
             flash('Macro not found', 'error')
@@ -829,6 +842,9 @@ def view_macro(macro_id):
 def view_execution(execution_id):
     """View details of a specific macro execution"""
     try:
+        # Rollback any stale transactions before attempting to query
+        db_session.rollback()
+        
         execution = db_session.query(MacroExecution).get(execution_id)
         if not execution:
             flash('Execution record not found', 'error')

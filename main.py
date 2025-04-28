@@ -11,7 +11,8 @@ import sys
 import random
 
 from database import init_db, db_session
-from models import Event, EventSequence, Pattern, Suggestion, Macro, MacroStep, Setting, AIAnalysisReport, MacroVariable
+from sqlalchemy import func
+from models import Event, EventSequence, Pattern, Suggestion, Macro, MacroStep, Setting, AIAnalysisReport, MacroVariable, MacroExecution, Metric
 import variable_detector
 from settings import Settings
 
@@ -2793,6 +2794,107 @@ def variable_documentation():
         return render_template('error.html', 
                                error="Error displaying variable documentation", 
                                details=str(e))
+
+@app.route('/metrics', methods=['GET'])
+def metrics_dashboard():
+    """
+    Dashboard for metrics including time saved by automations.
+    Shows KPIs for automation effectiveness and time savings.
+    """
+    try:
+        return render_template('metrics_dashboard.html')
+    except Exception as e:
+        logger.error(f"Error displaying metrics dashboard: {e}")
+        return render_template('error.html', 
+                              error="Error displaying metrics dashboard", 
+                              details=str(e))
+
+@app.route('/api/metrics', methods=['GET'])
+def get_metrics():
+    """
+    Get all metrics as JSON for the metrics dashboard.
+    Returns system-wide metrics for automation effectiveness.
+    """
+    try:
+        metrics = db_session.query(Metric).all()
+        metrics_data = {}
+        
+        for metric in metrics:
+            metrics_data[metric.name] = {
+                'value': float(metric.value),
+                'timestamp': metric.timestamp.isoformat() if metric.timestamp else None,
+                'notes': metric.notes
+            }
+            
+        # Calculate additional stats for macros
+        total_macros = db_session.query(func.count(Macro.id)).scalar() or 0
+        active_macros = db_session.query(func.count(Macro.id)).filter(
+            Macro.execution_count > 0
+        ).scalar() or 0
+        
+        total_executions = db_session.query(func.sum(Macro.execution_count)).scalar() or 0
+        successful_executions = db_session.query(func.sum(Macro.success_count)).scalar() or 0
+        
+        # Success rate
+        success_rate = 0
+        if total_executions > 0:
+            success_rate = (successful_executions / total_executions) * 100
+            
+        # Add these stats to the response
+        metrics_data['total_macros'] = {'value': total_macros}
+        metrics_data['active_macros'] = {'value': active_macros}
+        metrics_data['total_executions'] = {'value': total_executions}
+        metrics_data['successful_executions'] = {'value': successful_executions}
+        metrics_data['success_rate'] = {'value': success_rate}
+        
+        # If hours_saved_total metric doesn't exist, add it with default 0
+        if 'hours_saved_total' not in metrics_data:
+            metrics_data['hours_saved_total'] = {'value': 0.0}
+            
+        return jsonify(metrics_data)
+    except Exception as e:
+        logger.error(f"Error getting metrics: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/metrics/macros', methods=['GET'])
+def get_macro_metrics():
+    """
+    Get metrics for individual macros.
+    Returns performance data for each macro including success rate and time saved.
+    """
+    try:
+        macros = db_session.query(Macro).all()
+        
+        macro_metrics = []
+        for macro in macros:
+            # Skip macros that have never been executed
+            if not macro.execution_count:
+                continue
+                
+            success_rate = 0
+            if macro.execution_count > 0:
+                success_rate = (macro.success_count / macro.execution_count) * 100
+                
+            # Convert seconds to hours for display
+            hours_saved = (macro.total_time_saved or 0) / 3600.0
+                
+            macro_metrics.append({
+                'id': macro.id,
+                'name': macro.name,
+                'execution_count': macro.execution_count,
+                'success_count': macro.success_count,
+                'failure_count': macro.failure_count,
+                'success_rate': success_rate,
+                'original_sequence_duration': macro.original_sequence_duration,
+                'total_time_saved_seconds': macro.total_time_saved,
+                'total_time_saved_hours': hours_saved,
+                'last_execution_time': macro.last_execution_time.isoformat() if macro.last_execution_time else None
+            })
+            
+        return jsonify(macro_metrics)
+    except Exception as e:
+        logger.error(f"Error getting macro metrics: {e}")
+        return jsonify({'error': str(e)}), 500
 
 def start_monitoring_components():
     """Initialize and start the monitoring components"""

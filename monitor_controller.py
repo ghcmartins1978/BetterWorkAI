@@ -15,8 +15,8 @@ class MonitorController:
     """
     
     def __init__(self, server_url=None):
-        """Initialize the monitor controller"""
-        self.server_url = server_url or os.environ.get('AUTOMATION_SERVER_URL', '')
+        """Initialize the monitor controller for the Rust helper"""
+        self.server_url = server_url or os.environ.get('AUTOMATION_SERVER_URL', '')  # Using AUTOMATION_SERVER_URL for backward compatibility (should rename to RUST_HELPER_URL in future)
         if not self.server_url:
             logger.warning("No Rust helper URL provided. Monitoring control will not work.")
     

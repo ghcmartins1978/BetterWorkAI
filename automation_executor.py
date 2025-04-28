@@ -2,7 +2,7 @@ import logging
 import json
 import time
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 import pyautogui
 import webbrowser
 import re
@@ -10,7 +10,7 @@ import tkinter as tk
 from tkinter import simpledialog
 
 from database import db_session
-from models import Macro, MacroStep, Suggestion, MacroVariable
+from models import Macro, MacroStep, Suggestion, MacroVariable, MacroExecution, Metric
 import variable_detector
 
 logger = logging.getLogger(__name__)
@@ -69,17 +69,34 @@ class AutomationExecutor:
         self.abort_requested = False
         result = False
         
+        # Create a new execution record
+        execution = MacroExecution(
+            macro_id=macro_id,
+            start_time=datetime.now(),
+            status='running'
+        )
+        db_session.add(execution)
+        db_session.commit()
+        execution_id = execution.id
+        
+        start_time = time.time()
+        
         try:
             # Get macro from database
             macro = db_session.query(Macro).get(macro_id)
             
             if not macro or macro.status not in ['recorded', 'verified']:
                 logger.error(f"Cannot execute macro {macro_id}: invalid status")
+                self._update_execution_record(execution_id, 'failed', error_message="Invalid macro status")
                 return False
                 
             # Update macro status
             macro.status = 'executing'
             macro.last_execution_time = datetime.now()
+            
+            # Update execution record with original duration
+            if macro.original_sequence_duration:
+                execution.original_sequence_duration = macro.original_sequence_duration
             db_session.commit()
             
             # Get steps
@@ -90,6 +107,7 @@ class AutomationExecutor:
             if not steps:
                 logger.warning(f"Macro {macro_id} has no steps")
                 macro.status = 'recorded'  # Reset status
+                self._update_execution_record(execution_id, 'failed', error_message="No steps to execute")
                 db_session.commit()
                 return False
             
@@ -102,9 +120,11 @@ class AutomationExecutor:
                 self._show_countdown(3)
                 
             # Execute each step
+            all_steps_successful = True
             for step in steps:
                 if self.abort_requested:
                     logger.info("Macro execution aborted by user")
+                    all_steps_successful = False
                     break
                     
                 # Apply delay
@@ -123,18 +143,61 @@ class AutomationExecutor:
                 
                 if not success:
                     logger.error(f"Failed to execute step {step.step_number} of macro {macro_id}")
+                    all_steps_successful = False
                     break
-                    
-            # Update macro status
-            if not self.abort_requested:
+            
+            # Calculate execution time and time saved
+            end_time = time.time()
+            execution_duration = end_time - start_time
+            
+            # Update macro status and metrics
+            if all_steps_successful and not self.abort_requested:
                 macro.status = 'recorded'  # Reset to recorded state
                 macro.execution_count = (macro.execution_count or 0) + 1
-                db_session.commit()
+                macro.success_count = (macro.success_count or 0) + 1
+                
+                # Calculate time saved - if original duration is not set, use a default estimate
+                # based on the number of steps (e.g., 5 seconds per step)
+                if macro.original_sequence_duration is None:
+                    estimated_duration = len(steps) * 5.0  # 5 seconds per step
+                    macro.original_sequence_duration = estimated_duration
+                    
+                time_saved = macro.original_sequence_duration - execution_duration
+                if time_saved < 0:
+                    time_saved = 0
+                    
+                macro.total_time_saved = (macro.total_time_saved or 0.0) + time_saved
+                
+                # Update metrics
+                self._update_time_saved_metrics(time_saved)
+                
+                # Update execution record
+                self._update_execution_record(
+                    execution_id, 
+                    'success',
+                    execution_duration=execution_duration,
+                    time_saved=time_saved
+                )
+                
                 result = True
             else:
                 macro.status = 'recorded'  # Reset to recorded state
-                db_session.commit()
+                macro.failure_count = (macro.failure_count or 0) + 1
+                
+                # Update execution record
+                self._update_execution_record(
+                    execution_id, 
+                    'failed',
+                    execution_duration=execution_duration,
+                    error_message="Execution aborted or steps failed"
+                )
+                
                 result = False
+                
+            db_session.commit()
+            
+            # Check if we need to trigger relearn prompt (Ticket A9)
+            self._check_relearn_criteria(macro_id)
                 
         except Exception as e:
             logger.error(f"Error executing macro {macro_id}: {e}")
@@ -143,9 +206,20 @@ class AutomationExecutor:
             try:
                 macro = db_session.query(Macro).get(macro_id)
                 macro.status = 'recorded'  # Reset to recorded state
+                macro.failure_count = (macro.failure_count or 0) + 1
                 db_session.commit()
-            except:
-                pass
+                
+                # Update execution record
+                end_time = time.time()
+                execution_duration = end_time - start_time
+                self._update_execution_record(
+                    execution_id, 
+                    'failed',
+                    execution_duration=execution_duration,
+                    error_message=str(e)
+                )
+            except Exception as inner_e:
+                logger.error(f"Error updating macro status: {inner_e}")
                 
         finally:
             self.currently_executing = False
@@ -663,3 +737,140 @@ class AutomationExecutor:
             return True
         except (ValueError, TypeError):
             return False
+            
+    def _update_execution_record(self, execution_id, status, execution_duration=None, time_saved=None, error_message=None):
+        """
+        Update a macro execution record with results
+        
+        Args:
+            execution_id: ID of the execution record
+            status: New status (success, failed, timeout)
+            execution_duration: Duration of execution in seconds
+            time_saved: Time saved in seconds (original_duration - execution_duration)
+            error_message: Error message if any
+        """
+        try:
+            execution = db_session.query(MacroExecution).get(execution_id)
+            if not execution:
+                logger.error(f"Execution record {execution_id} not found")
+                return
+                
+            execution.status = status
+            execution.end_time = datetime.now()
+            
+            if execution_duration is not None:
+                execution.execution_duration = execution_duration
+                
+            if time_saved is not None:
+                execution.time_saved = time_saved
+                
+            if error_message:
+                execution.error_message = error_message
+                
+            db_session.commit()
+            logger.info(f"Updated execution record {execution_id} with status {status}")
+            
+        except Exception as e:
+            logger.error(f"Error updating execution record: {e}")
+            
+    def _update_time_saved_metrics(self, time_saved_seconds):
+        """
+        Update metrics with time saved
+        
+        Args:
+            time_saved_seconds: Time saved in seconds
+        """
+        try:
+            # Convert seconds to hours
+            hours_saved = time_saved_seconds / 3600.0
+            
+            # Get current hours_saved_total metric
+            hours_saved_metric = db_session.query(Metric).filter(Metric.name == 'hours_saved_total').first()
+            
+            if not hours_saved_metric:
+                # Create it if it doesn't exist
+                hours_saved_metric = Metric(
+                    name='hours_saved_total',
+                    value=hours_saved,
+                    notes='Total hours saved by all macro executions'
+                )
+                db_session.add(hours_saved_metric)
+            else:
+                # Update existing metric
+                hours_saved_metric.value = hours_saved_metric.value + hours_saved
+                hours_saved_metric.timestamp = datetime.now()
+                
+            db_session.commit()
+            logger.info(f"Updated hours_saved_total metric: {hours_saved_metric.value} hours")
+            
+        except Exception as e:
+            logger.error(f"Error updating time saved metrics: {e}")
+            
+    def _check_relearn_criteria(self, macro_id):
+        """
+        Check if a macro needs relearning based on failure rate
+        
+        Args:
+            macro_id: ID of the macro to check
+        """
+        try:
+            macro = db_session.query(Macro).get(macro_id)
+            if not macro:
+                return
+                
+            # Only check if the macro has been executed multiple times
+            if macro.execution_count < 10:
+                return
+                
+            # Calculate failure rate
+            failure_rate = macro.failure_count / macro.execution_count
+            
+            # Check if failure rate exceeds threshold (10%)
+            if failure_rate > 0.1:
+                
+                # Check if user has already been prompted recently
+                if macro.relearn_prompt_time:
+                    # Don't prompt again if user was prompted recently (within 7 days)
+                    time_since_prompt = datetime.now() - macro.relearn_prompt_time
+                    if time_since_prompt.days < 7:
+                        return
+                
+                # User hasn't been prompted recently or has never been prompted
+                # and hasn't selected 'never' as relearn_status
+                if macro.relearn_status != 'never':
+                    self._prompt_relearn(macro_id, failure_rate)
+                    
+        except Exception as e:
+            logger.error(f"Error checking relearn criteria: {e}")
+            
+    def _prompt_relearn(self, macro_id, failure_rate):
+        """
+        Prompt user to relearn a macro due to high failure rate
+        
+        Args:
+            macro_id: ID of the macro 
+            failure_rate: Current failure rate (0.0-1.0)
+        """
+        try:
+            macro = db_session.query(Macro).get(macro_id)
+            if not macro:
+                return
+                
+            # Update the prompt time
+            macro.relearn_prompt_time = datetime.now()
+            db_session.commit()
+            
+            # Show notification
+            failure_percent = int(failure_rate * 100)
+            title = f"Automation '{macro.name}' is failing {failure_percent}% of the time"
+            message = "Would you like to re-record this automation to make it more reliable?"
+            
+            self._show_notification(title, message)
+            
+            # In a real implementation, we would display a dialog with Yes/Later/Never options
+            # and update macro.relearn_status based on the user's choice
+            # For now, we'll just log it
+            logger.info(f"User prompted to relearn macro {macro_id} (failure rate: {failure_percent}%)")
+            
+        except Exception as e:
+            logger.error(f"Error prompting relearn: {e}")

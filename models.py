@@ -121,11 +121,17 @@ class Macro(Base):
     creation_time = Column(DateTime, default=datetime.now)
     last_execution_time = Column(DateTime)
     execution_count = Column(Integer, default=0)
+    success_count = Column(Integer, default=0)  # Counter for successful executions
+    failure_count = Column(Integer, default=0)  # Counter for failed executions
     step_count = Column(Integer, default=0)
     status = Column(String(20), default='created')  # created, recording, recorded, executing, verified, empty
     tags = Column(Text)  # Comma-separated tags or JSON array
     color = Column(String(20), default='secondary')  # Bootstrap color class
     icon = Column(String(20))  # Bootstrap icon name
+    original_sequence_duration = Column(Float)  # Original duration in seconds for KPI calculation
+    total_time_saved = Column(Float, default=0.0)  # Total time saved in seconds
+    relearn_status = Column(String(20))  # yes, later, never - for feedback loop
+    relearn_prompt_time = Column(DateTime)  # When the user was last prompted to relearn
     
     # Relationships
     steps = relationship('MacroStep', back_populates='macro', cascade='all, delete-orphan')
@@ -174,3 +180,35 @@ class ScheduledJob(Base):
     enabled = Column(Integer, default=1)  # Whether the job is enabled
     parameters = Column(Text)  # JSON string of job parameters
     result = Column(Text)  # JSON string of last job results
+
+class MacroExecution(Base):
+    """
+    Represents a single execution of a macro
+    """
+    __tablename__ = 'macro_executions'
+    
+    id = Column(Integer, primary_key=True)
+    macro_id = Column(Integer, ForeignKey('macros.id'), nullable=False)
+    start_time = Column(DateTime, default=datetime.now)
+    end_time = Column(DateTime)
+    status = Column(String(20), default='running')  # running, success, failed, timeout
+    original_sequence_duration = Column(Float)  # Original duration in seconds
+    execution_duration = Column(Float)  # Actual execution time in seconds
+    time_saved = Column(Float)  # Time saved in seconds (original_duration - execution_duration)
+    error_message = Column(Text)  # Error message if any
+    log_path = Column(String(255))  # Path to execution log
+    
+    # Relationship to macro
+    macro = relationship('Macro', backref='executions')
+
+class Metric(Base):
+    """
+    Represents system metrics for analytics
+    """
+    __tablename__ = 'metrics'
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String(50), nullable=False)
+    value = Column(Float, default=0.0)
+    timestamp = Column(DateTime, default=datetime.now)
+    notes = Column(Text)

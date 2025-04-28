@@ -1,0 +1,218 @@
+{% extends "layout.html" %}
+
+{% block title %}Metrics Dashboard - BettermanAI{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h2">Automation Metrics Dashboard</h1>
+            <p class="lead text-muted">Track time saved and automation effectiveness</p>
+        </div>
+    </div>
+    
+    <!-- Time Saved Card -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <div class="bg-info bg-opacity-10 p-3 rounded">
+                                <i class="bi bi-hourglass-split fs-2 text-info"></i>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <h5 class="card-title">Total Time Saved</h5>
+                            <div class="d-flex align-items-center">
+                                <h2 class="mb-0 me-2" id="hours-saved">0.0</h2>
+                                <span class="text-muted fs-5">hours</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- KPI Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Total Macros</h5>
+                    <div class="d-flex align-items-center">
+                        <h3 class="mb-0" id="total-macros">0</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Active Macros</h5>
+                    <div class="d-flex align-items-center">
+                        <h3 class="mb-0" id="active-macros">0</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Total Executions</h5>
+                    <div class="d-flex align-items-center">
+                        <h3 class="mb-0" id="total-executions">0</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Success Rate</h5>
+                    <div class="d-flex align-items-center">
+                        <h3 class="mb-0" id="success-rate">0</h3>
+                        <span class="ms-1 text-muted">%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Macro Performance Table -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Macro Performance</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Executions</th>
+                                    <th>Success Rate</th>
+                                    <th>Time Saved</th>
+                                    <th>Last Run</th>
+                                </tr>
+                            </thead>
+                            <tbody id="macros-table-body">
+                                <tr>
+                                    <td colspan="5" class="text-center py-4">No macro execution data yet</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        fetchMetrics();
+        fetchMacroMetrics();
+        
+        // Refresh data every 60 seconds
+        setInterval(function() {
+            fetchMetrics();
+            fetchMacroMetrics();
+        }, 60000);
+    });
+    
+    function fetchMetrics() {
+        fetch('/api/metrics')
+            .then(response => response.json())
+            .then(data => {
+                updateDashboard(data);
+            })
+            .catch(error => {
+                console.error('Error fetching metrics:', error);
+            });
+    }
+    
+    function fetchMacroMetrics() {
+        fetch('/api/metrics/macros')
+            .then(response => response.json())
+            .then(data => {
+                updateMacroTable(data);
+            })
+            .catch(error => {
+                console.error('Error fetching macro metrics:', error);
+            });
+    }
+    
+    function updateDashboard(data) {
+        // Update hours saved
+        const hoursSaved = data.hours_saved_total ? data.hours_saved_total.value : 0;
+        document.getElementById('hours-saved').textContent = hoursSaved.toFixed(2);
+        
+        // Update other metrics
+        document.getElementById('total-macros').textContent = data.total_macros?.value || 0;
+        document.getElementById('active-macros').textContent = data.active_macros?.value || 0;
+        document.getElementById('total-executions').textContent = data.total_executions?.value || 0;
+        document.getElementById('success-rate').textContent = Math.round(data.success_rate?.value || 0);
+    }
+    
+    function updateMacroTable(macros) {
+        const tableBody = document.getElementById('macros-table-body');
+        
+        if (!macros || macros.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center py-4">No macro execution data yet</td>
+                </tr>
+            `;
+            return;
+        }
+        
+        // Sort macros by time saved (descending)
+        macros.sort((a, b) => (b.total_time_saved_hours || 0) - (a.total_time_saved_hours || 0));
+        
+        let tableHtml = '';
+        macros.forEach(macro => {
+            const lastRunDate = macro.last_execution_time 
+                ? new Date(macro.last_execution_time).toLocaleString() 
+                : 'Never';
+                
+            tableHtml += `
+                <tr>
+                    <td>${macro.name}</td>
+                    <td>${macro.execution_count}</td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="progress flex-grow-1 me-2" style="height: 6px;">
+                                <div class="progress-bar ${getSuccessRateColorClass(macro.success_rate)}" 
+                                     role="progressbar" 
+                                     style="width: ${macro.success_rate}%;" 
+                                     aria-valuenow="${macro.success_rate}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                </div>
+                            </div>
+                            <span>${Math.round(macro.success_rate)}%</span>
+                        </div>
+                    </td>
+                    <td>${macro.total_time_saved_hours.toFixed(2)} hours</td>
+                    <td>${lastRunDate}</td>
+                </tr>
+            `;
+        });
+        
+        tableBody.innerHTML = tableHtml;
+    }
+    
+    function getSuccessRateColorClass(rate) {
+        if (rate >= 90) return 'bg-success';
+        if (rate >= 75) return 'bg-info';
+        if (rate >= 50) return 'bg-warning';
+        return 'bg-danger';
+    }
+</script>
+{% endblock %}

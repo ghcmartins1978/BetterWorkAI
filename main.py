@@ -46,6 +46,16 @@ def seed_demo_data():
         if db_session.query(Pattern).count() == 0:
             logger.info("Seeding demo data...")
             
+            # Add initial metrics if not present
+            if db_session.query(Metric).filter(Metric.name == 'hours_saved_total').count() == 0:
+                hours_saved_metric = Metric(
+                    name='hours_saved_total',
+                    value=5.2,  # Initial demo value
+                    notes='Total hours saved by all macro executions'
+                )
+                db_session.add(hours_saved_metric)
+                db_session.commit()
+            
             # Create demo patterns
             patterns = [
                 {
@@ -189,18 +199,26 @@ def seed_demo_data():
                     'description': 'Automatically files emails from specific senders into designated folders',
                     'creation_time': datetime.now() - timedelta(days=3, hours=2),
                     'last_execution_time': datetime.now() - timedelta(hours=3),
-                    'execution_count': 5,
+                    'execution_count': 42,
+                    'success_count': 39,
+                    'failure_count': 3,
                     'step_count': 8,
-                    'status': 'recorded'
+                    'status': 'recorded',
+                    'original_sequence_duration': 45.0,  # 45 seconds per manual execution
+                    'total_time_saved': 1560.0  # (45 secs * 39 successful executions) = 1755 - overhead
                 },
                 {
                     'name': 'Daily Report Generator',
                     'description': 'Extracts data from multiple sources and compiles it into a daily report',
                     'creation_time': datetime.now() - timedelta(days=10, hours=5),
                     'last_execution_time': datetime.now() - timedelta(hours=22),
-                    'execution_count': 15,
+                    'execution_count': 28,
+                    'success_count': 24,
+                    'failure_count': 4,
                     'step_count': 12,
-                    'status': 'recorded'
+                    'status': 'recorded',
+                    'original_sequence_duration': 180.0,  # 3 minutes per manual execution
+                    'total_time_saved': 4200.0  # (180 secs * 24 successful executions) = 4320 - overhead
                 },
                 {
                     'name': 'Invoice Data Entry',
@@ -208,8 +226,12 @@ def seed_demo_data():
                     'creation_time': datetime.now() - timedelta(days=15, hours=8),
                     'last_execution_time': None,
                     'execution_count': 0,
+                    'success_count': 0,
+                    'failure_count': 0,
                     'step_count': 0,
-                    'status': 'recording'
+                    'status': 'recording',
+                    'original_sequence_duration': 0.0,
+                    'total_time_saved': 0.0
                 }
             ]
             

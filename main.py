@@ -1418,7 +1418,7 @@ def settings_page():
             settings_dict[setting.name] = setting.value
     
     # Add special settings
-    settings_dict['automation_server_url'] = os.environ.get('AUTOMATION_SERVER_URL', '')
+    settings_dict['automation_server_url'] = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400')
     
     # Check connection status
     import requests
@@ -1465,13 +1465,10 @@ def update_settings():
 @app.route('/test_connection')
 def test_connection():
     """Test connection to Rust helper"""
-    server_url = settings.get_setting('automation_server_url', '')
+    from automation_client import AutomationClient
+    import requests
     
-    if not server_url:
-        return jsonify({
-            'connected': False, 
-            'error': 'Server URL not configured'
-        })
+    server_url = settings.get_setting('automation_server_url', 'http://127.0.0.1:17400')
     
     # Initialize the client with the server URL
     client = AutomationClient(server_url)
@@ -1657,7 +1654,7 @@ def context_test():
 @app.route('/helper-api-manager')
 def helper_api_manager():
     """Rust Helper API Manager page"""
-    server_url = os.environ.get('AUTOMATION_SERVER_URL', '')
+    server_url = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400')
     return render_template('server_url_manager.html', server_url=server_url)
 
 

@@ -20,7 +20,7 @@ class TestPatternGenerator:
     Test pattern generator that simulates user activity patterns
     """
     def __init__(self, server_url=None):
-        self.server_url = server_url or os.environ.get('AUTOMATION_SERVER_URL', '')
+        self.server_url = server_url or os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400')
         if not self.server_url:
             logger.warning("No Rust helper URL provided.")
     

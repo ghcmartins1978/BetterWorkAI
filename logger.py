@@ -3,6 +3,10 @@ import json
 import logging
 from datetime import datetime
 
+# Import database components
+from database import async_db_writer
+from models import Event
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, 
                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -23,9 +27,32 @@ def get_log_file_path():
         
     return os.path.join(log_dir, f'events_{today}.json')
 
+def _db_store_event(session, event_type, event_data_json):
+    """
+    Store an event in the database
+    This function is called by the async database writer
+    
+    Args:
+        session: Database session
+        event_type: Type of event
+        event_data_json: JSON string of event data
+    """
+    # Create a new Event object
+    event = Event(
+        type=event_type,
+        data=event_data_json,
+        timestamp=datetime.now()
+    )
+    
+    # Add to session
+    session.add(event)
+    logger.debug(f"Event stored in database: {event_type}")
+    
+    return event.id
+
 def log_event(event_data):
     """
-    Log an event to the daily JSON log file
+    Log an event to the daily JSON log file and the database
     
     Args:
         event_data: Dictionary with event data
@@ -64,6 +91,17 @@ def log_event(event_data):
         # Write back to file
         with open(log_file, 'w') as f:
             json.dump(events, f, indent=2)
+            
+        # Queue database insert using async writer
+        # Extract event type from the data
+        event_type = event_data.get('type', 'unknown')
+        
+        # Convert data to JSON string
+        event_data_json = json.dumps(event_data)
+        
+        # Add to async database writer queue
+        async_db_writer.add_task(_db_store_event, event_type, event_data_json)
+        logger.debug(f"Event queued for database insert: {event_type}")
             
     except Exception as e:
         logger.error(f"Error logging event: {e}")

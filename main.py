@@ -2212,12 +2212,21 @@ def execute_macro(macro_id, mode='normal'):
         pass  # Keep as is if not convertible
     
     # Now get the macro from the database
-    macro = db_session.query(Macro).get(macro_id)
-    if not macro:
-        return {'status': 'error', 'message': f'Macro not found with ID {macro_id}'}
-    
-    # Log the execution attempt
-    logger.info(f"Executing macro {macro_id} in {mode} mode")
+    try:
+        macro = db_session.query(Macro).get(macro_id)
+        if not macro:
+            return {'status': 'error', 'message': f'Macro not found with ID {macro_id}'}
+        
+        # Log the execution attempt
+        logger.info(f"Executing macro {macro_id} in {mode} mode")
+    except Exception as e:
+        logger.error(f"Database error while getting macro {macro_id}: {e}")
+        return {
+            'status': 'error',
+            'message': 'Database connection error. Please try again later.',
+            'error_type': 'database_connection',
+            'macro_id': macro_id
+        }
     
     try:
         # In a real implementation, this would execute the macro
@@ -2335,9 +2344,17 @@ def get_macro_status(macro_id):
     except (ValueError, TypeError):
         pass  # Keep as is if not convertible
     
-    macro = db_session.query(Macro).get(macro_id)
-    if not macro:
-        return {'status': 'error', 'message': 'Macro not found'}
+    try:
+        macro = db_session.query(Macro).get(macro_id)
+        if not macro:
+            return {'status': 'error', 'message': 'Macro not found'}
+    except Exception as e:
+        logger.error(f"Database error while getting macro status for {macro_id}: {e}")
+        return {
+            'status': 'error',
+            'message': 'Database connection error. Please try again later.',
+            'error_type': 'database_connection'
+        }
     
     # In a real implementation, this would check the actual execution status
     # Here we just return the stored status
@@ -2407,9 +2424,17 @@ def stop_macro(macro_id):
     except (ValueError, TypeError):
         pass  # Keep as is if not convertible
     
-    macro = db_session.query(Macro).get(macro_id)
-    if not macro:
-        return {'status': 'error', 'message': f'Macro not found with ID {macro_id}'}
+    try:
+        macro = db_session.query(Macro).get(macro_id)
+        if not macro:
+            return {'status': 'error', 'message': f'Macro not found with ID {macro_id}'}
+    except Exception as e:
+        logger.error(f"Database error while stopping macro {macro_id}: {e}")
+        return {
+            'status': 'error',
+            'message': 'Database connection error. Please try again later.',
+            'error_type': 'database_connection'
+        }
     
     # In a real implementation, this would send a stop signal to the automation server
     # Here we just update the status

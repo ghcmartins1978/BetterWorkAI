@@ -1,0 +1,121 @@
+Below is a **two-part deliverable**:
+
+* **Part A – QA audit of the current drop (`bettermanai-270425-2152.zip`)**  
+  – which Replit tickets are done, which are still missing or need refactor / de-duplication.  
+* **Part B – Clean-up & UI re-organisation plan**  
+  – concrete refactor checklist, folder map, lateral-menu structure, and a reminder of the Quick-UI / brand guide so Replit can restyle the app in the same pass.
+
+---
+
+## 𝐏𝐀𝐑𝐓 A | Ticket-by-Ticket Status
+
+| Ticket ID | Expected artefact | Found? | Notes / Required action |
+|-----------|------------------|--------|-------------------------|
+| **A1 TagUI wrapper** | `src/macro_runner.rs` + REST `/run_macro` | **✅** file exists; spawns TagUI & returns `pid`, `log` | OK |
+| **A2 YAML→TagUI compiler** | `automation_macros.py` or Rust equiv + tests | **✅** `automation_macros.py` present; golden test in `tests/unit/test_macro_compiler.py` | OK |
+| **A3 Dry-run overlay** | Tauri `Overlay.svelte` + `/preview` IPC route | **⚠️ Missing** – overlay component not in `ui/`; no IPC handler. | **Add overlay** |
+| **A4 Macro Library UI** | Sidebar page listing YAML files | **✅** `ui/pages/Automations.svelte` with table; but list doesn’t refresh after new macro save. | Add `macroSaved` event bus refresh |
+| **A5 Variable detector** | GPT prompt & modal | **⚠️ Partially** – `variable_detector.py` calls GPT, but UI modal scaffold only (no field editor). | Finish field-editor component |
+| **A6 Scheduler & hot-key** | `scheduler.py` + Windows `schtasks` | **✅** scheduler module & hot-key listener in `event_listener.py`; cron job table present | OK |
+| **A7 Safety nets** | timeout, screenshot-diff | **✅** timeout implemented; **❌ diff check** absent | add before/after diff via Pillow |
+| **A8 KPI counter & /metrics** | `/metrics` endpoint & Tauri card | **✅** endpoint returns JSON; **⚠️ UI card placeholder** shows `-- h` | wire up hoursSaved prop |
+| **A9 Failure feedback** | auto-prompt to re-record | **❌ Missing** | implement trigger rule |
+
+### Other observations (code quality)
+
+* **Duplicate helpers** – `ai_helper.py` and `ai_analysis_script.py` both wrap OpenAI calls; merge.  
+* **DB insert still missing in logger** – `logger.log_event()` writes only to file & memory, not to DB → weekly/monthly detection will still miss data.  
+* **Dead modules** – `automation_server.py` never imported; redundant after Rust helper.  
+* **Hard-coded paths** – TagUI log path uses `C:\\Temp` on Windows; move to `os.path.join(data_dir, 'logs')`.  
+
+---
+
+## 𝐏𝐀𝐑𝐓 B | Refactor & UI Re-organisation Plan
+
+### 1. Code cleanup checklist
+| Task | Why | Owner |
+|------|-----|-------|
+| Merge `ai_helper.py` + `ai_analysis_script.py` into `ai_llm.py` | Remove duplication | Core |
+| Move DB insert logic into `logger.log_event()` via async queue (see earlier snippet) | Prevent data loss | Core |
+| Remove `automation_server.py` (unused) | Dead code | Core |
+| Centralise constants (`DATA_DIR`, `LOG_DIR`, palette) in `config.py` | Avoid hard-coded paths | Core |
+| Add `tests/unit/test_logger_db.py` to ensure every event ends in SQLite | Regression guard | QA |
+
+### 2. Folder structure after clean-up
+```
+bettermanai/
+ ├─ src/
+ │   ├─ core/             # Rust helper
+ │   ├─ automation/       # runner + compiler
+ │   ├─ capture/          # event_listener, audio, webcam
+ │   ├─ ai/               # ai_llm.py, summariser, variable_detector
+ │   ├─ db/               # database.py, models
+ │   └─ sched/            # scheduler.py
+ ├─ ui/ (Tauri)
+ │   ├─ components/
+ │   ├─ pages/
+ │   │   ├─ Dashboard.svelte
+ │   │   ├─ Timeline.svelte
+ │   │   ├─ Automations.svelte
+ │   │   ├─ Metrics.svelte
+ │   │   └─ Settings.svelte
+ │   └─ assets/ (logo, icons, palette.ts)
+ └─ tests/
+```
+
+### 3. Lateral-menu re-design  *(matches brand synopsis)*
+
+```
+▸ Dashboard        (overview, KPI cards)
+▸ Timeline         (raw events & patterns)
+▸ Automations
+    ├─ My Macros
+    └─ Create / Edit (opens editor modal)
+▸ Metrics
+    ├─ Usage Stats
+    └─ Performance
+▸ Settings
+    ├─ Privacy & Data
+    ├─ Microphone / Webcam
+    ├─ Scheduler
+    └─ About
+```
+
+*Collapsible `Automations` & `Metrics` keep nav slim on 13″ screens.*
+
+### 4. Quick-UI / Brand Guide hooks
+
+* **Palette constants** (`colors.ts`):  
+  ```ts
+  export const Navy   = '#0E1B27';
+  export const Cyan   = '#00C4FF';
+  export const Slate  = '#D9E1E8';
+  export const Green  = '#45E19F';
+  export const Amber  = '#FFB547';
+  ```
+* **Typography**: load Inter via Google Fonts in `index.html`.
+* **Logo component** (`Logo.svelte`) renders cyan llama-bolt SVG.
+* **Tray icon** states: `/assets/icon_idle.png`, `/icon_watch.png`, `/icon_mic.png`.
+
+### 5. Remaining tickets for Replit
+
+| New ID | Description |
+|--------|-------------|
+| **B1** | Add DB insert queue in `logger` (fix data loss). |
+| **B2** | Complete Dry-run overlay component (Ticket A3). |
+| **B3** | Finish variable-editor modal & connect to compiler (Ticket A5). |
+| **B4** | Implement screenshot diff check & notify (Ticket A7 part). |
+| **B5** | Wire KPI card to `/metrics` endpoint (Ticket A8). |
+| **B6** | Add failure-feedback auto prompt (Ticket A9). |
+| **B7** | Merge duplicate LLM helper modules & update imports. |
+| **B8** | Apply new sidebar groups & brand palette; refactor CSS. |
+| **B9** | Remove `automation_server.py`, update docs. |
+
+**Definition of Done**: Each PR must include minimal unit tests + Cypress update for UI nav.
+
+---
+
+### 6. Final note to Replit agents
+*Follow the order B1 → B9; keep commits atomic; update README & sidebar screenshots after the palette change.*  
+
+With these adjustments the code-base will be clean, branded, and functionally complete.

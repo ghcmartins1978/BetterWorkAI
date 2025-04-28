@@ -1650,7 +1650,7 @@ def privacy():
 
 @app.route('/helper-api-manager')
 def helper_api_manager():
-    """Helper API Manager page"""
+    """Rust Helper API Manager page"""
     server_url = os.environ.get('AUTOMATION_SERVER_URL', '')
     return render_template('server_url_manager.html', server_url=server_url)
 
@@ -2698,20 +2698,20 @@ def execute_macro(macro_id, mode='normal'):
             'started_at': datetime.now().isoformat(),
         }
         
-        # For normal execution, connect to the local automation server
+        # For normal execution, connect to the local Rust helper
         # For dry-run, just simulate the execution in the browser
         if mode == 'normal':
-            # Get the automation server URL from environment
+            # Get the Rust helper URL from environment
             server_url = os.environ.get('AUTOMATION_SERVER_URL')
             if not server_url:
                 return {
                     'status': 'error',
-                    'message': 'Automation server URL not configured. Please configure it in the Server URL Manager.',
+                    'message': 'Rust helper URL not configured. Please configure it in the Server URL Manager.',
                     'macro_id': macro_id
                 }
                 
             # Log the attempt to connect to the server
-            logger.info(f"Connecting to automation server at {server_url}")
+            logger.info(f"Connecting to Rust helper at {server_url}")
             result['server_url'] = server_url
             
             # Create a temporary directory for execution logs
@@ -2944,7 +2944,7 @@ def stop_macro(macro_id):
                 'status': macro.status
             }
             
-            # In a real implementation, this would send a stop signal to the automation server
+            # In a real implementation, this would send a stop signal to the Rust helper
             # Here we just update the status
             if macro.status == 'running':
                 macro.status = 'stopped'

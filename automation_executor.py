@@ -191,8 +191,8 @@ class AutomationExecutor:
                     warning_message = f"Warning: Screen changed only {diff_percentage:.2f}% after execution. Automation may not have had the expected effect."
                     logger.warning(warning_message)
                     
-                    # Store the warning in the execution record metadata
-                    execution.metadata = json.dumps({
+                    # Store the warning in the execution record execution_data
+                    execution.execution_data = json.dumps({
                         "screen_change_percentage": diff_percentage,
                         "warning": warning_message,
                         "before_screenshot": before_img_path,
@@ -398,7 +398,7 @@ class AutomationExecutor:
                 message = f"Executing macro in {i}..."
                 
                 # We can't directly draw, so we'll simulate a notification
-                self._show_notification(message, "", timeout=0.8)
+                self._show_notification(message, "", timeout=1)
                 time.sleep(0.2)
                 
         except Exception as e:

@@ -728,6 +728,77 @@ def view_macro(macro_id):
     steps = db_session.query(MacroStep).filter_by(macro_id=macro.id).order_by(MacroStep.step_number).all()
     
     return render_template('macro.html', macro=macro, steps=steps)
+    
+@app.route('/execution/<int:execution_id>')
+def view_execution(execution_id):
+    """View details of a specific macro execution"""
+    execution = db_session.query(MacroExecution).get(execution_id)
+    if not execution:
+        flash('Execution record not found', 'error')
+        return redirect(url_for('macros'))
+    
+    macro = db_session.query(Macro).get(execution.macro_id)
+    if not macro:
+        flash('Associated macro not found', 'error')
+        return redirect(url_for('macros'))
+    
+    # Determine status color for badge display
+    status_color = 'secondary'
+    if execution.status == 'success':
+        status_color = 'success'
+    elif execution.status == 'failed':
+        status_color = 'danger'
+    elif execution.status == 'timeout':
+        status_color = 'warning'
+    elif execution.status == 'running':
+        status_color = 'primary'
+    
+    # Parse execution data if available
+    execution_data = None
+    if execution.execution_data:
+        try:
+            execution_data = json.loads(execution.execution_data)
+            
+            # Create symlinks to screenshots in static folder if needed
+            if 'before_screenshot' in execution_data and execution_data['before_screenshot']:
+                try:
+                    src = execution_data['before_screenshot']
+                    dst = os.path.join('static/screenshots', os.path.basename(src))
+                    os.makedirs(os.path.dirname(dst), exist_ok=True)
+                    # Create symlink if it doesn't exist
+                    if not os.path.exists(dst):
+                        os.symlink(src, dst)
+                except Exception as e:
+                    logger.error(f"Error creating symlink for before screenshot: {e}")
+            
+            if 'after_screenshot' in execution_data and execution_data['after_screenshot']:
+                try:
+                    src = execution_data['after_screenshot']
+                    dst = os.path.join('static/screenshots', os.path.basename(src))
+                    os.makedirs(os.path.dirname(dst), exist_ok=True)
+                    if not os.path.exists(dst):
+                        os.symlink(src, dst)
+                except Exception as e:
+                    logger.error(f"Error creating symlink for after screenshot: {e}")
+            
+            if 'diff_screenshot' in execution_data and execution_data['diff_screenshot']:
+                try:
+                    src = execution_data['diff_screenshot']
+                    dst = os.path.join('static/screenshots', os.path.basename(src))
+                    os.makedirs(os.path.dirname(dst), exist_ok=True)
+                    if not os.path.exists(dst):
+                        os.symlink(src, dst)
+                except Exception as e:
+                    logger.error(f"Error creating symlink for diff screenshot: {e}")
+                    
+        except Exception as e:
+            logger.error(f"Error parsing execution data: {e}")
+    
+    return render_template('execution_detail.html', 
+                          execution=execution, 
+                          macro=macro, 
+                          status_color=status_color,
+                          execution_data=execution_data)
 
 @app.route('/macro/new')
 def new_macro():

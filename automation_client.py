@@ -11,8 +11,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # The helper URL should be provided as an environment variable
-# Default to local Rust helper URL (127.0.0.1:17400) if none provided
-RUST_HELPER_URL = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400')  # Using AUTOMATION_SERVER_URL for backward compatibility (should rename to RUST_HELPER_URL in future)
+# However, we're overriding with the default URL to avoid problems with outdated environment variables
+# RUST_HELPER_URL = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400')  # Old method
+RUST_HELPER_URL = 'http://127.0.0.1:17400'  # Force using localhost URL
 
 class AutomationClient:
     """
@@ -31,7 +32,12 @@ class AutomationClient:
         Args:
             server_url: URL of the Rust helper's REST API (typically http://127.0.0.1:17400)
         """
-        self.server_url = server_url or RUST_HELPER_URL
+        # Force use of the correct server URL
+        if server_url:
+            self.server_url = server_url
+        else:
+            # Directly use RUST_HELPER_URL which is set to the correct local URL
+            self.server_url = RUST_HELPER_URL
         
         if not self.server_url:
             logger.warning("No Rust helper URL provided. Remote automation will not work.")

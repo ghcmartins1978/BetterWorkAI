@@ -16,8 +16,12 @@ class MonitorController:
     
     def __init__(self, server_url=None):
         """Initialize the monitor controller for the Rust helper"""
-        # Default to local Rust helper URL if none provided
-        self.server_url = server_url or os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400')
+        # Force using the default URL to avoid the problematic environment variable
+        if server_url:
+            self.server_url = server_url
+        else:
+            # Temporarily overriding the environment variable with the correct default URL
+            self.server_url = 'http://127.0.0.1:17400'
         logger.info(f"Monitor controller initialized with Rust helper URL: {self.server_url}")
     
     def is_connected(self):

@@ -553,6 +553,55 @@ def update_variable_value(variable_id: int, value: str) -> bool:
         
         variable.current_value = value
         variable.updated_at = datetime.now()
+        
+        db_session.commit()
+        return True
+    except Exception as e:
+        db_session.rollback()
+        logger.error(f"Error updating variable value {variable_id}: {str(e)}")
+        return False
+
+
+def update_variable(variable_id: int, variable_data: Dict[str, Any]) -> bool:
+    """
+    Update all properties of a variable.
+    
+    Args:
+        variable_id: ID of the variable to update
+        variable_data: Dictionary containing variable properties to update
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        variable = db_session.query(MacroVariable).get(variable_id)
+        if not variable:
+            logger.error(f"Variable with ID {variable_id} not found")
+            return False
+        
+        # Update properties if provided
+        if 'description' in variable_data:
+            variable.description = variable_data['description']
+        
+        if 'default_value' in variable_data:
+            variable.default_value = variable_data['default_value']
+            
+        if 'current_value' in variable_data:
+            variable.current_value = variable_data['current_value']
+            
+        if 'type' in variable_data:
+            variable.variable_type = variable_data['type']
+            
+        if 'is_required' in variable_data:
+            variable.is_required = 1 if variable_data['is_required'] else 0
+            
+        if 'choice_options' in variable_data and variable_data.get('type') == 'choice':
+            # Store choice options as a JSON string
+            options = variable_data['choice_options']
+            if isinstance(options, list):
+                variable.metadata = json.dumps({'choice_options': options})
+            
+        variable.updated_at = datetime.now()
         db_session.commit()
         return True
     except Exception as e:

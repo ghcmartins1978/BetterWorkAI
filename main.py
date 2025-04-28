@@ -2749,17 +2749,18 @@ def api_get_variables(macro_id):
 
 @app.route('/api/automation/variables/<variable_id>', methods=['PUT'])
 def api_update_variable(variable_id):
-    """API endpoint to update a variable's value"""
+    """API endpoint to update a variable's properties"""
     try:
         data = request.json
-        value = data.get('value')
-        if value is None:
-            return jsonify({
-                'status': 'error',
-                'message': 'No value provided'
-            })
         
-        success = variable_detector.update_variable_value(variable_id, value)
+        # Check if it's a full variable update or just a value update
+        if 'value' in data and len(data) == 1:
+            # Simple value update
+            success = variable_detector.update_variable_value(variable_id, data['value'])
+        else:
+            # Full variable update
+            success = variable_detector.update_variable(variable_id, data)
+        
         if success:
             return jsonify({
                 'status': 'success',
@@ -2862,6 +2863,63 @@ def variable_documentation():
         return render_template('error.html', 
                                error="Error displaying variable documentation", 
                                details=str(e))
+
+@app.route('/variable_editor/<macro_id>', methods=['GET'])
+def variable_editor(macro_id):
+    """
+    Display the variable editor for a specific macro.
+    This page allows editing variable properties such as description, default value, type, etc.
+    """
+    try:
+        # Get the macro
+        macro = db_session.query(Macro).get(macro_id)
+        if not macro:
+            return render_template('error.html', 
+                                error="Macro not found", 
+                                details=f"No macro found with ID {macro_id}")
+        
+        # Get variables for this macro
+        variables_dict = variable_detector.get_variables_for_macro(macro_id)
+        variables = []
+        
+        # Convert dictionary to list for easier template rendering
+        for name, var_data in variables_dict.items():
+            # Extract choice options from metadata if present
+            choice_options = []
+            if var_data.get('type') == 'choice' and 'id' in var_data:
+                # Fetch the variable from database to access its metadata
+                variable = db_session.query(MacroVariable).get(var_data['id'])
+                if variable and variable.metadata:
+                    try:
+                        metadata = json.loads(variable.metadata)
+                        choice_options = metadata.get('choice_options', [])
+                    except:
+                        pass
+            
+            # Add to variables list
+            var_data['choice_options'] = choice_options
+            variables.append(var_data)
+            
+        # Define a Jinja2 filter for variable type badge styling
+        @app.template_filter('format_variable_type_badge')
+        def format_variable_type_badge(variable_type):
+            type_badges = {
+                'string': 'primary',
+                'number': 'success',
+                'boolean': 'warning',
+                'choice': 'secondary',
+                'date': 'info'
+            }
+            return type_badges.get(variable_type, 'primary')
+            
+        return render_template('variable_editor.html',
+                              macro=macro,
+                              variables=variables)
+    except Exception as e:
+        logger.error(f"Error displaying variable editor: {e}")
+        return render_template('error.html', 
+                              error="Error displaying variable editor", 
+                              details=str(e))
 
 @app.route('/metrics', methods=['GET'])
 def metrics_dashboard():

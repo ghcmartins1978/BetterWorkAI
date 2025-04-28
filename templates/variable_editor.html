@@ -1,0 +1,429 @@
+{% extends "layout.html" %}
+
+{% block title %}Variable Editor{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('macros') }}">Macros</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('view_macro', macro_id=macro.id) }}">{{ macro.name }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Variable Editor</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-primary bg-opacity-10">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="card-title mb-0">
+                        <i class="bi bi-braces-asterisk me-2"></i>
+                        Variables for {{ macro.name }}
+                    </h4>
+                    <a href="/variable_documentation" target="_blank" class="btn btn-sm btn-outline-info">
+                        <i class="bi bi-question-circle me-1"></i>
+                        Documentation
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                {% if variables %}
+                    <form id="variableForm">
+                        {% for variable in variables %}
+                            <div class="card mb-4 variable-card" data-variable-id="{{ variable.id }}">
+                                <div class="card-header bg-light">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0">{{ variable.name }}</h5>
+                                        <span class="badge bg-{{ variable.type | format_variable_type_badge }}">{{ variable.type }}</span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Description</label>
+                                        <input type="text" class="form-control" name="description_{{ variable.id }}" value="{{ variable.description }}">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Default Value</label>
+                                        <input type="text" class="form-control" name="default_value_{{ variable.id }}" value="{{ variable.default_value }}">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Current Value</label>
+                                        <input type="text" class="form-control" name="current_value_{{ variable.id }}" value="{{ variable.current_value }}">
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Type</label>
+                                                <select class="form-select" name="type_{{ variable.id }}">
+                                                    <option value="string" {% if variable.type == 'string' %}selected{% endif %}>String</option>
+                                                    <option value="number" {% if variable.type == 'number' %}selected{% endif %}>Number</option>
+                                                    <option value="boolean" {% if variable.type == 'boolean' %}selected{% endif %}>Boolean</option>
+                                                    <option value="choice" {% if variable.type == 'choice' %}selected{% endif %}>Choice</option>
+                                                    <option value="date" {% if variable.type == 'date' %}selected{% endif %}>Date</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Required</label>
+                                                <div class="form-check form-switch mt-2">
+                                                    <input class="form-check-input" type="checkbox" name="required_{{ variable.id }}" {% if variable.is_required %}checked{% endif %}>
+                                                    <label class="form-check-label">This variable is required</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3 choice-options-container {% if variable.type != 'choice' %}d-none{% endif %}" id="choice_options_{{ variable.id }}">
+                                        <label class="form-label">Choice Options <small class="text-muted">(comma-separated)</small></label>
+                                        <input type="text" class="form-control" name="choice_options_{{ variable.id }}" value="{{ variable.choice_options|join(',') if variable.choice_options else '' }}">
+                                        <div class="form-text">Enter the available options for this choice variable, separated by commas</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Usage</label>
+                                        <div class="rounded p-3 bg-light">
+                                            <code>{{ '{{' }}{{ variable.name }}{{ '}}' }}</code>
+                                            <span class="ms-2 text-muted">- Basic usage</span>
+                                        </div>
+                                        {% if variable.type == 'number' %}
+                                            <div class="rounded p-3 bg-light mt-2">
+                                                <code>{{ '{{' }}{{ variable.name }}:calc:*2{{ '}}' }}</code>
+                                                <span class="ms-2 text-muted">- Arithmetic operation</span>
+                                            </div>
+                                        {% elif variable.type == 'boolean' %}
+                                            <div class="rounded p-3 bg-light mt-2">
+                                                <code>{{ '{{if:' }}{{ variable.name }}:Yes:No{{ '}}' }}</code>
+                                                <span class="ms-2 text-muted">- Conditional formatting</span>
+                                            </div>
+                                        {% elif variable.type == 'string' %}
+                                            <div class="rounded p-3 bg-light mt-2">
+                                                <code>{{ '{{' }}{{ variable.name }}:upper{{ '}}' }}</code>
+                                                <span class="ms-2 text-muted">- Text transformation</span>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </form>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        No variables have been detected for this macro yet. Use the "Detect Variables" button to scan the macro for variables.
+                    </div>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-light d-flex justify-content-between">
+                <div>
+                    <a href="{{ url_for('view_macro', macro_id=macro.id) }}" class="btn btn-outline-secondary me-2">
+                        <i class="bi bi-arrow-left me-1"></i>
+                        Back
+                    </a>
+                    <button id="detectVariablesBtn" class="btn btn-outline-info me-2">
+                        <i class="bi bi-search me-1"></i>
+                        Detect Variables
+                    </button>
+                </div>
+                <div>
+                    <button id="saveVariablesBtn" class="btn btn-primary {% if not variables %}d-none{% endif %}">
+                        <i class="bi bi-save me-1"></i>
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Variable Types
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                        <div class="d-flex">
+                            <span class="badge bg-primary me-2">string</span>
+                            <div>
+                                <p class="mb-1">Text values like names, addresses, etc.</p>
+                                <small class="text-muted">Example: "John Smith", "Main Street"</small>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="list-group-item">
+                        <div class="d-flex">
+                            <span class="badge bg-success me-2">number</span>
+                            <div>
+                                <p class="mb-1">Numeric values for calculations.</p>
+                                <small class="text-muted">Example: 42, 3.14, -10</small>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="list-group-item">
+                        <div class="d-flex">
+                            <span class="badge bg-warning text-dark me-2">boolean</span>
+                            <div>
+                                <p class="mb-1">True/false values for conditions.</p>
+                                <small class="text-muted">Example: true, false, yes, no</small>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="list-group-item">
+                        <div class="d-flex">
+                            <span class="badge bg-secondary me-2">choice</span>
+                            <div>
+                                <p class="mb-1">Selection from predefined options.</p>
+                                <small class="text-muted">Example: "red,green,blue"</small>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="list-group-item">
+                        <div class="d-flex">
+                            <span class="badge bg-info me-2">date</span>
+                            <div>
+                                <p class="mb-1">Date and time values.</p>
+                                <small class="text-muted">Example: "2025-04-28"</small>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-question-circle me-2"></i>
+                    Tips
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-3">
+                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                        Variables are stored in <code>{{ '{{variable_name}}' }}</code> format in your macro steps.
+                    </li>
+                    <li class="mb-3">
+                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                        Set default values to make execution easier.
+                    </li>
+                    <li class="mb-3">
+                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                        You'll be prompted for required variables during execution.
+                    </li>
+                    <li>
+                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                        Check the documentation for advanced formatting options.
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show/hide choice options based on variable type
+    document.querySelectorAll('select[name^="type_"]').forEach(select => {
+        select.addEventListener('change', function() {
+            const variableId = this.name.split('_')[1];
+            const choiceOptionsContainer = document.getElementById(`choice_options_${variableId}`);
+            
+            if (this.value === 'choice') {
+                choiceOptionsContainer.classList.remove('d-none');
+            } else {
+                choiceOptionsContainer.classList.add('d-none');
+            }
+        });
+    });
+    
+    // Detect Variables button
+    const detectVariablesBtn = document.getElementById('detectVariablesBtn');
+    if (detectVariablesBtn) {
+        detectVariablesBtn.addEventListener('click', function() {
+            const macroId = '{{ macro.id }}';
+            
+            // Show loading state
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Detecting...';
+            
+            // Call the API to detect variables
+            fetch(`/api/automation/macros/${macroId}/detect-variables`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Reset button state
+                detectVariablesBtn.disabled = false;
+                detectVariablesBtn.innerHTML = '<i class="bi bi-search me-1"></i>Detect Variables';
+                
+                if (data.status === 'success') {
+                    showToast('Success', `Detected ${Object.keys(data.variables).length} variables`, 'success');
+                    
+                    // Register the detected variables
+                    fetch(`/api/automation/macros/${macroId}/register-variables`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(registerData => {
+                        if (registerData.status === 'success') {
+                            // Reload the page to show the new variables
+                            window.location.reload();
+                        } else {
+                            showToast('Error', registerData.message || 'Failed to register variables', 'danger');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error registering variables:', error);
+                        showToast('Error', 'Failed to register variables', 'danger');
+                    });
+                } else {
+                    showToast('Error', data.message || 'Failed to detect variables', 'danger');
+                }
+            })
+            .catch(error => {
+                // Reset button state
+                detectVariablesBtn.disabled = false;
+                detectVariablesBtn.innerHTML = '<i class="bi bi-search me-1"></i>Detect Variables';
+                
+                console.error('Error detecting variables:', error);
+                showToast('Error', 'Error communicating with the server', 'danger');
+            });
+        });
+    }
+    
+    // Save Variables button
+    const saveVariablesBtn = document.getElementById('saveVariablesBtn');
+    if (saveVariablesBtn) {
+        saveVariablesBtn.addEventListener('click', function() {
+            // Show loading state
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Saving...';
+            
+            // Get all variable cards
+            const variableCards = document.querySelectorAll('.variable-card');
+            let updatePromises = [];
+            
+            variableCards.forEach(card => {
+                const variableId = card.dataset.variableId;
+                const description = document.querySelector(`[name="description_${variableId}"]`).value;
+                const defaultValue = document.querySelector(`[name="default_value_${variableId}"]`).value;
+                const currentValue = document.querySelector(`[name="current_value_${variableId}"]`).value;
+                const type = document.querySelector(`[name="type_${variableId}"]`).value;
+                const isRequired = document.querySelector(`[name="required_${variableId}"]`).checked;
+                
+                let choiceOptions = '';
+                if (type === 'choice') {
+                    choiceOptions = document.querySelector(`[name="choice_options_${variableId}"]`).value;
+                }
+                
+                // Create update promise for this variable
+                const updatePromise = fetch(`/api/automation/variables/${variableId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        description: description,
+                        default_value: defaultValue,
+                        current_value: currentValue,
+                        type: type,
+                        is_required: isRequired,
+                        choice_options: choiceOptions ? choiceOptions.split(',').map(opt => opt.trim()) : []
+                    })
+                })
+                .then(response => response.json());
+                
+                updatePromises.push(updatePromise);
+            });
+            
+            // Wait for all updates to complete
+            Promise.all(updatePromises)
+                .then(results => {
+                    // Reset button state
+                    saveVariablesBtn.disabled = false;
+                    saveVariablesBtn.innerHTML = '<i class="bi bi-save me-1"></i>Save Changes';
+                    
+                    // Check if all updates were successful
+                    const failures = results.filter(result => result.status !== 'success');
+                    
+                    if (failures.length === 0) {
+                        showToast('Success', 'All variables updated successfully', 'success');
+                    } else {
+                        showToast('Warning', `${failures.length} variables failed to update`, 'warning');
+                    }
+                })
+                .catch(error => {
+                    // Reset button state
+                    saveVariablesBtn.disabled = false;
+                    saveVariablesBtn.innerHTML = '<i class="bi bi-save me-1"></i>Save Changes';
+                    
+                    console.error('Error updating variables:', error);
+                    showToast('Error', 'Error communicating with the server', 'danger');
+                });
+        });
+    }
+    
+    function showToast(title, message, type = 'success') {
+        // Create toast container if it doesn't exist
+        let toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
+        }
+        
+        // Create toast element
+        const toastId = 'toast-' + Math.random().toString(36).substr(2, 9);
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type} border-0`;
+        toast.id = toastId;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+        
+        // Create toast content
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <strong>${title}</strong>: ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        
+        // Add to container
+        toastContainer.appendChild(toast);
+        
+        // Initialize and show the toast
+        const bsToast = new bootstrap.Toast(toast, {
+            autohide: true,
+            delay: 5000
+        });
+        bsToast.show();
+        
+        // Remove from DOM after hidden
+        toast.addEventListener('hidden.bs.toast', function() {
+            toast.remove();
+            if (toastContainer.children.length === 0) {
+                toastContainer.remove();
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

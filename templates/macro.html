@@ -88,9 +88,13 @@
                     </a>
                 </div>
                 <div>
-                    <button onclick="executeMacro({{ macro.id }})" class="btn btn-success {% if not steps %}disabled{% endif %}">
+                    <button onclick="executeMacro({{ macro.id }})" class="btn btn-success {% if not steps %}disabled{% endif %} me-2">
                         <i class="bi bi-play-fill me-1"></i>
                         Execute Macro
+                    </button>
+                    <button type="button" id="dry-run-btn" class="btn btn-info text-white {% if not steps %}disabled{% endif %}" data-macro-id="{{ macro.id }}">
+                        <i class="bi bi-eye me-1"></i>
+                        Dry Run
                     </button>
                 </div>
             </div>
@@ -167,6 +171,13 @@
 </div>
 {% endblock %}
 
+{% block head %}
+{{ super() }}
+<!-- Load dry run overlay scripts -->
+<script src="{{ url_for('static', filename='js/dry-run-overlay.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dry-run-manager.js') }}"></script>
+{% endblock %}
+
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -179,6 +190,170 @@ document.addEventListener('DOMContentLoaded', function() {
             // Not valid JSON, leave as is
         }
     });
+    
+    // Dry Run Button Functionality
+    const dryRunBtn = document.getElementById('dry-run-btn');
+    if (dryRunBtn) {
+        dryRunBtn.addEventListener('click', function() {
+            const macroId = this.getAttribute('data-macro-id');
+            
+            // Show loading state
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Loading...';
+            
+            // Call the API to execute the macro in dry-run mode
+            fetch(`/api/automation/macros/${macroId}/execute`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    mode: 'dry-run'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Dry run response:', data);
+                
+                if (data.status === 'success') {
+                    // Get the macro details to start the visual demonstration
+                    fetch(`/api/automation/macros/${macroId}`)
+                        .then(response => response.json())
+                        .then(macroData => {
+                            // Reset button state
+                            dryRunBtn.disabled = false;
+                            dryRunBtn.innerHTML = '<i class="bi bi-eye me-1"></i>Dry Run';
+                            
+                            if (macroData.status === 'success') {
+                                // Start the visual overlay simulation
+                                if (window.dryRunManager) {
+                                    window.dryRunManager.start(macroId, macroData.macro.steps);
+                                    showToast('Dry run started', 'The dry run simulation is now active.', 'info');
+                                } else {
+                                    showToast('Error', 'Dry run manager not available', 'danger');
+                                }
+                            } else {
+                                showToast('Error', macroData.message || 'Failed to load macro details', 'danger');
+                            }
+                        })
+                        .catch(err => {
+                            // Reset button state
+                            dryRunBtn.disabled = false;
+                            dryRunBtn.innerHTML = '<i class="bi bi-eye me-1"></i>Dry Run';
+                            
+                            console.error('Error fetching macro:', err);
+                            showToast('Error', 'Failed to fetch macro details', 'danger');
+                        });
+                } else {
+                    // Reset button state
+                    dryRunBtn.disabled = false;
+                    dryRunBtn.innerHTML = '<i class="bi bi-eye me-1"></i>Dry Run';
+                    
+                    showToast('Error', data.message || 'Failed to start dry run', 'danger');
+                }
+            })
+            .catch(error => {
+                // Reset button state
+                dryRunBtn.disabled = false;
+                dryRunBtn.innerHTML = '<i class="bi bi-eye me-1"></i>Dry Run';
+                
+                console.error('Error starting dry run:', error);
+                showToast('Error', 'Error communicating with the server', 'danger');
+            });
+        });
+    }
+    
+    function showToast(title, message, type = 'success') {
+        // Create toast container if it doesn't exist
+        let toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
+        }
+        
+        // Create toast element
+        const toastId = 'toast-' + Math.random().toString(36).substr(2, 9);
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type} border-0`;
+        toast.id = toastId;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+        
+        // Create toast content
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <strong>${title}</strong>: ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        
+        // Add to container
+        toastContainer.appendChild(toast);
+        
+        // Initialize and show the toast
+        const bsToast = new bootstrap.Toast(toast, {
+            autohide: true,
+            delay: 5000
+        });
+        bsToast.show();
+        
+        // Remove from DOM after hidden
+        toast.addEventListener('hidden.bs.toast', function() {
+            toast.remove();
+            if (toastContainer.children.length === 0) {
+                toastContainer.remove();
+            }
+        });
+    }
+    
+    // For executing the macro normally
+    window.executeMacro = function(macroId) {
+        // Show confirmation dialog
+        if (confirm('Are you sure you want to execute this macro?')) {
+            // Disable all buttons
+            const buttons = document.querySelectorAll('.card-footer button');
+            buttons.forEach(btn => btn.disabled = true);
+            
+            // Show loading state on execute button
+            const executeBtn = document.querySelector('.card-footer button.btn-success');
+            executeBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Executing...';
+            
+            // Call API to execute macro
+            fetch(`/api/automation/macros/${macroId}/execute`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    mode: 'normal'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Re-enable buttons
+                buttons.forEach(btn => btn.disabled = false);
+                executeBtn.innerHTML = '<i class="bi bi-play-fill me-1"></i>Execute Macro';
+                
+                if (data.status === 'success') {
+                    showToast('Success', 'Macro execution started successfully', 'success');
+                } else {
+                    showToast('Error', data.message || 'Failed to execute macro', 'danger');
+                }
+            })
+            .catch(error => {
+                // Re-enable buttons
+                buttons.forEach(btn => btn.disabled = false);
+                executeBtn.innerHTML = '<i class="bi bi-play-fill me-1"></i>Execute Macro';
+                
+                console.error('Error executing macro:', error);
+                showToast('Error', 'Error communicating with the server', 'danger');
+            });
+        }
+    };
 });
 </script>
 {% endblock %}

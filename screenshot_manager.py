@@ -3,6 +3,9 @@ import json
 import base64
 import logging
 from datetime import datetime
+from database import session_scope
+from models import AIAnalysisReport, Event
+from ai_llm import ai_llm
 
 logger = logging.getLogger(__name__)
 
@@ -73,10 +76,6 @@ class ScreenshotManager:
         """
         try:
             # Check if OpenAI API is available
-            from ai_llm import ai_llm
-            from database import session_scope
-            from models import AIAnalysisReport, Event
-            import json
             
             if not ai_llm.is_available():
                 logger.warning("OpenAI API not available for screenshot analysis")

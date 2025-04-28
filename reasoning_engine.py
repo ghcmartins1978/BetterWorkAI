@@ -313,7 +313,7 @@ class ReasoningEngine:
             steps = macro.steps
             
             # Use OpenAI to enhance the macro
-            from ai_helper import ai_helper
+            from ai_llm import ai_llm
             
             # Convert steps for AI processing
             steps_data = []
@@ -326,7 +326,7 @@ class ReasoningEngine:
                 steps_data.append(step_data)
             
             # Enhance description
-            enhanced_description = ai_helper.enhance_macro_description(
+            enhanced_description = ai_llm.enhance_macro_description(
                 macro_name=macro.name,
                 current_description=macro.description,
                 steps=steps_data
@@ -337,7 +337,7 @@ class ReasoningEngine:
                 logger.info(f"Enhanced macro {macro_id} description with AI")
             
             # Enhance steps
-            enhanced_steps = ai_helper.enhance_macro_steps(
+            enhanced_steps = ai_llm.enhance_macro_steps(
                 macro_name=macro.name,
                 steps=steps_data
             )

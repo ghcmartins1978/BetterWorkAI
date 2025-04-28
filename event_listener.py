@@ -47,7 +47,7 @@ class EventListener:
         self.running = False
         
     def _fetch_events(self):
-        """Fetch events from the automation server"""
+        """Fetch events from the Rust helper"""
         if not self.monitor_controller.is_connected():
             logger.warning("Cannot fetch events: Monitor controller not connected")
             return []

@@ -22,10 +22,10 @@ class TestPatternGenerator:
     def __init__(self, server_url=None):
         self.server_url = server_url or os.environ.get('AUTOMATION_SERVER_URL', '')
         if not self.server_url:
-            logger.warning("No automation server URL provided.")
+            logger.warning("No Rust helper URL provided.")
     
     def is_connected(self):
-        """Check if we can connect to the automation server"""
+        """Check if we can connect to the Rust helper"""
         if not self.server_url:
             return False
             
@@ -33,11 +33,11 @@ class TestPatternGenerator:
             response = requests.get(f"{self.server_url}/api/status", timeout=3)
             return response.status_code == 200
         except Exception as e:
-            logger.error(f"Failed to connect to automation server: {e}")
+            logger.error(f"Failed to connect to Rust helper: {e}")
             return False
             
     def start_monitoring(self):
-        """Start monitoring on the server"""
+        """Start monitoring on the Rust helper"""
         if not self.server_url:
             return False
             

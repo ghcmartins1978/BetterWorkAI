@@ -190,7 +190,7 @@
                                 </button>
                             </div>
                             <div class="form-text">
-                                Enter the ngrok URL that points to your local automation server
+                                Enter the URL that points to your local Rust helper (usually http://127.0.0.1:17400)
                             </div>
                         </div>
                         
@@ -205,7 +205,7 @@
                                     <div class="alert alert-success d-flex align-items-center mb-0" role="alert">
                                         <i class="bi bi-check-circle-fill me-2"></i>
                                         <div>
-                                            Connected to local automation server
+                                            Connected to local Rust helper
                                             <small class="d-block text-muted">Screen size: {{ connection_status.screen_size.width }}x{{ connection_status.screen_size.height }}</small>
                                         </div>
                                     </div>
@@ -213,8 +213,8 @@
                                     <div class="alert alert-danger d-flex align-items-center mb-0" role="alert">
                                         <i class="bi bi-exclamation-triangle-fill me-2"></i>
                                         <div>
-                                            Not connected to local automation server
-                                            <small class="d-block">Set up the local server and provide the ngrok URL above</small>
+                                            Not connected to local Rust helper
+                                            <small class="d-block">Set up the local Rust helper and provide its URL above</small>
                                         </div>
                                     </div>
                                 {% endif %}

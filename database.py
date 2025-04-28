@@ -206,6 +206,17 @@ def check_and_update_schema():
             # Create ai_analysis_reports table
             logger.info("Creating ai_analysis_reports table")
             models.AIAnalysisReport.__table__.create(engine)
+            
+        # Check if macro_executions table exists and has the required columns
+        if 'macro_executions' in inspector.get_table_names():
+            columns = [col['name'] for col in inspector.get_columns('macro_executions')]
+            if 'execution_data' not in columns:
+                # Add execution_data column
+                logger.info("Adding execution_data column to macro_executions table")
+                with engine.begin() as conn:
+                    conn.execute(sa.text(
+                        "ALTER TABLE macro_executions ADD COLUMN execution_data TEXT"
+                    ))
         
         logger.info("Database schema update complete")
         return True

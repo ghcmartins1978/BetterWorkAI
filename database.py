@@ -3,10 +3,12 @@ import logging
 import threading
 import queue
 import time
+import random
 from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.exc import OperationalError, PendingRollbackError
 
 logger = logging.getLogger(__name__)
 
@@ -25,16 +27,71 @@ engine = create_engine(
     database_url, 
     pool_recycle=300,  # Recycle connections after 5 minutes
     pool_pre_ping=True,  # Check connection validity before using
-    pool_size=5,  # Maximum number of connections to keep
-    max_overflow=10,  # Maximum overflow connections
+    pool_size=10,  # Increased maximum number of connections to keep
+    max_overflow=20,  # Increased maximum overflow connections
     connect_args={"encoding": "utf8"} if database_url.startswith('sqlite') else {}  # UTF-8 fix for SQLite
 )
 
-db_session = scoped_session(sessionmaker(autocommit=False,
-                                         autoflush=False,
-                                         bind=engine))
+# Create a session factory
+Session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Create a scoped session
+db_session = scoped_session(Session)
+
 Base = declarative_base()
 Base.query = db_session.query_property()
+
+# Max number of retries for database operations
+MAX_DB_RETRIES = 3
+RETRY_BACKOFF_BASE = 0.5  # Base backoff time in seconds
+
+def safe_db_operation(operation, *args, **kwargs):
+    """
+    Execute a database operation safely with retries and error handling
+    
+    Args:
+        operation: Function that performs the database operation
+        *args: Arguments to pass to the operation function
+        **kwargs: Keyword arguments to pass to the operation function
+        
+    Returns:
+        Result of the operation or None if all retries failed
+    """
+    retries = 0
+    last_error = None
+    
+    while retries < MAX_DB_RETRIES:
+        try:
+            # Ensure we have a fresh session
+            db_session.remove()
+            
+            # Execute the operation
+            result = operation(*args, **kwargs)
+            return result
+            
+        except (OperationalError, PendingRollbackError) as e:
+            # Handle common database connection errors
+            last_error = e
+            db_session.rollback()
+            
+            # Log the error
+            logger.warning(f"Database operation failed (attempt {retries+1}/{MAX_DB_RETRIES}): {e}")
+            
+            # Exponential backoff with jitter
+            sleep_time = RETRY_BACKOFF_BASE * (2 ** retries) * random.uniform(0.8, 1.2)
+            time.sleep(sleep_time)
+            
+            retries += 1
+            
+        except Exception as e:
+            # For other exceptions, log and re-raise
+            logger.error(f"Unexpected database error: {e}")
+            db_session.rollback()
+            raise
+    
+    # If we got here, all retries failed
+    logger.error(f"Database operation failed after {MAX_DB_RETRIES} retries. Last error: {last_error}")
+    return None
 
 # Async database writer class
 class AsyncDatabaseWriter:

@@ -798,9 +798,20 @@ def view_pattern(pattern_id):
 def macros():
     """View recorded macros"""
     try:
-        # Try to get a fresh session in case there's a stale transaction
-        db_session.rollback()  # Roll back any potential failed transactions
-        all_macros = db_session.query(Macro).all()
+        # Use the safe database operation function with retries
+        from database import safe_db_operation
+        
+        # Define the operation to get all macros
+        def get_all_macros():
+            return db_session.query(Macro).all()
+        
+        # Execute the operation safely with retries
+        all_macros = safe_db_operation(get_all_macros)
+        
+        if all_macros is None:
+            # If database operation failed completely after retries
+            raise Exception("Database operation failed after maximum retries")
+            
         return render_template('macros.html', macros=all_macros)
     except Exception as e:
         logger.error(f"Database error while accessing macros list: {e}")
@@ -819,15 +830,24 @@ def macro_library():
 def view_macro(macro_id):
     """View a specific macro"""
     try:
-        # Rollback any stale transactions before attempting to query
-        db_session.rollback()
+        # Use the safe database operation function with retries
+        from database import safe_db_operation
         
-        macro = db_session.query(Macro).get(macro_id)
+        # Define the operation to get macro and steps
+        def get_macro_and_steps(macro_id):
+            macro = db_session.query(Macro).get(macro_id)
+            if not macro:
+                return None, None
+            
+            steps = db_session.query(MacroStep).filter_by(macro_id=macro.id).order_by(MacroStep.step_number).all()
+            return macro, steps
+        
+        # Execute the operation safely with retries
+        macro, steps = safe_db_operation(get_macro_and_steps, macro_id)
+        
         if not macro:
             flash('Macro not found', 'error')
             return redirect(url_for('macros'))
-        
-        steps = db_session.query(MacroStep).filter_by(macro_id=macro.id).order_by(MacroStep.step_number).all()
         
         return render_template('macro.html', macro=macro, steps=steps)
     except Exception as e:
@@ -842,29 +862,42 @@ def view_macro(macro_id):
 def view_execution(execution_id):
     """View details of a specific macro execution"""
     try:
-        # Rollback any stale transactions before attempting to query
-        db_session.rollback()
+        # Use the safe database operation function with retries
+        from database import safe_db_operation
         
-        execution = db_session.query(MacroExecution).get(execution_id)
+        # Define the operation to get execution and macro
+        def get_execution_and_macro(execution_id):
+            execution = db_session.query(MacroExecution).get(execution_id)
+            if not execution:
+                return None, None, None
+            
+            macro = db_session.query(Macro).get(execution.macro_id)
+            if not macro:
+                return execution, None, None
+                
+            # Determine status color for badge display
+            status_color = 'secondary'
+            if execution.status == 'success':
+                status_color = 'success'
+            elif execution.status == 'failed':
+                status_color = 'danger'
+            elif execution.status == 'timeout':
+                status_color = 'warning'
+            elif execution.status == 'running':
+                status_color = 'primary'
+                
+            return execution, macro, status_color
+        
+        # Execute the operation safely with retries
+        execution, macro, status_color = safe_db_operation(get_execution_and_macro, execution_id)
+        
         if not execution:
             flash('Execution record not found', 'error')
             return redirect(url_for('macros'))
-        
-        macro = db_session.query(Macro).get(execution.macro_id)
+            
         if not macro:
             flash('Associated macro not found', 'error')
             return redirect(url_for('macros'))
-        
-        # Determine status color for badge display
-        status_color = 'secondary'
-        if execution.status == 'success':
-            status_color = 'success'
-        elif execution.status == 'failed':
-            status_color = 'danger'
-        elif execution.status == 'timeout':
-            status_color = 'warning'
-        elif execution.status == 'running':
-            status_color = 'primary'
     except Exception as e:
         logger.error(f"Database error while viewing execution {execution_id}: {e}")
         flash('Database connection error. Please try again later.', 'error')

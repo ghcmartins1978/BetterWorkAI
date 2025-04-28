@@ -25,7 +25,7 @@
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
                         <button type="button" class="btn btn-outline-primary ms-2" data-bs-toggle="modal" data-bs-target="#serverConnectionModal">
-                            <i class="bi bi-plug"></i> Server
+                            <i class="bi bi-plug"></i> Helper API
                         </button>
                     </li>
                     <li class="nav-item">
@@ -173,7 +173,7 @@
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="/server-url-manager">
-                                    <i class="bi bi-link-45deg me-2"></i>Server URL
+                                    <i class="bi bi-link-45deg me-2"></i>Helper API URL
                                 </a>
                             </li>
                             <li class="nav-item">
@@ -235,20 +235,20 @@
         </div>
     </footer>
 
-    <!-- Server Connection Modal -->
+    <!-- Rust Helper Connection Modal -->
     <div class="modal fade" id="serverConnectionModal" tabindex="-1" aria-labelledby="serverConnectionModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="serverConnectionModalLabel">Automation Server Connection</h5>
+                    <h5 class="modal-title" id="serverConnectionModalLabel">Rust Helper Connection</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-muted">Enter the ngrok URL of your local automation server.</p>
+                    <p class="text-muted">Enter the URL of your local Rust helper's REST API (typically http://127.0.0.1:17400).</p>
                     <form id="serverConnectionForm">
                         <div class="mb-3">
-                            <label for="serverUrl" class="form-label">Server URL</label>
-                            <input type="text" class="form-control" id="serverUrl" placeholder="https://your-ngrok-url.ngrok.io" 
+                            <label for="serverUrl" class="form-label">Helper API URL</label>
+                            <input type="text" class="form-control" id="serverUrl" placeholder="http://127.0.0.1:17400" 
                                    value="{{ os.environ.get('AUTOMATION_SERVER_URL', '') }}">
                             <div class="form-text">Current URL: <code id="currentServerUrl">{{ os.environ.get('AUTOMATION_SERVER_URL', 'Not set') }}</code></div>
                         </div>
@@ -294,7 +294,7 @@
                 // Show status
                 $status.removeClass('d-none alert-danger alert-success').addClass('alert-info').text('Testing connection...');
                 
-                // Test connection
+                // Test connection to the Rust helper
                 $.ajax({
                     url: '/api/test_connection',
                     method: 'POST',
@@ -306,7 +306,7 @@
                     success: function(response) {
                         if (response.success) {
                             $status.removeClass('alert-info alert-danger').addClass('alert-success')
-                                   .html(`<i class="bi bi-check-circle-fill"></i> ${response.message || 'Connection successful!'}`);
+                                   .html(`<i class="bi bi-check-circle-fill"></i> ${response.message || 'Connected to Rust helper successfully!'}`);
                             
                             // Update the current URL display
                             $('#currentServerUrl').text(serverUrl);
@@ -318,13 +318,17 @@
                                 location.reload();
                             }, 2000);
                         } else {
+                            let errorMessage = response.error || 'Connection failed';
+                            if (errorMessage.includes('timeout') || errorMessage.includes('network error')) {
+                                errorMessage += '. Please check if the Rust helper is running on your local machine.';
+                            }
                             $status.removeClass('alert-info alert-success').addClass('alert-danger')
-                                   .html(`<i class="bi bi-exclamation-triangle-fill"></i> ${response.error || 'Connection failed'}`);
+                                   .html(`<i class="bi bi-exclamation-triangle-fill"></i> ${errorMessage}`);
                         }
                     },
                     error: function(xhr) {
                         $status.removeClass('alert-info alert-success').addClass('alert-danger')
-                               .html('<i class="bi bi-exclamation-triangle-fill"></i> Error testing connection. Please try again.');
+                               .html('<i class="bi bi-exclamation-triangle-fill"></i> Error testing connection. Please verify the Rust helper is running on your local machine.');
                     }
                 });
             });

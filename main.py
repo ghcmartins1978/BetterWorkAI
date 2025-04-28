@@ -2059,7 +2059,7 @@ def api_test_connection():
     from requests.exceptions import RequestException
 
     data = request.json
-    server_url = data.get('server_url', os.environ.get('AUTOMATION_SERVER_URL', ''))
+    server_url = data.get('server_url', os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400'))
     update_env = data.get('update_env', False)
     
     if not server_url:
@@ -2110,7 +2110,7 @@ def monitor_dashboard():
     controller = MonitorController()
     
     # Get server URL
-    server_url = os.environ.get('AUTOMATION_SERVER_URL', '')
+    server_url = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400')
     
     # Check connection status
     connection_status = {

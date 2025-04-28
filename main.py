@@ -29,6 +29,19 @@ app.secret_key = os.environ.get("SESSION_SECRET", "betterman_ai_secret")
 def basename_filter(path):
     """Get the basename of a path"""
     return os.path.basename(path) if path else ""
+    
+# Define template context processor to make functions available in templates
+@app.context_processor
+def utility_processor():
+    def get_recent_executions(macro_id, limit=5):
+        """Get recent executions for a macro, for use in templates"""
+        try:
+            return db_session.query(MacroExecution).filter_by(macro_id=macro_id).order_by(MacroExecution.start_time.desc()).limit(limit).all()
+        except Exception as e:
+            logger.error(f"Error getting recent executions: {e}")
+            return []
+    
+    return dict(get_recent_executions=get_recent_executions)
 
 # Initialize database
 init_db()
@@ -250,6 +263,75 @@ def seed_demo_data():
             
             # Associate the email filing macro with the accepted suggestion
             created_suggestions[1].macro_id = created_macros[0].id
+            
+            # Create demo macro executions with screenshot data
+            executions = [
+                {
+                    'macro_id': created_macros[0].id,  # Email Filing Automation
+                    'start_time': datetime.now() - timedelta(days=1, hours=3),
+                    'end_time': datetime.now() - timedelta(days=1, hours=3, minutes=1),
+                    'status': 'success',
+                    'original_sequence_duration': 45.0,
+                    'execution_duration': 38.2,
+                    'time_saved': 6.8,
+                    'execution_data': json.dumps({
+                        'before_screenshot': 'data/screenshots/email_before.png',
+                        'after_screenshot': 'data/screenshots/email_after.png',
+                        'diff_screenshot': 'data/screenshots/email_diff.png',
+                        'screen_change_percentage': 34.8
+                    })
+                },
+                {
+                    'macro_id': created_macros[0].id,  # Email Filing Automation
+                    'start_time': datetime.now() - timedelta(days=2, hours=5),
+                    'end_time': datetime.now() - timedelta(days=2, hours=5, minutes=1),
+                    'status': 'success',
+                    'original_sequence_duration': 45.0,
+                    'execution_duration': 39.1,
+                    'time_saved': 5.9,
+                    'execution_data': json.dumps({
+                        'before_screenshot': 'data/screenshots/email_before2.png',
+                        'after_screenshot': 'data/screenshots/email_after2.png',
+                        'diff_screenshot': 'data/screenshots/email_diff2.png',
+                        'screen_change_percentage': 42.3
+                    })
+                },
+                {
+                    'macro_id': created_macros[0].id,  # Email Filing Automation
+                    'start_time': datetime.now() - timedelta(days=3, hours=2),
+                    'end_time': datetime.now() - timedelta(days=3, hours=2, minutes=1),
+                    'status': 'failed',
+                    'original_sequence_duration': 45.0,
+                    'execution_duration': 12.3,
+                    'error_message': 'Target email folder not found',
+                    'execution_data': json.dumps({
+                        'before_screenshot': 'data/screenshots/email_before_failed.png',
+                        'after_screenshot': 'data/screenshots/email_after_failed.png',
+                        'diff_screenshot': 'data/screenshots/email_diff_failed.png',
+                        'screen_change_percentage': 2.1,
+                        'warning': 'Minimal screen change detected (2.1%). The macro might not have completed its intended actions.'
+                    })
+                },
+                {
+                    'macro_id': created_macros[1].id,  # Daily Report Generator
+                    'start_time': datetime.now() - timedelta(days=1, hours=1),
+                    'end_time': datetime.now() - timedelta(days=1, hours=0, minutes=55),
+                    'status': 'success',
+                    'original_sequence_duration': 180.0,
+                    'execution_duration': 152.3,
+                    'time_saved': 27.7,
+                    'execution_data': json.dumps({
+                        'before_screenshot': 'data/screenshots/report_before.png',
+                        'after_screenshot': 'data/screenshots/report_after.png',
+                        'diff_screenshot': 'data/screenshots/report_diff.png',
+                        'screen_change_percentage': 67.8
+                    })
+                }
+            ]
+            
+            for execution_data in executions:
+                execution = MacroExecution(**execution_data)
+                db_session.add(execution)
             
             # Create demo macro steps
             steps = [

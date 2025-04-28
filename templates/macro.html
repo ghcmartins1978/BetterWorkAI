@@ -103,6 +103,61 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Recent Executions Section -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-clock-history me-2"></i>
+                    Recent Executions
+                </h5>
+            </div>
+            <div class="card-body">
+                {% set executions = get_recent_executions(macro.id, 5) %}
+                {% if executions %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Duration</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for execution in executions %}
+                            <tr>
+                                <td>{{ execution.id }}</td>
+                                <td>{{ execution.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>
+                                    <span class="badge {% if execution.status == 'success' %}bg-success{% elif execution.status == 'failed' %}bg-danger{% elif execution.status == 'timeout' %}bg-warning{% else %}bg-primary{% endif %}">
+                                        {{ execution.status }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if execution.execution_duration %}
+                                        {{ "%.1f"|format(execution.execution_duration) }}s
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('view_execution', execution_id=execution.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No execution history available.</p>
+                {% endif %}
+            </div>
+        </div>
     </div>
     
     <div class="col-lg-4">

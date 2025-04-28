@@ -968,16 +968,38 @@ class AutomationExecutor:
             macro.relearn_prompt_time = datetime.now()
             db_session.commit()
             
-            # Show notification
+            # Format the failure percentage
             failure_percent = int(failure_rate * 100)
+            
+            # Create a notification with a link to a relearn prompt page
             title = f"Automation '{macro.name}' is failing {failure_percent}% of the time"
-            message = "Would you like to re-record this automation to make it more reliable?"
+            message = "This macro needs to be re-recorded for better reliability."
             
-            self._show_notification(title, message)
+            # We'll show a notification that directs to a dedicated page with options
+            notification_message = f"{message} Click to view options."
             
-            # In a real implementation, we would display a dialog with Yes/Later/Never options
-            # and update macro.relearn_status based on the user's choice
-            # For now, we'll just log it
+            # Create a suggestion entry for the relearn prompt
+            suggestion = Suggestion(
+                pattern_id=None,  # Not based on a pattern
+                title=title,
+                description=f"Macro ID {macro_id} has a failure rate of {failure_percent}%. Consider re-recording it for better reliability.",
+                status='relearn_prompt',  # Special status for relearn prompts
+                macro_id=macro_id
+            )
+            db_session.add(suggestion)
+            db_session.commit()
+            
+            # In a production environment, we would:
+            # 1. Add a "relearn_suggestions" table to track these specifically
+            # 2. Make the notification clickable to open the web UI with options
+            
+            # Add suggestion ID to the notification so it can be tracked
+            self._show_relearn_notification(
+                title, 
+                notification_message,
+                suggestion.id,
+                macro_id
+            )
             logger.info(f"User prompted to relearn macro {macro_id} (failure rate: {failure_percent}%)")
             
         except Exception as e:

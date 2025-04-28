@@ -1648,6 +1648,12 @@ def privacy():
     return render_template('privacy.html')
 
 
+@app.route('/context-test')
+def context_test():
+    """Context enrichment test page"""
+    return render_template('context_test.html')
+
+
 @app.route('/helper-api-manager')
 def helper_api_manager():
     """Rust Helper API Manager page"""
@@ -2006,22 +2012,10 @@ def detect_webcam_faces():
         logger.error(f"Error detecting faces: {e}")
         return jsonify({'success': False, 'error': str(e)})
 
-@app.route('/api/context')
-def api_context():
-    """API endpoint to get context information from context enrichers"""
-    try:
-        # Lazy import to avoid circular dependencies
-        from src.context_enrich.context_manager import ContextManager
-        
-        # Check if context enrichment is enabled in settings
-        context_enabled = settings.get_setting('context_enrichment_enabled', default=True)
-        
-        if not context_enabled:
-            return jsonify({
-                'status': 'disabled',
-                'message': 'Context enrichment is disabled in settings',
-                'context': {}
-            })
+# Replaced with updated API context endpoint below
+# @app.route('/api/context') 
+# def api_context():
+#     """API endpoint to get context information from context enrichers"""
         
         # Initialize context manager with settings
         manager = ContextManager(settings)
@@ -2140,6 +2134,37 @@ def monitor_dashboard():
                           server_url=server_url,
                           connection_status=connection_status,
                           monitoring_active=connection_status.get('monitoring', False))
+    
+@app.route('/api/context')
+def api_context():
+    """API endpoint to get context information from context enrichers"""
+    try:
+        # Check if context enrichment is enabled
+        if settings.get_setting('context_enrichment_enabled', 'true').lower() != 'true':
+            return jsonify({
+                'status': 'disabled',
+                'message': 'Context enrichment is disabled in settings'
+            })
+        
+        # Get refresh parameter
+        refresh = request.args.get('refresh', 'false').lower() == 'true'
+        
+        # Get context data using our context analyzer
+        from context_analyzer import get_current_context
+        context_data = get_current_context(refresh=refresh)
+        
+        return jsonify({
+            'status': 'success',
+            'context': context_data
+        })
+    except Exception as e:
+        logger.error(f"Error getting context: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        })
                           
 @app.route('/api/monitoring/start', methods=['POST'])
 def start_monitoring():

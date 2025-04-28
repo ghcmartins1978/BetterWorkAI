@@ -2168,7 +2168,8 @@ def start_monitoring():
     """Start monitoring on the local server"""
     from monitor_controller import MonitorController
     
-    controller = MonitorController()
+    # Force using localhost URL to avoid environment variable issues
+    controller = MonitorController(server_url="http://127.0.0.1:17400")
     result = controller.start_monitoring()
     
     return jsonify(result)
@@ -2178,7 +2179,8 @@ def stop_monitoring():
     """Stop monitoring on the local server"""
     from monitor_controller import MonitorController
     
-    controller = MonitorController()
+    # Force using localhost URL to avoid environment variable issues
+    controller = MonitorController(server_url="http://127.0.0.1:17400")
     result = controller.stop_monitoring()
     
     return jsonify(result)
@@ -2189,7 +2191,8 @@ def get_events():
     from monitor_controller import MonitorController
     import logging
     
-    controller = MonitorController()
+    # Force using localhost URL to avoid environment variable issues
+    controller = MonitorController(server_url="http://127.0.0.1:17400")
     count = request.args.get('count', default=100, type=int)
     offset = request.args.get('offset', default=0, type=int)
     event_type = request.args.get('type')

@@ -24,6 +24,10 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "betterman_ai_secret")
 
+# Import and register test routes
+from test_route import register_test_routes
+register_test_routes(app)
+
 # Register custom filters
 @app.template_filter('basename')
 def basename_filter(path):

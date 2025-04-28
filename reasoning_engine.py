@@ -116,10 +116,10 @@ class ReasoningEngine:
             # Use AI to analyze the pattern if available
             ai_analysis = None
             if self.openai_available and sequences:
-                from ai_helper import ai_helper
+                from ai_llm import ai_llm
                 
                 try:
-                    ai_analysis = ai_helper.analyze_pattern(
+                    ai_analysis = ai_llm.analyze_pattern(
                         pattern_name=pattern.name,
                         sequences=sequences,
                         score=pattern.score

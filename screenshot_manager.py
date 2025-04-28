@@ -73,12 +73,12 @@ class ScreenshotManager:
         """
         try:
             # Check if OpenAI API is available
-            from ai_helper import ai_helper
-            from database import db_session
+            from ai_llm import ai_llm
+            from database import session_scope
             from models import AIAnalysisReport, Event
             import json
             
-            if not ai_helper.is_available():
+            if not ai_llm.is_available():
                 logger.warning("OpenAI API not available for screenshot analysis")
                 return None
                 
@@ -87,7 +87,7 @@ class ScreenshotManager:
                 screenshot_base64 = base64.b64encode(f.read()).decode('utf-8')
                 
             # Analyze with AI
-            analysis = ai_helper.analyze_screenshot(
+            analysis = ai_llm.analyze_screenshot(
                 screenshot_base64=screenshot_base64,
                 action_type=event_data.get('type', 'unknown'),
                 action_params=event_data.get('data', {})
@@ -125,29 +125,30 @@ class ScreenshotManager:
                 app_context = analysis.get('application', 'Unknown application')
                 
                 # Save to database
-                report = AIAnalysisReport(
-                    report_type='screenshot',
-                    source_id=event_data.get('id'),
-                    source_path=screenshot_path,
-                    analysis_data=json.dumps(analysis),
-                    summary=summary,
-                    insights=insights,
-                    automation_potential=automation_potential,
-                    application_context=app_context
-                )
-                db_session.add(report)
-                db_session.commit()
-                
-                # Update the event record if we have an ID
-                if 'id' in event_data:
-                    try:
-                        event = db_session.query(Event).get(event_data['id'])
-                        if event:
-                            event.has_screenshot = 1
-                            event.analysis_report_id = report.id
-                            db_session.commit()
-                    except Exception as db_error:
-                        logger.error(f"Error updating event record: {db_error}")
+                with session_scope() as db:
+                    report = AIAnalysisReport(
+                        report_type='screenshot',
+                        source_id=event_data.get('id'),
+                        source_path=screenshot_path,
+                        analysis_data=json.dumps(analysis),
+                        summary=summary,
+                        insights=insights,
+                        automation_potential=automation_potential,
+                        application_context=app_context
+                    )
+                    db.add(report)
+                    db.commit()
+                    
+                    # Update the event record if we have an ID
+                    if 'id' in event_data:
+                        try:
+                            event = db.query(Event).get(event_data['id'])
+                            if event:
+                                event.has_screenshot = 1
+                                event.analysis_report_id = report.id
+                                db.commit()
+                        except Exception as db_error:
+                            logger.error(f"Error updating event record: {db_error}")
                 
                 logger.info(f"Screenshot analysis saved to database with ID {report.id}")
                 

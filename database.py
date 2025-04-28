@@ -5,7 +5,8 @@ import queue
 import time
 import random
 from datetime import datetime
-from sqlalchemy import create_engine
+from contextlib import contextmanager
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.exc import OperationalError, PendingRollbackError
@@ -22,76 +23,73 @@ if not database_url:
     database_url = f"sqlite:///{default_db_path}"
     logger.info(f"DATABASE_URL not set, using default SQLite database: {default_db_path}")
 
-# Configure SQLAlchemy engine with connection pooling and UTF-8 encoding
+# Configure SQLAlchemy engine with improved connection pooling settings
 engine = create_engine(
     database_url, 
-    pool_recycle=300,  # Recycle connections after 5 minutes
-    pool_pre_ping=True,  # Check connection validity before using
-    pool_size=10,  # Increased maximum number of connections to keep
-    max_overflow=20,  # Increased maximum overflow connections
+    pool_recycle=1800,      # Recycle connections after 30 minutes idle
+    pool_pre_ping=True,     # Check connection validity before using
+    pool_size=10,           # Maximum number of connections to keep
+    max_overflow=20,        # Maximum overflow connections
     connect_args={"encoding": "utf8"} if database_url.startswith('sqlite') else {}  # UTF-8 fix for SQLite
 )
 
 # Create a session factory
-Session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Create a scoped session
-db_session = scoped_session(Session)
+# Create a scoped session for backward compatibility
+db_session = scoped_session(SessionLocal)
 
 Base = declarative_base()
 Base.query = db_session.query_property()
 
-# Max number of retries for database operations
-MAX_DB_RETRIES = 3
-RETRY_BACKOFF_BASE = 0.5  # Base backoff time in seconds
+# Context manager for database sessions
+@contextmanager
+def session_scope():
+    """
+    Provide a transactional scope around a series of operations.
+    This ensures that sessions are properly closed and rolled back in case of errors.
+    
+    Usage:
+        with session_scope() as db:
+            result = db.query(Model).all()
+    """
+    session = SessionLocal()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
-def safe_db_operation(operation, *args, **kwargs):
-    """
-    Execute a database operation safely with retries and error handling
-    
-    Args:
-        operation: Function that performs the database operation
-        *args: Arguments to pass to the operation function
-        **kwargs: Keyword arguments to pass to the operation function
-        
-    Returns:
-        Result of the operation or None if all retries failed
-    """
-    retries = 0
-    last_error = None
-    
-    while retries < MAX_DB_RETRIES:
-        try:
-            # Ensure we have a fresh session
-            db_session.remove()
-            
-            # Execute the operation
-            result = operation(*args, **kwargs)
-            return result
-            
-        except (OperationalError, PendingRollbackError) as e:
-            # Handle common database connection errors
-            last_error = e
-            db_session.rollback()
-            
-            # Log the error
-            logger.warning(f"Database operation failed (attempt {retries+1}/{MAX_DB_RETRIES}): {e}")
-            
-            # Exponential backoff with jitter
-            sleep_time = RETRY_BACKOFF_BASE * (2 ** retries) * random.uniform(0.8, 1.2)
-            time.sleep(sleep_time)
-            
-            retries += 1
-            
-        except Exception as e:
-            # For other exceptions, log and re-raise
-            logger.error(f"Unexpected database error: {e}")
-            db_session.rollback()
-            raise
-    
-    # If we got here, all retries failed
-    logger.error(f"Database operation failed after {MAX_DB_RETRIES} retries. Last error: {last_error}")
-    return None
+# Connection pool event listeners (to be registered AFTER initialization)
+def register_connection_events():
+    """Register listeners for connection events (used after initialization)"""
+    @event.listens_for(engine, "connect")
+    def connect(dbapi_connection, connection_record):
+        """Listener for connection events to log when connections are created"""
+        logger.debug("Database connection created")
+
+    @event.listens_for(engine, "checkout")
+    def checkout(dbapi_connection, connection_record, connection_proxy):
+        """Listener for connection checkout events to ensure the connection is still alive"""
+        # This is handled by pool_pre_ping=True but adding extra logging for visibility
+        logger.debug("Database connection checked out from pool")
+
+    # Only ping at checkout time, not on engine_connect which conflicts with DDL operations
+    if engine.dialect.name == 'postgresql':
+        @event.listens_for(engine, "connect")
+        def ping_postgresql_connection(dbapi_connection, connection_record):
+            """Ping the database at connection creation time to verify it's responsive"""
+            try:
+                cursor = dbapi_connection.cursor()
+                cursor.execute("SELECT 1")
+                cursor.close()
+                logger.debug("Database ping successful (PostgreSQL)")
+            except Exception as e:
+                logger.warning(f"Database ping failed (PostgreSQL): {e}")
+                # Let pool_pre_ping handle reconnection
 
 # Async database writer class
 class AsyncDatabaseWriter:
@@ -220,6 +218,10 @@ def init_db():
         from settings import Settings
         settings = Settings()
         settings.initialize_defaults()
+        
+        # Register connection event listeners AFTER initialization 
+        # to avoid transaction conflicts during table creation
+        register_connection_events()
         
         logger.info("Database initialization complete")
     except Exception as e:

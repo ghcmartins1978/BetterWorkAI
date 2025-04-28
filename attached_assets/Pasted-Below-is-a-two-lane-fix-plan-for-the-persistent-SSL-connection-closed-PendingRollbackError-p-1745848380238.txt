@@ -1,0 +1,152 @@
+Below is a **two-lane fix plan** for the persistent “SSL connection closed / PendingRollbackError” problems, followed by a comparison and my recommended path.
+
+---
+
+## 1 Quick Diagnosis of the 28-Apr zip
+
+* `database.py` now wraps a single global `engine` + `SessionLocal` but:
+  * `pool_size` defaults small (5) and **`pool_recycle` is still 0** → a stale connection can sit > 5 min and die at the first query.
+  * `safe_db_operation()` retries the *SQLAlchemy call* but **never forces a new connection** (it re-uses the poisoned session inside the same pooled connection).
+* Routes create **long-lived sessions** stored in `g.db_session`, yet some background jobs reuse that same session in another thread → violates SQLAlchemy thread safety and triggers “connection already closed / rollback pending”.
+* Rollbacks are sprinkled in many `except` clauses but not inside `finally:`; if an exception happens before the `try`, the session is still dirty on the next request.
+
+---
+
+## 2 Two Alternative Solutions
+
+### **Solution A – Minimal In-Place Hardening (keep sync SQLAlchemy)**
+
+1. **Engine tweaks**
+   ```python
+   engine = create_engine(
+       DB_URL,
+       pool_size=10, max_overflow=20,
+       pool_recycle=1800,       # drop conn after 30-min idle
+       pool_pre_ping=True,      # ping before checkout
+   )
+   ```
+2. **Per-request session (Flask style)**
+   ```python
+   from contextlib import contextmanager
+   
+   @contextmanager
+   def session_scope():
+       session = SessionLocal()
+       try:
+           yield session
+           session.commit()
+       except Exception:
+           session.rollback()
+           raise
+       finally:
+           session.close()
+   ```
+   In every route / background task:
+   ```python
+   with session_scope() as db:
+       macro = db.query(Macro).get(id)
+   ```
+   *No global sessions, no cross-thread use.*
+
+3. **Retry only at connection checkout**
+   Use `sqlalchemy.event.listens_for(engine, 'engine_connect', ...)` to detect `psycopg2.OperationalError` and reconnect; no need for manual back-off in every query.
+
+4. **Health checker**
+   Background thread pings `SELECT 1` every 60 s; if it fails twice → logs critical and schedules app restart.
+
+**Pros**
+* ~150 LOC change; no route refactor.
+* Uses familiar sync SQLAlchemy.
+
+**Cons**
+* Still single-thread blocking; heavy workloads may tie up gunicorn workers.
+* Cannot leverage asyncio if later UI becomes async.
+
+---
+
+### **Solution B – Async Engine + `tenacity` Retry Middleware**
+
+1. Migrate to **`SQLAlchemy 2.0 async`** with `asyncpg` driver.
+   ```python
+   engine = create_async_engine(DB_URL, pool_recycle=1800, pool_pre_ping=True)
+   async_session = async_sessionmaker(engine, expire_on_commit=False)
+   ```
+2. **FastAPI** or Flask-async routes use:
+   ```python
+   @asynccontextmanager
+   async def session_scope():
+       async with async_session() as session:
+           try:
+               yield session
+               await session.commit()
+           except:
+               await session.rollback()
+               raise
+   ```
+3. Add **`@retry`** decorator (tenacity) only to the DB checkout step:
+   ```python
+   from tenacity import retry, wait_exponential, stop_after_attempt
+
+   @retry(wait=wait_exponential(multiplier=1, min=1, max=8),
+          stop=stop_after_attempt(3),
+          reraise=True)
+   async def fetch_macro(session, id):
+       return await session.get(Macro, id)
+   ```
+
+**Pros**
+* Non-blocking; future-proof for websocket pushes (overlay etc.).
+* tenacity centralises retries; cleaner route code.
+
+**Cons**
+* Larger refactor (touches every DB call).
+* Requires async TagUI runner wrapper or threadpool.
+
+---
+
+## 3 Other House-Keeping in Either Path
+
+* **Remove scattered `db_session.rollback()` calls** – the context manager handles rollback/close deterministically.
+* **Retry loops inside routes** can be deleted (less code).
+* Keep the exponential-backoff idea **only** at connection checkout to avoid retry bombs on logical errors.
+* Add **SIGTERM graceful shutdown** (closes pool).
+
+---
+
+## 4 Decision Matrix
+
+| Criterion | Solution A | Solution B |
+|-----------|------------|------------|
+| Code churn | **Low** (~150 LOC) | High (multi-file refactor) |
+| Time to deliver | 1–2 days | 1–2 weeks |
+| Future perf/scalability | Moderate | **High** |
+| Risk of new bugs | Low | Medium (async pitfalls) |
+| Fits solo-founder velocity | **Yes** | Only if you can pause feature work |
+
+### **Recommendation**
+Implement **Solution A now** to unblock your beta users quickly; schedule **Solution B** as a Q3 refactor once core features are stable.
+
+---
+
+## 5 Concrete Fix Steps (Solution A)
+
+1. **Delete** global `db_session` import lines.  
+2. Add `session_scope()` context manager in `database.py`.  
+3. Replace each `safe_db_operation(...)` wrapper with:
+   ```python
+   with session_scope() as db:
+       # your query
+   ```
+4. Remove custom retry/backoff loops (they will duplicate `pool_pre_ping`).  
+5. Set `pool_recycle=1800` & `pool_pre_ping=True` in `create_engine()`.  
+6. Add `/healthz` route (SELECT 1) for uptime monitoring.
+
+Run tests → no PendingRollbackError → Dry-run should now render without SSL drops.
+
+---
+
+### CPO / UX Note
+Users only see *“Database connection error. Please try again later.”*  
+After the above, that message should vanish.  If it does occur, surface **“Reconnect now”** button that simply triggers `engine.dispose()` then reloads the page—less frustration.
+
+Let me know which path you choose, and I’ll draft the actual code diff or PR template.

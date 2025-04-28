@@ -798,19 +798,12 @@ def view_pattern(pattern_id):
 def macros():
     """View recorded macros"""
     try:
-        # Use the safe database operation function with retries
-        from database import safe_db_operation
+        # Use the session_scope context manager for a clean transaction
+        from database import session_scope
         
-        # Define the operation to get all macros
-        def get_all_macros():
-            return db_session.query(Macro).all()
-        
-        # Execute the operation safely with retries
-        all_macros = safe_db_operation(get_all_macros)
-        
-        if all_macros is None:
-            # If database operation failed completely after retries
-            raise Exception("Database operation failed after maximum retries")
+        with session_scope() as db:
+            # Get all macros in a single database transaction
+            all_macros = db.query(Macro).all()
             
         return render_template('macros.html', macros=all_macros)
     except Exception as e:
@@ -830,24 +823,18 @@ def macro_library():
 def view_macro(macro_id):
     """View a specific macro"""
     try:
-        # Use the safe database operation function with retries
-        from database import safe_db_operation
+        # Use the session_scope context manager for a clean transaction
+        from database import session_scope
         
-        # Define the operation to get macro and steps
-        def get_macro_and_steps(macro_id):
-            macro = db_session.query(Macro).get(macro_id)
+        with session_scope() as db:
+            # Query the macro
+            macro = db.query(Macro).get(macro_id)
             if not macro:
-                return None, None
+                flash('Macro not found', 'error')
+                return redirect(url_for('macros'))
             
-            steps = db_session.query(MacroStep).filter_by(macro_id=macro.id).order_by(MacroStep.step_number).all()
-            return macro, steps
-        
-        # Execute the operation safely with retries
-        macro, steps = safe_db_operation(get_macro_and_steps, macro_id)
-        
-        if not macro:
-            flash('Macro not found', 'error')
-            return redirect(url_for('macros'))
+            # Query related steps
+            steps = db.query(MacroStep).filter_by(macro_id=macro.id).order_by(MacroStep.step_number).all()
         
         return render_template('macro.html', macro=macro, steps=steps)
     except Exception as e:
@@ -862,18 +849,21 @@ def view_macro(macro_id):
 def view_execution(execution_id):
     """View details of a specific macro execution"""
     try:
-        # Use the safe database operation function with retries
-        from database import safe_db_operation
+        # Use the session_scope context manager for a clean transaction
+        from database import session_scope
         
-        # Define the operation to get execution and macro
-        def get_execution_and_macro(execution_id):
-            execution = db_session.query(MacroExecution).get(execution_id)
+        with session_scope() as db:
+            # Query the execution
+            execution = db.query(MacroExecution).get(execution_id)
             if not execution:
-                return None, None, None
+                flash('Execution record not found', 'error')
+                return redirect(url_for('macros'))
             
-            macro = db_session.query(Macro).get(execution.macro_id)
+            # Query the related macro
+            macro = db.query(Macro).get(execution.macro_id)
             if not macro:
-                return execution, None, None
+                flash('Associated macro not found', 'error')
+                return redirect(url_for('macros'))
                 
             # Determine status color for badge display
             status_color = 'secondary'
@@ -885,19 +875,6 @@ def view_execution(execution_id):
                 status_color = 'warning'
             elif execution.status == 'running':
                 status_color = 'primary'
-                
-            return execution, macro, status_color
-        
-        # Execute the operation safely with retries
-        execution, macro, status_color = safe_db_operation(get_execution_and_macro, execution_id)
-        
-        if not execution:
-            flash('Execution record not found', 'error')
-            return redirect(url_for('macros'))
-            
-        if not macro:
-            flash('Associated macro not found', 'error')
-            return redirect(url_for('macros'))
     except Exception as e:
         logger.error(f"Database error while viewing execution {execution_id}: {e}")
         flash('Database connection error. Please try again later.', 'error')
@@ -956,26 +933,50 @@ def view_execution(execution_id):
 @app.route('/macro/new')
 def new_macro():
     """Create a new macro"""
-    macro = Macro(
-        name="New Macro",
-        description="",
-        creation_time=datetime.now(),
-        status='created'
-    )
-    db_session.add(macro)
-    db_session.commit()
-    
-    return redirect(url_for('edit_macro', macro_id=macro.id))
+    try:
+        # Use the session_scope context manager for a clean transaction
+        from database import session_scope
+        
+        with session_scope() as db:
+            macro = Macro(
+                name="New Macro",
+                description="",
+                creation_time=datetime.now(),
+                status='created'
+            )
+            db.add(macro)
+            # The session will be committed automatically when the context manager exits
+            
+        return redirect(url_for('edit_macro', macro_id=macro.id))
+    except Exception as e:
+        logger.error(f"Database error while creating new macro: {e}")
+        flash('Database connection error. Please try again later.', 'error')
+        return render_template('error.html', 
+                              error_title="Database Connection Error",
+                              error_message="Unable to connect to the database. Please try again later.",
+                              back_link=url_for('macros'))
 
 @app.route('/macro/<int:macro_id>/edit')
 def edit_macro(macro_id):
     """Edit a macro"""
-    macro = db_session.query(Macro).get(macro_id)
-    if not macro:
-        flash('Macro not found', 'error')
-        return redirect(url_for('macros'))
-    
-    return render_template('edit_macro.html', macro=macro)
+    try:
+        # Use the session_scope context manager for a clean transaction
+        from database import session_scope
+        
+        with session_scope() as db:
+            macro = db.query(Macro).get(macro_id)
+            if not macro:
+                flash('Macro not found', 'error')
+                return redirect(url_for('macros'))
+        
+        return render_template('edit_macro.html', macro=macro)
+    except Exception as e:
+        logger.error(f"Database error while editing macro {macro_id}: {e}")
+        flash('Database connection error. Please try again later.', 'error')
+        return render_template('error.html', 
+                              error_title="Database Connection Error",
+                              error_message="Unable to connect to the database. Please try again later.",
+                              back_link=url_for('macros'))
 
 @app.route('/macro/<int:macro_id>/record', methods=['POST'])
 def record_macro(macro_id):
@@ -2627,6 +2628,32 @@ def get_log_content_direct():
     except Exception as e:
         logger.error(f"Error getting log content: {e}")
         return f"Error getting log content: {e}", 500
+
+@app.route('/healthz')
+def health_check():
+    """Health check endpoint for monitoring"""
+    try:
+        # Use the session_scope context manager to verify database connectivity
+        from database import session_scope
+        from sqlalchemy import text
+        
+        with session_scope() as db:
+            # Simple query to verify database connection
+            db.execute(text("SELECT 1")).scalar()
+            
+        return jsonify({
+            'status': 'healthy',
+            'database': 'connected',
+            'timestamp': datetime.now().isoformat()
+        }), 200
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return jsonify({
+            'status': 'unhealthy',
+            'database': 'disconnected',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
 
 def create_sample_macro():
     """

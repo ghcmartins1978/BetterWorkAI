@@ -2260,7 +2260,16 @@ def init_default_settings():
         'webcam_blur_strength': 15,
         'webcam_pixelate_factor': 15,
         'webcam_face_detection': True,
-        'webcam_save_frames': False
+        'webcam_save_frames': False,
+        
+        # Context enrichment settings
+        'context_enrichment_enabled': True,
+        'context_enricher_browser_enabled': True,
+        'context_enricher_explorer_enabled': True,
+        'context_enricher_office_enabled': True,
+        'context_enricher_clipboard_enabled': True,
+        'context_cache_lifetime': 10,
+        'clipboard_max_length': 200
     }
     
     for name, value in default_settings.items():

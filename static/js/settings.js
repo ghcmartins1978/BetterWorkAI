@@ -49,6 +49,16 @@ function initSettingsUI() {
             scheduledHoursDiv.style.display = this.value === 'scheduled' ? 'block' : 'none';
         });
     }
+    
+    // Toggle context enrichment options based on main switch
+    const contextEnrichmentEnabled = document.getElementById('contextEnrichmentEnabled');
+    const contextEnrichmentOptions = document.getElementById('contextEnrichmentOptions');
+    
+    if (contextEnrichmentEnabled && contextEnrichmentOptions) {
+        contextEnrichmentEnabled.addEventListener('change', function() {
+            contextEnrichmentOptions.style.display = this.checked ? 'block' : 'none';
+        });
+    }
 }
 
 /**

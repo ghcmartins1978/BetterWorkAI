@@ -545,6 +545,93 @@
                         </div>
                         
                         <div class="mb-4">
+                            <h6 class="mb-3">Context Enrichment</h6>
+                            
+                            <div class="alert alert-info bg-info bg-opacity-10 mb-3" role="alert">
+                                <div class="d-flex">
+                                    <div class="me-3">
+                                        <i class="bi bi-info-circle-fill fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <p class="mb-0">
+                                            Context enrichment helps BettermanAI understand what you're working on by capturing information from
+                                            your environment like browser tabs, open documents, and file explorer windows. This additional context
+                                            makes automations more accurate and intelligent.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" role="switch" id="contextEnrichmentEnabled" name="context_enrichment_enabled" 
+                                    {% if settings.context_enrichment_enabled != 'false' %}checked{% endif %}>
+                                <label class="form-check-label" for="contextEnrichmentEnabled">
+                                    Enable Context Enrichment
+                                </label>
+                                <div class="form-text">
+                                    When enabled, BettermanAI will capture additional context from your environment
+                                </div>
+                            </div>
+                            
+                            <div id="contextEnrichmentOptions" style="{% if settings.context_enrichment_enabled == 'false' %}display: none;{% endif %}">
+                                <div class="ms-4 mb-3">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="browserContextEnabled" name="context_enricher_browser_enabled" 
+                                            {% if settings.context_enricher_browser_enabled != 'false' %}checked{% endif %}>
+                                        <label class="form-check-label" for="browserContextEnabled">
+                                            Capture browser tab information
+                                        </label>
+                                        <div class="form-text">
+                                            Captures current URL, tab title, and domain
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="explorerContextEnabled" name="context_enricher_explorer_enabled" 
+                                            {% if settings.context_enricher_explorer_enabled != 'false' %}checked{% endif %}>
+                                        <label class="form-check-label" for="explorerContextEnabled">
+                                            Capture file explorer information
+                                        </label>
+                                        <div class="form-text">
+                                            Captures current directory and selected files in file explorer
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="officeContextEnabled" name="context_enricher_office_enabled" 
+                                            {% if settings.context_enricher_office_enabled != 'false' %}checked{% endif %}>
+                                        <label class="form-check-label" for="officeContextEnabled">
+                                            Capture office application information
+                                        </label>
+                                        <div class="form-text">
+                                            Captures current document, spreadsheet, or presentation details
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="clipboardContextEnabled" name="context_enricher_clipboard_enabled" 
+                                            {% if settings.context_enricher_clipboard_enabled != 'false' %}checked{% endif %}>
+                                        <label class="form-check-label" for="clipboardContextEnabled">
+                                            Capture clipboard information
+                                        </label>
+                                        <div class="form-text">
+                                            Captures and filters text from clipboard (personal information is automatically redacted)
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="clipboardMaxLength" class="form-label">Maximum clipboard capture length</label>
+                                        <input type="number" class="form-control" id="clipboardMaxLength" name="clipboard_max_length" 
+                                               value="{{ settings.clipboard_max_length or '200' }}" min="50" max="1000">
+                                        <div class="form-text">
+                                            Maximum number of characters to capture from clipboard (50-1000)
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
                             <h6 class="mb-3">Data Management</h6>
                             
                             <div class="d-flex gap-2 mb-2">

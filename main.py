@@ -2024,7 +2024,7 @@ def api_stats():
 
 @app.route('/api/test_connection', methods=['POST'])
 def api_test_connection():
-    """Test connection to the local automation server"""
+    """Test connection to the local Rust helper's REST API"""
     import requests
     from requests.exceptions import RequestException
 
@@ -2033,10 +2033,10 @@ def api_test_connection():
     update_env = data.get('update_env', False)
     
     if not server_url:
-        return jsonify({'success': False, 'error': 'No server URL provided'})
+        return jsonify({'success': False, 'error': 'No Helper API URL provided'})
     
     try:
-        # Try to get the status of the server
+        # Try to get the status of the Rust helper
         response = requests.get(f"{server_url}/api/status", timeout=5)
         
         if response.status_code == 200:
@@ -2124,7 +2124,7 @@ def stop_monitoring():
     
 @app.route('/api/events')
 def get_events():
-    """Get events from the local server"""
+    """Get events from the local Rust helper"""
     from monitor_controller import MonitorController
     import logging
     
@@ -2135,7 +2135,7 @@ def get_events():
     
     try:
         events = controller.get_events(count=count, event_type=event_type)
-        logging.info(f"Retrieved {len(events)} events from automation server")
+        logging.info(f"Retrieved {len(events)} events from Rust helper")
         
         # Apply offset if provided
         if offset > 0 and offset < len(events):

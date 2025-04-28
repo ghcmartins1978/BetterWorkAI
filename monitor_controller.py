@@ -11,17 +11,17 @@ logger = logging.getLogger(__name__)
 
 class MonitorController:
     """
-    Controls monitoring on the local automation server
+    Controls monitoring on the local Rust helper
     """
     
     def __init__(self, server_url=None):
         """Initialize the monitor controller"""
         self.server_url = server_url or os.environ.get('AUTOMATION_SERVER_URL', '')
         if not self.server_url:
-            logger.warning("No automation server URL provided. Monitoring control will not work.")
+            logger.warning("No Rust helper URL provided. Monitoring control will not work.")
     
     def is_connected(self):
-        """Check if we can connect to the automation server"""
+        """Check if we can connect to the Rust helper's REST API"""
         if not self.server_url:
             return False
             
@@ -29,7 +29,7 @@ class MonitorController:
             response = requests.get(f"{self.server_url}/api/status", timeout=3)
             return response.status_code == 200
         except Exception as e:
-            logger.error(f"Failed to connect to automation server: {e}")
+            logger.error(f"Failed to connect to Rust helper: {e}")
             return False
     
     def get_status(self):

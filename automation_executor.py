@@ -442,6 +442,37 @@ class AutomationExecutor:
         except Exception as e:
             logger.error(f"Error showing notification: {e}")
             
+    def _show_relearn_notification(self, title, message="", suggestion_id=None, macro_id=None, timeout=5):
+        """
+        Show a relearn notification to the user with a link to the relearn prompt page
+        
+        Args:
+            title: Title of the notification
+            message: Body message of the notification
+            suggestion_id: ID of the suggestion record for tracking
+            macro_id: ID of the macro needing relearn
+            timeout: Timeout in seconds (integer)
+        """
+        try:
+            # For a real implementation, we'd use system notifications with clickable links
+            # Here we'll create a specialized notification file that the UI can detect
+            
+            relearn_notification_path = "relearn_notification.txt"
+            with open(relearn_notification_path, 'w') as f:
+                f.write(f"{title}\n\n{message}\n\nSuggestion ID: {suggestion_id}\nMacro ID: {macro_id}")
+                
+            # In a web UI implementation, we'd trigger a popup or toast
+            # with links to the relearn prompt page
+            # For example: /relearn-prompt/{macro_id}/{suggestion_id}
+            
+            # Add this notification to the logs
+            logger.info(f"Relearn notification: {title} - {message} (Macro ID: {macro_id}, Suggestion ID: {suggestion_id})")
+            
+            # The web UI will periodically check for these notifications and show them
+            
+        except Exception as e:
+            logger.error(f"Error showing relearn notification: {e}")
+            
     def _get_variable_values(self, macro_id):
         """
         Get the current values of all variables for a macro.
@@ -968,6 +999,9 @@ class AutomationExecutor:
             macro.relearn_prompt_time = datetime.now()
             db_session.commit()
             
+            # Create a suggestion entry for tracking purposes
+            from models import Suggestion
+            
             # Format the failure percentage
             failure_percent = int(failure_rate * 100)
             
@@ -982,8 +1016,11 @@ class AutomationExecutor:
             suggestion = Suggestion(
                 pattern_id=None,  # Not based on a pattern
                 title=title,
-                description=f"Macro ID {macro_id} has a failure rate of {failure_percent}%. Consider re-recording it for better reliability.",
-                status='relearn_prompt',  # Special status for relearn prompts
+                description=f"Macro '{macro.name}' has a failure rate of {failure_percent}% over the last {macro.execution_count} executions. Consider re-recording it for better reliability.",
+                detection_time=datetime.now(),
+                status='pending',
+                source='feedback',
+                confidence=min(failure_rate * 5, 1.0),  # Higher failure rate means higher confidence in need to relearn
                 macro_id=macro_id
             )
             db_session.add(suggestion)
@@ -997,8 +1034,9 @@ class AutomationExecutor:
             self._show_relearn_notification(
                 title, 
                 notification_message,
-                suggestion.id,
-                macro_id
+                suggestion_id=suggestion.id,
+                macro_id=macro_id,
+                timeout=15  # Give users a bit more time to see this important notification
             )
             logger.info(f"User prompted to relearn macro {macro_id} (failure rate: {failure_percent}%)")
             

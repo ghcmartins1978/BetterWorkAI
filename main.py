@@ -723,6 +723,128 @@ def index():
                           macro_count=macro_count,
                           recent_patterns=recent_patterns,
                           recent_macros=recent_macros)
+                          
+@app.route('/relearn-prompt/<macro_id>/<suggestion_id>', methods=['GET'])
+def relearn_prompt(macro_id, suggestion_id):
+    """
+    Page for prompting the user to relearn a macro
+    Shows the Yes/Later/Never options
+    """
+    try:
+        # Import the session_scope context manager for database transactions
+        from database import session_scope
+        
+        try:
+            with session_scope() as db:
+                # Get the macro and suggestion data
+                macro = db.query(Macro).get(macro_id)
+                suggestion = db.query(Suggestion).get(suggestion_id)
+                
+                if not macro or not suggestion:
+                    flash("The requested macro or suggestion could not be found.", "danger")
+                    return redirect(url_for('macros'))
+                
+                # Calculate the failure rate
+                failure_rate = 0
+                if macro.execution_count > 0:
+                    failure_rate = (macro.failure_count or 0) / macro.execution_count
+                
+                failure_percent = int(failure_rate * 100)
+                
+                # Get recent executions to show as evidence
+                recent_executions = db.query(MacroExecution)\
+                    .filter(MacroExecution.macro_id == macro.id)\
+                    .order_by(MacroExecution.start_time.desc())\
+                    .limit(10)\
+                    .all()
+                
+                # Pass the data to the template
+                return render_template(
+                    'relearn_prompt.html', 
+                    active_page='macros',
+                    macro=macro,
+                    suggestion=suggestion,
+                    failure_percent=failure_percent,
+                    recent_executions=recent_executions
+                )
+                
+        except Exception as db_error:
+            logger.error(f"Database error in relearn prompt: {db_error}")
+            flash("A database error occurred. Please try again later.", "danger")
+            return redirect(url_for('macros'))
+            
+    except Exception as e:
+        logger.error(f"Error in relearn prompt: {e}")
+        flash("An error occurred. Please try again later.", "danger")
+        return redirect(url_for('macros'))
+        
+@app.route('/relearn-prompt/<macro_id>/<suggestion_id>/action', methods=['POST'])
+def relearn_prompt_action(macro_id, suggestion_id):
+    """
+    Handle user action on relearn prompt (Yes/Later/Never)
+    """
+    try:
+        action = request.form.get('action')
+        if not action:
+            return jsonify({'success': False, 'error': 'No action provided'})
+            
+        # Import the session_scope context manager for database transactions
+        from database import session_scope
+        
+        with session_scope() as db:
+            # Get the macro
+            macro = db.query(Macro).get(macro_id)
+            if not macro:
+                return jsonify({'success': False, 'error': 'Macro not found'})
+                
+            if action == 'yes':
+                # User wants to relearn the macro
+                # Update relearn status and time
+                macro.relearn_status = 'pending'
+                macro.relearn_prompt_time = datetime.now()
+                
+                # Redirect to the record page
+                response = {'success': True, 'redirect': url_for('record_macro', macro_id=macro.id)}
+                
+                # Log this decision
+                logger.info(f"User chose to relearn macro {macro_id}")
+                
+            elif action == 'later':
+                # User wants to decide later
+                # Update the relearn status but keep the suggestion active
+                macro.relearn_status = 'later'
+                macro.relearn_prompt_time = datetime.now()
+                
+                response = {'success': True, 'message': 'You can relearn this macro later when ready.'}
+                logger.info(f"User chose to relearn macro {macro_id} later")
+                
+            elif action == 'never':
+                # User never wants to relearn this macro
+                # Update the relearn status to never and mark the suggestion as handled
+                macro.relearn_status = 'never'
+                macro.relearn_prompt_time = datetime.now()
+                
+                # Update the suggestion if it exists
+                if suggestion_id and suggestion_id != 'None':
+                    suggestion = db.query(Suggestion).get(suggestion_id)
+                    if suggestion:
+                        suggestion.status = 'rejected'
+                        suggestion.action_time = datetime.now()
+                
+                response = {'success': True, 'message': 'This macro will not be suggested for relearning again.'}
+                logger.info(f"User chose to never relearn macro {macro_id}")
+                
+            else:
+                return jsonify({'success': False, 'error': 'Invalid action'})
+            
+            # Commit the changes
+            db.commit()
+            
+            return jsonify(response)
+            
+    except Exception as e:
+        logger.error(f"Error in relearn prompt action: {e}")
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/toggle_monitoring', methods=['POST'])
 def toggle_monitoring():

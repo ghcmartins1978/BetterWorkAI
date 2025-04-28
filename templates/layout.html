@@ -237,35 +237,106 @@
 
     <!-- Rust Helper Connection Modal -->
     <div class="modal fade" id="serverConnectionModal" tabindex="-1" aria-labelledby="serverConnectionModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="serverConnectionModalLabel">Rust Helper Connection</h5>
+                    <h5 class="modal-title" id="serverConnectionModalLabel">
+                        <i class="bi bi-plugin me-1 text-primary"></i> Rust Helper Connection
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-muted">Enter the URL of your local Rust helper's REST API (typically http://127.0.0.1:17400).</p>
-                    <form id="serverConnectionForm">
-                        <div class="mb-3">
-                            <label for="serverUrl" class="form-label">Helper API URL</label>
-                            <input type="text" class="form-control" id="serverUrl" placeholder="http://127.0.0.1:17400" 
-                                   value="{{ os.environ.get('AUTOMATION_SERVER_URL', '') }}">
-                            <div class="form-text">Current URL: <code id="currentServerUrl">{{ os.environ.get('AUTOMATION_SERVER_URL', 'Not set') }}</code></div>
+                    <div class="row mb-3">
+                        <div class="col-12 mb-3">
+                            <div id="connectionStatusIndicator" class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                <strong>Not Connected to Rust Helper</strong>
+                                <p class="mb-0">The Rust helper isn't running on your local machine. This means automation features will not work properly.</p>
+                            </div>
                         </div>
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" id="updateEnv" checked>
-                            <label class="form-check-label" for="updateEnv">
-                                Update environment variable permanently
-                            </label>
+                    </div>
+                    
+                    <ul class="nav nav-tabs mb-3" id="helperSetupTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="connection-tab" data-bs-toggle="tab" data-bs-target="#connection-tab-pane" type="button" role="tab">Connection Settings</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="installation-tab" data-bs-toggle="tab" data-bs-target="#installation-tab-pane" type="button" role="tab">Installation Guide</button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content" id="helperSetupTabsContent">
+                        <!-- Connection Tab -->
+                        <div class="tab-pane fade show active" id="connection-tab-pane" role="tabpanel" aria-labelledby="connection-tab" tabindex="0">
+                            <form id="serverConnectionForm">
+                                <div class="mb-3">
+                                    <label for="serverUrl" class="form-label">Helper API URL</label>
+                                    <input type="text" class="form-control" id="serverUrl" placeholder="http://127.0.0.1:17400" 
+                                           value="{{ os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400') }}">
+                                    <div class="form-text">Current URL: <code id="currentServerUrl">{{ os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400') }}</code></div>
+                                </div>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="updateEnv" checked>
+                                    <label class="form-check-label" for="updateEnv">
+                                        Update environment variable permanently
+                                    </label>
+                                </div>
+                                <div id="connectionStatus" class="alert alert-info d-none">
+                                    Testing connection...
+                                </div>
+                                <div class="d-grid gap-2">
+                                    <button type="button" class="btn btn-primary" id="testConnectionBtn">
+                                        <i class="bi bi-lightning-charge-fill me-1"></i> Test & Save Connection
+                                    </button>
+                                </div>
+                            </form>
                         </div>
-                        <div id="connectionStatus" class="alert alert-info d-none">
-                            Testing connection...
+                        
+                        <!-- Installation Guide Tab -->
+                        <div class="tab-pane fade" id="installation-tab-pane" role="tabpanel" aria-labelledby="installation-tab" tabindex="0">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle-fill me-2"></i>
+                                <strong>About the Rust Helper</strong>
+                                <p>The Rust helper application runs on your local machine and allows BettermanAI to interact with your desktop. It enables mouse and keyboard automation, window management, and screen monitoring.</p>
+                            </div>
+                            
+                            <h6 class="mb-3">Installation Steps</h6>
+                            <ol class="list-group list-group-numbered mb-4">
+                                <li class="list-group-item d-flex justify-content-between align-items-start">
+                                    <div class="ms-2 me-auto">
+                                        <div class="fw-bold">Download the Rust Helper</div>
+                                        Download the appropriate version for your operating system from our <a href="#" class="text-primary">download page</a>.
+                                    </div>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-start">
+                                    <div class="ms-2 me-auto">
+                                        <div class="fw-bold">Run the Application</div>
+                                        Launch the helper application. It should start a local web server on port 17400.
+                                    </div>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-start">
+                                    <div class="ms-2 me-auto">
+                                        <div class="fw-bold">Grant Permissions</div>
+                                        Grant the necessary permissions when prompted (accessibility, screen recording, etc.)
+                                    </div>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-start">
+                                    <div class="ms-2 me-auto">
+                                        <div class="fw-bold">Test Connection</div>
+                                        Come back to this dialog and click "Test & Save Connection" to verify everything is working.
+                                    </div>
+                                </li>
+                            </ol>
+                            
+                            <div class="alert alert-secondary">
+                                <h6><i class="bi bi-question-circle-fill me-2"></i>Why do I need this?</h6>
+                                <p class="mb-0">BettermanAI is a hybrid application. The web interface runs on Replit's servers, while the automation capabilities require a local application to access your desktop. For privacy and security, automation code runs locally on your computer.</p>
+                            </div>
                         </div>
-                    </form>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" id="testConnectionBtn">Test & Save Connection</button>
                 </div>
             </div>
         </div>
@@ -280,6 +351,78 @@
     
     <script>
         $(document).ready(function() {
+            // Check connection status on page load
+            checkHelperConnectionStatus();
+            
+            // Function to check connection status with the Rust helper
+            function checkHelperConnectionStatus() {
+                const $indicator = $('#connectionStatusIndicator');
+                const serverUrl = $('#serverUrl').val().trim() || $('#currentServerUrl').text() || 'http://127.0.0.1:17400';
+                
+                $.ajax({
+                    url: '/api/test_connection',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ 
+                        server_url: serverUrl,
+                        update_env: false // just testing, not updating
+                    }),
+                    success: function(response) {
+                        if (response.success) {
+                            // Update connection indicator to show connected
+                            $indicator.removeClass('alert-warning alert-danger').addClass('alert-success')
+                                      .html(`
+                                        <i class="bi bi-check-circle-fill me-2"></i>
+                                        <strong>Connected to Rust Helper</strong>
+                                        <p class="mb-0">Connection successful. Automation features are ready to use.</p>
+                                        ${response.monitoring ? '<span class="badge bg-primary mt-2">Monitoring Active</span>' : ''}
+                                      `);
+                            
+                            // Update connection button in navbar to show connected state
+                            updateNavConnectionButton(true);
+                        } else {
+                            // Update connection indicator to show disconnected with error
+                            $indicator.removeClass('alert-success').addClass('alert-danger')
+                                      .html(`
+                                        <i class="bi bi-x-circle-fill me-2"></i>
+                                        <strong>Connection Failed</strong>
+                                        <p class="mb-0">Could not connect to the Rust helper. ${response.error}</p>
+                                        <p class="mt-2 mb-0">Please check if the helper application is running on your local machine.</p>
+                                      `);
+                            
+                            // Update connection button in navbar to show disconnected state
+                            updateNavConnectionButton(false);
+                        }
+                    },
+                    error: function() {
+                        // Update connection indicator to show disconnected
+                        $indicator.removeClass('alert-success').addClass('alert-warning')
+                                  .html(`
+                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                    <strong>Not Connected to Rust Helper</strong>
+                                    <p class="mb-0">The Rust helper isn't running on your local machine. This means automation features will not work properly.</p>
+                                    <a href="#" class="btn btn-sm btn-outline-secondary mt-2" data-bs-toggle="tab" data-bs-target="#installation-tab-pane">View Installation Guide</a>
+                                  `);
+                        
+                        // Update connection button in navbar to show disconnected state
+                        updateNavConnectionButton(false);
+                    }
+                });
+            }
+            
+            // Update the navbar connection button based on connection status
+            function updateNavConnectionButton(isConnected) {
+                const $button = $('button[data-bs-target="#serverConnectionModal"]');
+                
+                if (isConnected) {
+                    $button.removeClass('btn-outline-primary btn-outline-danger').addClass('btn-outline-success')
+                           .html('<i class="bi bi-plugin"></i> Helper Connected');
+                } else {
+                    $button.removeClass('btn-outline-primary btn-outline-success').addClass('btn-outline-danger')
+                           .html('<i class="bi bi-plugin"></i> Helper Disconnected');
+                }
+            }
+            
             // Server connection test
             $('#testConnectionBtn').click(function() {
                 const serverUrl = $('#serverUrl').val().trim();
@@ -306,10 +449,13 @@
                     success: function(response) {
                         if (response.success) {
                             $status.removeClass('alert-info alert-danger').addClass('alert-success')
-                                   .html(`<i class="bi bi-check-circle-fill"></i> ${response.message || 'Connected to Rust helper successfully!'}`);
+                                   .html(`<i class="bi bi-check-circle-fill me-2"></i> ${response.message || 'Connected to Rust helper successfully!'}`);
                             
                             // Update the current URL display
                             $('#currentServerUrl').text(serverUrl);
+                            
+                            // Update the connection indicator as well
+                            checkHelperConnectionStatus();
                             
                             // Close the modal after a delay
                             setTimeout(function() {
@@ -319,18 +465,31 @@
                             }, 2000);
                         } else {
                             let errorMessage = response.error || 'Connection failed';
-                            if (errorMessage.includes('timeout') || errorMessage.includes('network error')) {
+                            if (errorMessage.includes('timeout') || errorMessage.includes('network error') || 
+                                errorMessage.includes('Connection refused')) {
                                 errorMessage += '. Please check if the Rust helper is running on your local machine.';
                             }
                             $status.removeClass('alert-info alert-success').addClass('alert-danger')
-                                   .html(`<i class="bi bi-exclamation-triangle-fill"></i> ${errorMessage}`);
+                                   .html(`<i class="bi bi-exclamation-triangle-fill me-2"></i> ${errorMessage}`);
+                                   
+                            // Also update the connection indicator
+                            checkHelperConnectionStatus();
                         }
                     },
                     error: function(xhr) {
                         $status.removeClass('alert-info alert-success').addClass('alert-danger')
-                               .html('<i class="bi bi-exclamation-triangle-fill"></i> Error testing connection. Please verify the Rust helper is running on your local machine.');
+                               .html('<i class="bi bi-exclamation-triangle-fill me-2"></i> Error testing connection. Please verify the Rust helper is running on your local machine.');
+                               
+                        // Also update the connection indicator
+                        checkHelperConnectionStatus();
                     }
                 });
+            });
+            
+            // Tab navigation in the connection modal
+            $('#installation-tab').on('click', function (e) {
+                e.preventDefault();
+                $(this).tab('show');
             });
             
             // Auto-focus the input when the modal is shown

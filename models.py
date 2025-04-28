@@ -197,6 +197,7 @@ class MacroExecution(Base):
     time_saved = Column(Float)  # Time saved in seconds (original_duration - execution_duration)
     error_message = Column(Text)  # Error message if any
     log_path = Column(String(255))  # Path to execution log
+    execution_data = Column(Text)  # JSON string with additional execution data (screenshots, diff results, etc.)
     
     # Relationship to macro
     macro = relationship('Macro', backref='executions')

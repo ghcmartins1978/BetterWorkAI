@@ -2,12 +2,16 @@ import logging
 import json
 import time
 import threading
+import os
 from datetime import datetime, timedelta
 import pyautogui
 import webbrowser
 import re
 import tkinter as tk
 from tkinter import simpledialog
+from PIL import Image, ImageChops
+import numpy as np
+import io
 
 from database import db_session
 from models import Macro, MacroStep, Suggestion, MacroVariable, MacroExecution, Metric
@@ -68,6 +72,12 @@ class AutomationExecutor:
         self.currently_executing = True
         self.abort_requested = False
         result = False
+        before_img = None
+        after_img = None
+        screenshot_dir = "logs/screenshots"
+        
+        # Ensure screenshot directory exists
+        os.makedirs(screenshot_dir, exist_ok=True)
         
         # Create a new execution record
         execution = MacroExecution(
@@ -118,6 +128,12 @@ class AutomationExecutor:
             # Show countdown if configured
             if self.settings.get_setting('show_execution_countdown'):
                 self._show_countdown(3)
+            
+            # Take screenshot before execution (after countdown)
+            before_img = pyautogui.screenshot()
+            before_img_path = f"{screenshot_dir}/macro_{macro_id}_before_{int(time.time())}.png"
+            before_img.save(before_img_path)
+            logger.info(f"Saved before-execution screenshot to {before_img_path}")
                 
             # Execute each step
             all_steps_successful = True
@@ -146,9 +162,50 @@ class AutomationExecutor:
                     all_steps_successful = False
                     break
             
+            # Take screenshot after execution
+            after_img = pyautogui.screenshot()
+            after_img_path = f"{screenshot_dir}/macro_{macro_id}_after_{int(time.time())}.png"
+            after_img.save(after_img_path)
+            logger.info(f"Saved after-execution screenshot to {after_img_path}")
+            
             # Calculate execution time and time saved
             end_time = time.time()
             execution_duration = end_time - start_time
+            
+            # Compare before and after screenshots if both exist
+            if before_img and after_img:
+                logger.info("Comparing before and after screenshots")
+                diff_percentage, diff_img = self._compare_screenshots(before_img, after_img)
+                
+                # Initialize diff_img_path
+                diff_img_path = None
+                
+                # Save the diff image for reference
+                if diff_img:
+                    diff_img_path = f"{screenshot_dir}/macro_{macro_id}_diff_{int(time.time())}.png"
+                    diff_img.save(diff_img_path)
+                    logger.info(f"Saved screenshot diff to {diff_img_path}")
+                
+                # If less than 3% of the screen changed, add a warning
+                if diff_percentage < 3.0:
+                    warning_message = f"Warning: Screen changed only {diff_percentage:.2f}% after execution. Automation may not have had the expected effect."
+                    logger.warning(warning_message)
+                    
+                    # Store the warning in the execution record metadata
+                    execution.metadata = json.dumps({
+                        "screen_change_percentage": diff_percentage,
+                        "warning": warning_message,
+                        "before_screenshot": before_img_path,
+                        "after_screenshot": after_img_path,
+                        "diff_screenshot": diff_img_path
+                    })
+                    db_session.commit()
+                    
+                    # Show a notification about the warning
+                    self._show_notification(
+                        "Automation Warning", 
+                        f"Macro '{macro.name}' completed, but screen changed only {diff_percentage:.2f}%"
+                    )
             
             # Update macro status and metrics
             if all_steps_successful and not self.abort_requested:
@@ -737,6 +794,47 @@ class AutomationExecutor:
             return True
         except (ValueError, TypeError):
             return False
+            
+    def _compare_screenshots(self, before_img, after_img):
+        """
+        Compare two screenshots and calculate the percentage of difference.
+        
+        Args:
+            before_img: PIL Image of the screen before macro execution
+            after_img: PIL Image of the screen after macro execution
+            
+        Returns:
+            Tuple containing (difference_percentage, diff_image)
+        """
+        try:
+            # Ensure images are the same size
+            if before_img.size != after_img.size:
+                logger.warning("Screenshot sizes don't match, resizing for comparison")
+                after_img = after_img.resize(before_img.size)
+                
+            # Convert images to same mode if needed
+            if before_img.mode != after_img.mode:
+                after_img = after_img.convert(before_img.mode)
+                
+            # Calculate difference image
+            diff_img = ImageChops.difference(before_img, after_img)
+            
+            # Convert to numpy array for calculations
+            diff_array = np.array(diff_img)
+            
+            # Calculate percentage of non-zero (changed) pixels
+            total_pixels = diff_array.size / 3  # Divide by 3 for RGB channels
+            changed_pixels = np.count_nonzero(diff_array) / 3
+            
+            diff_percentage = (changed_pixels / total_pixels) * 100
+            
+            logger.info(f"Screenshot comparison: {diff_percentage:.2f}% pixels changed")
+            
+            return diff_percentage, diff_img
+            
+        except Exception as e:
+            logger.error(f"Error comparing screenshots: {e}")
+            return 100.0, None  # Return 100% difference on error to avoid false positives
             
     def _update_execution_record(self, execution_id, status, execution_duration=None, time_saved=None, error_message=None):
         """

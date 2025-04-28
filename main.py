@@ -24,6 +24,12 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "betterman_ai_secret")
 
+# Register custom filters
+@app.template_filter('basename')
+def basename_filter(path):
+    """Get the basename of a path"""
+    return os.path.basename(path) if path else ""
+
 # Initialize database
 init_db()
 

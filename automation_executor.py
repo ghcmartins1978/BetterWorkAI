@@ -410,6 +410,11 @@ class AutomationExecutor:
         
         This is a simple implementation using PyAutoGUI.
         In a full implementation, this would use system notifications.
+        
+        Args:
+            title: Title of the notification
+            message: Body message of the notification
+            timeout: Timeout in seconds (integer)
         """
         try:
             # For cross-platform compatibility, we create a simple alert

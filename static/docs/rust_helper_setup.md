@@ -2,6 +2,19 @@
 
 This document provides step-by-step instructions for setting up the BettermanAI Rust Helper on your local machine. The Rust Helper is a critical component that enables system-level monitoring and automation execution.
 
+## Why Do I Need the Rust Helper?
+
+**BettermanAI is a hybrid application** split between:
+- The web interface (running on Replit's servers in the cloud)
+- The automation capabilities (which must run locally on your computer)
+
+For privacy and security reasons, all automation code that monitors and controls your desktop runs locally on your machine, not in the cloud. The Rust Helper provides this critical local functionality.
+
+**Without the Rust Helper connected, you will not be able to:**
+- Record or run automation macros
+- Capture screenshots or monitor system events
+- Receive automation suggestions
+
 ## What is the Rust Helper?
 
 The Rust Helper is a local application written in Rust that provides:
@@ -10,6 +23,7 @@ The Rust Helper is a local application written in Rust that provides:
 2. Macro execution through TagUI integration
 3. Screenshot capture and analysis
 4. REST API for the web interface to communicate with
+5. Security layer to ensure your data stays private
 
 ## Prerequisites
 
@@ -60,10 +74,13 @@ Download the appropriate version for your operating system from the [releases pa
 ### Step 4: Connect the Web Interface
 
 1. Launch the helper application if it's not already running
-2. On the BettermanAI web interface, navigate to Settings
-3. Under "Helper Connection", enter: `http://127.0.0.1:17400`
-4. Click "Test Connection" to verify
-5. If successful, you'll see a green checkmark and system information
+2. On the BettermanAI web interface, you'll see a connection status alert at the top of your dashboard
+3. Click the "Setup Helper" button to open the connection modal
+4. Make sure the URL in the connection settings shows: `http://127.0.0.1:17400`
+5. Click "Test & Save Connection" to verify
+6. If successful, you'll see a green success message and the dashboard will update to show connected status
+
+> **Note:** The website automatically checks for connection on every page load. If you see the helper is connected (green status), you don't need to do anything else!
 
 ## Troubleshooting
 

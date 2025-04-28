@@ -195,6 +195,9 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Check connection status and update dashboard alert
+    checkHelperConnectionStatus();
+    
     // Handle monitoring toggle
     const monitoringToggle = document.getElementById('monitoringToggle');
     if (monitoringToggle) {
@@ -211,6 +214,104 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Function to check connection status and update dashboard alert
+function checkHelperConnectionStatus() {
+    const $alert = $('#dashboardConnectionAlert');
+    const serverUrl = localStorage.getItem('serverUrl') || 'http://127.0.0.1:17400';
+    
+    $.ajax({
+        url: '/api/test_connection',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ 
+            server_url: serverUrl,
+            update_env: false // just testing, not updating
+        }),
+        success: function(response) {
+            if (response.success) {
+                // Update alert to show connected state
+                $alert.removeClass('alert-warning alert-danger').addClass('alert-success')
+                    .html(`
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <i class="bi bi-check-circle-fill fs-4"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h5 class="alert-heading">Rust Helper Connected</h5>
+                                <p>Connection successful! All automation features are available and ready to use.</p>
+                                <hr>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <p class="mb-0">
+                                        <span class="badge bg-success me-2">Connected</span>
+                                        ${response.monitoring ? '<span class="badge bg-primary">Monitoring Active</span>' : ''}
+                                    </p>
+                                    <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#serverConnectionModal">
+                                        <i class="bi bi-gear me-1"></i> Connection Settings
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                
+                // Store server URL in localStorage for future checks
+                localStorage.setItem('serverUrl', serverUrl);
+                
+                // Enable monitoring toggle (if it exists)
+                $('#monitoringToggle').prop('disabled', false);
+            } else {
+                // Update alert to show error state
+                $alert.removeClass('alert-warning alert-success').addClass('alert-danger')
+                    .html(`
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <i class="bi bi-x-circle-fill fs-4"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h5 class="alert-heading">Connection Failed</h5>
+                                <p>Could not connect to the Rust helper: ${response.error}</p>
+                                <hr>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <p class="mb-0">Please verify the helper is running on your local machine.</p>
+                                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#serverConnectionModal">
+                                        <i class="bi bi-plugin me-1"></i> Setup Helper
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                
+                // Disable monitoring toggle (if it exists)
+                $('#monitoringToggle').prop('disabled', true);
+            }
+        },
+        error: function() {
+            // Update alert to show disconnected state
+            $alert.removeClass('alert-success alert-danger').addClass('alert-warning')
+                .html(`
+                    <div class="d-flex">
+                        <div class="me-3">
+                            <i class="bi bi-exclamation-triangle-fill fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="alert-heading">Rust Helper Not Connected</h5>
+                            <p>The local Rust helper application is required for automation features to work. Without it, you can browse recorded data but cannot create or run automations.</p>
+                            <hr>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <p class="mb-0">Install and run the Rust helper on your local machine to enable all features.</p>
+                                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#serverConnectionModal">
+                                    <i class="bi bi-plugin me-1"></i> Setup Helper
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            
+            // Disable monitoring toggle (if it exists)
+            $('#monitoringToggle').prop('disabled', true);
+        }
+    });
+}
 
 function toggleMonitoring() {
     // Send AJAX request to toggle monitoring

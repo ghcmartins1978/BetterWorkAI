@@ -133,19 +133,27 @@ class AsyncDatabaseWriter:
             *args: Arguments to pass to the function
             **kwargs: Keyword arguments to pass to the function
         """
+        if not self.running:
+            logger.warning("AsyncDatabaseWriter is not running, but task was added to queue")
+            
+        logger.info(f"Adding task to database queue: {func.__name__}")
         self.queue.put((func, args, kwargs))
         
     def _worker_loop(self):
         """Worker thread function to process database tasks"""
+        logger.info("Database writer worker loop started")
         while self.running:
             try:
                 task = self.queue.get(timeout=1)
                 if task is None:
+                    logger.info("Received shutdown signal in worker loop")
                     break
-                    
+                
                 func, args, kwargs = task
+                logger.info(f"Executing database task: {func.__name__}")
                 self._execute_task(func, args, kwargs)
                 self.queue.task_done()
+                logger.info(f"Database task completed: {func.__name__}")
                 
             except queue.Empty:
                 # No tasks available, continue waiting
@@ -153,6 +161,8 @@ class AsyncDatabaseWriter:
                 
             except Exception as e:
                 logger.error(f"Error in database writer worker loop: {e}")
+        
+        logger.info("Database writer worker loop exited")
                 
     def _execute_task(self, func, args, kwargs):
         """Execute a database task with retry logic"""

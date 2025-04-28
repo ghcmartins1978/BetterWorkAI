@@ -5,15 +5,20 @@ import time
 import json
 from datetime import datetime
 import logging
+import sys
+import os
+
+# Add current directory to path to ensure imports work
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, 
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Import the logger module
+# Import the database and logger modules
 from logger import log_event, get_recent_events
-from database import async_db_writer, session_scope
+from database import session_scope
 from models import Event
 
 
@@ -39,7 +44,7 @@ def test_log_event():
     
     # Let the async database writer process the queue
     logger.info("Waiting for async database writer to process events...")
-    time.sleep(3)
+    time.sleep(5)  # Increased wait time to ensure processing
     
     # Check in-memory cache
     recent_events = get_recent_events()
@@ -60,6 +65,15 @@ def test_log_event():
 if __name__ == "__main__":
     # Test logging and retrieving events
     try:
+        # Verify the database writer is running
+        from database import async_db_writer
+        if not async_db_writer.running:
+            logger.error("AsyncDatabaseWriter is not running! This test will fail.")
+            sys.exit(1)
+        else:
+            logger.info("AsyncDatabaseWriter is running. Proceeding with test.")
+            
+        # Run the test
         in_memory_count, db_count = test_log_event()
         logger.info(f"Test completed. In-memory events: {in_memory_count}, Database events: {db_count}")
         
@@ -70,6 +84,5 @@ if __name__ == "__main__":
             
     except Exception as e:
         logger.error(f"Test failed with error: {e}")
-    finally:
-        # Make sure we stop the async writer
-        logger.info("Test finished, but not stopping async_db_writer as it's used by the main application")
+        import traceback
+        traceback.print_exc()

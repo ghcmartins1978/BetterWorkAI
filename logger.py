@@ -37,18 +37,22 @@ def _db_store_event(session, event_type, event_data_json):
         event_type: Type of event
         event_data_json: JSON string of event data
     """
-    # Create a new Event object
-    event = Event(
-        type=event_type,
-        data=event_data_json,
-        timestamp=datetime.now()
-    )
-    
-    # Add to session
-    session.add(event)
-    logger.debug(f"Event stored in database: {event_type}")
-    
-    return event.id
+    try:
+        # Create a new Event object
+        event = Event(
+            type=event_type,
+            data=event_data_json,
+            timestamp=datetime.now()
+        )
+        
+        # Add to session
+        session.add(event)
+        logger.info(f"Event stored in database: {event_type}")
+        
+        return event.id
+    except Exception as e:
+        logger.error(f"Error storing event in database: {str(e)}")
+        raise
 
 def log_event(event_data):
     """

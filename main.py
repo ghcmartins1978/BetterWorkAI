@@ -3711,6 +3711,57 @@ def get_metrics():
         logger.error(f"Error getting metrics: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/kpi-metrics', methods=['GET'])
+def get_kpi_metrics():
+    """
+    Get KPI metrics for dashboard cards.
+    Returns summary metrics like events today, hours saved, active macros, and success rate.
+    """
+    try:
+        # Get the current date at midnight (beginning of day)
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Count events today
+        events_today = db_session.query(func.count(Event.id)).filter(
+            Event.timestamp >= today_start
+        ).scalar() or 0
+        
+        # Get hours saved metric
+        hours_saved_metric = db_session.query(Metric).filter(
+            Metric.name == 'hours_saved_total'
+        ).first()
+        
+        hours_saved = round(float(hours_saved_metric.value), 1) if hours_saved_metric else 0
+        
+        # Count active macros
+        macros_active = db_session.query(func.count(Macro.id)).filter(
+            Macro.execution_count > 0
+        ).scalar() or 0
+        
+        # Calculate success rate
+        total_executions = db_session.query(func.sum(Macro.execution_count)).scalar() or 0
+        successful_executions = db_session.query(func.sum(Macro.success_count)).scalar() or 0
+        
+        success_rate = 0
+        if total_executions > 0:
+            success_rate = round((successful_executions / total_executions) * 100, 1)
+        
+        return jsonify({
+            'success': True,
+            'kpi_metrics': {
+                'events_today': events_today,
+                'hours_saved': hours_saved,
+                'macros_active': macros_active,
+                'success_rate': success_rate
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error getting KPI metrics: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/api/metrics/macros', methods=['GET'])
 def get_macro_metrics():
     """

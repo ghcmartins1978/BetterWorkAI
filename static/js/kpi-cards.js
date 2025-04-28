@@ -1,62 +1,91 @@
 /**
- * KPI Cards Manager - Updates the KPI cards at the bottom of the screen with real-time data
+ * BettermanAI KPI Cards 
+ * Displays key performance indicators for automation metrics
  */
 document.addEventListener('DOMContentLoaded', function() {
-    // Only run if KPI cards are present on the page
-    if (document.getElementById('events-today-count')) {
-        // Initial load
-        updateKPICards();
-        
-        // Set up periodic refresh every 30 seconds
-        setInterval(updateKPICards, 30000);
-    }
+    // Initialize and update KPI cards
+    updateKPICards();
+    
+    // Update every 30 seconds
+    setInterval(updateKPICards, 30000);
 });
 
 /**
- * Updates all KPI cards with fresh data from the API
+ * Update KPI cards with latest data
  */
 function updateKPICards() {
+    // Find all KPI cards
+    const kpiCards = document.querySelectorAll('.kpi-card');
+    
+    // If no KPI cards found, exit
+    if (kpiCards.length === 0) {
+        return;
+    }
+    
+    // Fetch KPI metrics from API
     fetch('/api/kpi-metrics')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to fetch KPI metrics');
+            }
+            return response.json();
+        })
         .then(data => {
+            if (!data.success) {
+                throw new Error(data.error || 'Unknown error');
+            }
+            
             // Update each KPI card
-            updateKPICard('events-today-count', data.events_today || 0);
-            updateKPICard('hours-saved-count', formatHours(data.hours_saved || 0));
-            updateKPICard('macros-active-count', data.macros_active || 0);
-            updateKPICard('success-rate-percent', formatPercent(data.success_rate || 0));
+            const metrics = data.kpi_metrics;
+            
+            // Update events today card
+            const eventsCard = document.querySelector('.kpi-card[data-metric="events_today"]');
+            if (eventsCard) {
+                const valueEl = eventsCard.querySelector('.kpi-value');
+                if (valueEl) {
+                    valueEl.textContent = metrics.events_today.toLocaleString();
+                }
+            }
+            
+            // Update hours saved card
+            const hoursCard = document.querySelector('.kpi-card[data-metric="hours_saved"]');
+            if (hoursCard) {
+                const valueEl = hoursCard.querySelector('.kpi-value');
+                if (valueEl) {
+                    valueEl.textContent = metrics.hours_saved.toLocaleString();
+                }
+            }
+            
+            // Update active macros card
+            const macrosCard = document.querySelector('.kpi-card[data-metric="macros_active"]');
+            if (macrosCard) {
+                const valueEl = macrosCard.querySelector('.kpi-value');
+                if (valueEl) {
+                    valueEl.textContent = metrics.macros_active.toLocaleString();
+                }
+            }
+            
+            // Update success rate card
+            const successCard = document.querySelector('.kpi-card[data-metric="success_rate"]');
+            if (successCard) {
+                const valueEl = successCard.querySelector('.kpi-value');
+                if (valueEl) {
+                    valueEl.textContent = metrics.success_rate.toFixed(1) + '%';
+                    
+                    // Add color classes based on success rate value
+                    if (metrics.success_rate >= 95) {
+                        valueEl.className = 'kpi-value text-success';
+                    } else if (metrics.success_rate >= 80) {
+                        valueEl.className = 'kpi-value text-info';
+                    } else if (metrics.success_rate >= 60) {
+                        valueEl.className = 'kpi-value text-warning';
+                    } else {
+                        valueEl.className = 'kpi-value text-danger';
+                    }
+                }
+            }
         })
         .catch(error => {
             console.error('Error updating KPI cards:', error);
         });
-}
-
-/**
- * Updates a single KPI card with new data
- */
-function updateKPICard(elementId, value) {
-    const element = document.getElementById(elementId);
-    if (element) {
-        // Add a subtle animation when value changes
-        if (element.textContent !== String(value)) {
-            element.classList.add('highlight-change');
-            setTimeout(() => {
-                element.classList.remove('highlight-change');
-            }, 1000);
-        }
-        element.textContent = value;
-    }
-}
-
-/**
- * Formats hours with one decimal place
- */
-function formatHours(hours) {
-    return parseFloat(hours).toFixed(1);
-}
-
-/**
- * Formats percent as whole number with % sign
- */
-function formatPercent(percent) {
-    return Math.round(percent) + '%';
 }

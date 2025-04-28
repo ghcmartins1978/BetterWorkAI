@@ -35,7 +35,7 @@ class MonitorController:
     def get_status(self):
         """Get the current status of the monitoring"""
         if not self.server_url:
-            return {'monitoring': False, 'error': 'No server URL provided'}
+            return {'monitoring': False, 'error': 'No Rust helper URL provided'}
             
         try:
             response = requests.get(f"{self.server_url}/api/status", timeout=3)

@@ -11,18 +11,21 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # The helper URL should be provided as an environment variable
-RUST_HELPER_URL = os.environ.get('AUTOMATION_SERVER_URL', '')  # Using AUTOMATION_SERVER_URL for backward compatibility
+RUST_HELPER_URL = os.environ.get('AUTOMATION_SERVER_URL', '')  # Using AUTOMATION_SERVER_URL for backward compatibility (should rename to RUST_HELPER_URL in future)
 
 class AutomationClient:
     """
     Client for the Rust helper's REST API. This allows the application to
     control mouse, keyboard, and window actions on the user's computer
     by sending requests to the Rust helper's Actix-Web API running on 127.0.0.1:17400.
+    
+    The Rust helper is a standalone application running on the user's system that
+    provides system-level automation capabilities through a REST API.
     """
     
     def __init__(self, server_url=None):
         """
-        Initialize the automation client
+        Initialize the automation client for interacting with the Rust helper
         
         Args:
             server_url: URL of the Rust helper's REST API (typically http://127.0.0.1:17400)
@@ -35,7 +38,7 @@ class AutomationClient:
             logger.info(f"Automation client initialized with Rust helper URL: {self.server_url}")
     
     def set_server_url(self, url):
-        """Update the server URL"""
+        """Update the Rust helper URL"""
         self.server_url = url
         logger.info(f"Updated Rust helper URL to: {self.server_url}")
         return self.is_connected()
@@ -59,7 +62,7 @@ class AutomationClient:
             return False
             
     def _handle_response(self, response):
-        """Handle a response from the server, with proper error checking"""
+        """Handle a response from the Rust helper, with proper error checking"""
         if response.status_code != 200:
             logger.error(f"Rust helper returned non-200 status code: {response.status_code}")
             return {'status': 'error', 'message': f'Rust helper returned status code {response.status_code}'}
@@ -164,8 +167,8 @@ class AutomationClient:
     def keyboard_hotkey(self, *keys):
         """Press a hotkey combination (multiple keys)"""
         if not self.server_url:
-            logger.warning("Cannot press hotkey: No server URL")
-            return {'status': 'error', 'message': 'No server URL provided'}
+            logger.warning("Cannot press hotkey: No Rust helper URL")
+            return {'status': 'error', 'message': 'No Rust helper URL provided'}
             
         try:
             response = requests.post(
@@ -182,7 +185,7 @@ class AutomationClient:
     def get_window_list(self):
         """Get a list of all window titles"""
         if not self.server_url:
-            logger.warning("Cannot get window list: No server URL")
+            logger.warning("Cannot get window list: No Rust helper URL")
             return []
             
         try:
@@ -201,8 +204,8 @@ class AutomationClient:
     def focus_window(self, title):
         """Focus a window by its title"""
         if not self.server_url:
-            logger.warning("Cannot focus window: No server URL")
-            return {'status': 'error', 'message': 'No server URL provided'}
+            logger.warning("Cannot focus window: No Rust helper URL")
+            return {'status': 'error', 'message': 'No Rust helper URL provided'}
             
         try:
             response = requests.post(

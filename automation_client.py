@@ -32,7 +32,7 @@ class AutomationClient:
         if not self.server_url:
             logger.warning("No Rust helper URL provided. Remote automation will not work.")
         else:
-            logger.info(f"Automation client initialized with server URL: {self.server_url}")
+            logger.info(f"Automation client initialized with Rust helper URL: {self.server_url}")
     
     def set_server_url(self, url):
         """Update the server URL"""
@@ -55,14 +55,14 @@ class AutomationClient:
             response = requests.get(f"{self.server_url}/api/window/list", timeout=3)
             return response.status_code == 200
         except Exception as e:
-            logger.error(f"Failed to connect to automation server: {e}")
+            logger.error(f"Failed to connect to Rust helper: {e}")
             return False
             
     def _handle_response(self, response):
         """Handle a response from the server, with proper error checking"""
         if response.status_code != 200:
-            logger.error(f"Server returned non-200 status code: {response.status_code}")
-            return {'status': 'error', 'message': f'Server returned status code {response.status_code}'}
+            logger.error(f"Rust helper returned non-200 status code: {response.status_code}")
+            return {'status': 'error', 'message': f'Rust helper returned status code {response.status_code}'}
             
         # Check if response is JSON
         try:
@@ -77,10 +77,10 @@ class AutomationClient:
             
             # Check if it's HTML (probably an error page)
             if 'text/html' in content_type or response.text.strip().startswith(('<!DOCTYPE', '<html')):
-                logger.error("Received HTML response instead of JSON - this likely indicates an error occurred on the server")
+                logger.error("Received HTML response instead of JSON - this likely indicates an error occurred on the Rust helper")
                 return {
                     'status': 'error', 
-                    'message': 'Received HTML response instead of JSON. The server may be returning an error page.',
+                    'message': 'Received HTML response instead of JSON. The Rust helper may be returning an error page.',
                     'html_response': True
                 }
             
@@ -95,8 +95,8 @@ class AutomationClient:
     def mouse_move(self, x, y):
         """Move mouse to absolute position"""
         if not self.server_url:
-            logger.warning("Cannot move mouse: No server URL")
-            return {'status': 'error', 'message': 'No server URL provided'}
+            logger.warning("Cannot move mouse: No Rust helper URL")
+            return {'status': 'error', 'message': 'No Rust helper URL provided'}
             
         try:
             response = requests.post(
@@ -112,8 +112,8 @@ class AutomationClient:
     def mouse_click(self, x, y, button='left', clicks=1):
         """Click at the specified position"""
         if not self.server_url:
-            logger.warning("Cannot click mouse: No server URL")
-            return {'status': 'error', 'message': 'No server URL provided'}
+            logger.warning("Cannot click mouse: No Rust helper URL")
+            return {'status': 'error', 'message': 'No Rust helper URL provided'}
             
         try:
             response = requests.post(
@@ -130,8 +130,8 @@ class AutomationClient:
     def keyboard_type(self, text):
         """Type the specified text"""
         if not self.server_url:
-            logger.warning("Cannot type text: No server URL")
-            return {'status': 'error', 'message': 'No server URL provided'}
+            logger.warning("Cannot type text: No Rust helper URL")
+            return {'status': 'error', 'message': 'No Rust helper URL provided'}
             
         try:
             response = requests.post(
@@ -147,8 +147,8 @@ class AutomationClient:
     def keyboard_press(self, key):
         """Press a single key"""
         if not self.server_url:
-            logger.warning("Cannot press key: No server URL")
-            return {'status': 'error', 'message': 'No server URL provided'}
+            logger.warning("Cannot press key: No Rust helper URL")
+            return {'status': 'error', 'message': 'No Rust helper URL provided'}
             
         try:
             response = requests.post(

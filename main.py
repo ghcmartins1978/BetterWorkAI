@@ -35,11 +35,41 @@ def basename_filter(path):
 def utility_processor():
     def get_recent_executions(macro_id, limit=5):
         """Get recent executions for a macro, for use in templates"""
+        # Use the session_scope context manager for a clean transaction
+        from database import session_scope
+        
+        executions_data = []
         try:
-            return db_session.query(MacroExecution).filter_by(macro_id=macro_id).order_by(MacroExecution.start_time.desc()).limit(limit).all()
+            with session_scope() as db:
+                executions = db.query(MacroExecution).filter_by(macro_id=macro_id).order_by(MacroExecution.start_time.desc()).limit(limit).all()
+                
+                # Convert ORM objects to dictionaries while session is open
+                for execution in executions:
+                    # Determine status color for badge display
+                    status_color = 'secondary'
+                    if execution.status == 'success':
+                        status_color = 'success'
+                    elif execution.status == 'failed':
+                        status_color = 'danger'
+                    elif execution.status == 'timeout':
+                        status_color = 'warning'
+                    elif execution.status == 'running':
+                        status_color = 'primary'
+                        
+                    execution_dict = {
+                        'id': execution.id,
+                        'macro_id': execution.macro_id,
+                        'status': execution.status,
+                        'start_time': execution.start_time,
+                        'end_time': execution.end_time,
+                        'duration': execution.duration,
+                        'status_color': status_color
+                    }
+                    executions_data.append(execution_dict)
         except Exception as e:
             logger.error(f"Error getting recent executions: {e}")
-            return []
+                
+        return executions_data
     
     return dict(get_recent_executions=get_recent_executions)
 
@@ -819,12 +849,11 @@ def macros():
                     'last_execution_time': macro.last_execution_time,
                     'execution_count': macro.execution_count,
                     'step_count': macro.step_count,
-                    'success_count': macro.success_count,
-                    'failure_count': macro.failure_count,
+                    'success_count': macro.success_count if hasattr(macro, 'success_count') else 0,
+                    'failure_count': macro.failure_count if hasattr(macro, 'failure_count') else 0,
                     'tags': macro.tags,
                     'color': macro.color or 'secondary',
-                    'icon': macro.icon or 'robot',
-                    'is_favorite': macro.is_favorite or False
+                    'icon': macro.icon or 'robot'
                 }
                 macros_data.append(macro_dict)
             
@@ -874,12 +903,11 @@ def view_macro(macro_id):
                 'last_execution_time': macro.last_execution_time,
                 'execution_count': macro.execution_count,
                 'step_count': macro.step_count,
-                'success_count': macro.success_count,
-                'failure_count': macro.failure_count,
+                'success_count': macro.success_count if hasattr(macro, 'success_count') else 0,
+                'failure_count': macro.failure_count if hasattr(macro, 'failure_count') else 0,
                 'tags': macro.tags,
                 'color': macro.color or 'secondary',
-                'icon': macro.icon or 'robot',
-                'is_favorite': macro.is_favorite or False
+                'icon': macro.icon or 'robot'
             }
             
             steps_data = []
@@ -1068,12 +1096,11 @@ def edit_macro(macro_id):
                 'last_execution_time': macro.last_execution_time,
                 'execution_count': macro.execution_count,
                 'step_count': macro.step_count,
-                'success_count': macro.success_count,
-                'failure_count': macro.failure_count,
+                'success_count': macro.success_count if hasattr(macro, 'success_count') else 0,
+                'failure_count': macro.failure_count if hasattr(macro, 'failure_count') else 0,
                 'tags': macro.tags,
                 'color': macro.color or 'secondary',
-                'icon': macro.icon or 'robot',
-                'is_favorite': macro.is_favorite or False
+                'icon': macro.icon or 'robot'
             }
         
         # Use the copied data for rendering, not the ORM object

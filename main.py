@@ -5,7 +5,8 @@ import threading
 import logging
 import base64
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, abort, send_file, Response
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, abort, send_file, Response, make_response
+from flask_wtf.csrf import CSRFProtect, generate_csrf
 import signal
 import sys
 import random
@@ -23,6 +24,9 @@ logger = logging.getLogger(__name__)
 # Create and configure Flask app
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "betterman_ai_secret")
+
+# Initialize CSRF protection
+csrf = CSRFProtect(app)
 
 # Check if running in Electron and configure accordingly
 try:

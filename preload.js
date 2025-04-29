@@ -5,7 +5,12 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld(
   'electron', {
     getAppPath: () => ipcRenderer.invoke('get-app-path'),
-    getPlatform: () => ipcRenderer.invoke('get-platform'),
-    // Add any other methods you want to expose to the renderer process
+    getPlatform: () => process.platform,
+    reloadApp: () => ipcRenderer.invoke('reload-app'),
+    goBack: () => ipcRenderer.invoke('go-back'),
+    goForward: () => ipcRenderer.invoke('go-forward'),
+    openDevTools: () => ipcRenderer.invoke('open-dev-tools'),
+    checkDatabaseConnection: () => ipcRenderer.invoke('check-database-connection'),
+    platform: process.platform
   }
 );

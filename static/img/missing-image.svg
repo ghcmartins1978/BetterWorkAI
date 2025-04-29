@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200px" height="150px" viewBox="0 0 200 150" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Missing Image</title>
+    <g id="Missing-Image" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect id="Background" fill="#2A3746" x="0" y="0" width="200" height="150" rx="8"></rect>
+        <g id="Image-Icon" transform="translate(50, 30)" fill="#8A9AAD" fill-rule="nonzero">
+            <path d="M100,0 C100,0 100,90 100,90 C100,90 0,90 0,90 C0,90 0,0 0,0 C0,0 100,0 100,0 Z M90,10 L10,10 L10,70 L30,50 L50,70 L80,30 L90,40 L90,10 Z M30,20 C35.5228,20 40,24.4772 40,30 C40,35.5228 35.5228,40 30,40 C24.4772,40 20,35.5228 20,30 C20,24.4772 24.4772,20 30,20 Z"></path>
+        </g>
+        <text id="Image-not-found" font-family="Inter, sans-serif" font-size="14" font-weight="600" fill="#FFFFFF" text-anchor="middle" x="100" y="120">
+            Image not found
+        </text>
+    </g>
+</svg>

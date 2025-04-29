@@ -717,7 +717,27 @@ logger.info("seed_demo_data() call completed")
 # Add context processor to make os available to all templates
 @app.context_processor
 def inject_os():
-    return dict(os=os)
+    return dict(os=os, is_electron=is_electron)
+
+# Add global error handlers
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('error.html', 
+                           error_title="Page Not Found",
+                           error_message="The page you are looking for does not exist."), 404
+
+@app.errorhandler(500)
+def server_error(e):
+    return render_template('error.html', 
+                           error_title="Server Error",
+                           error_message="An internal server error occurred. Please try again later."), 500
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    logger.error(f"Unhandled exception: {str(e)}")
+    return render_template('error.html', 
+                           error_title="Application Error",
+                           error_message=f"An unexpected error occurred: {str(e)}"), 500
 
 @app.route('/')
 def index():

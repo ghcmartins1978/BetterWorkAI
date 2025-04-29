@@ -20,6 +20,9 @@
             document.documentElement.classList.add(`platform-${window.electron.platform}`);
         }
     </script>
+    {% if is_electron %}
+    <script src="{{ url_for('static', filename='js/electron-navigation.js') }}"></script>
+    {% endif %}
 </head>
 <body>
     <!-- Top Navigation Bar -->

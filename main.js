@@ -194,3 +194,74 @@ app.on('will-quit', () => {
 // IPC handlers for communication between renderer and main process
 ipcMain.handle('get-app-path', () => app.getAppPath());
 ipcMain.handle('get-platform', () => process.platform);
+
+// Navigation handlers
+ipcMain.handle('reload-app', () => {
+  if (mainWindow) {
+    mainWindow.reload();
+    return true;
+  }
+  return false;
+});
+
+ipcMain.handle('go-back', () => {
+  if (mainWindow && mainWindow.webContents.canGoBack()) {
+    mainWindow.webContents.goBack();
+    return true;
+  }
+  return false;
+});
+
+ipcMain.handle('go-forward', () => {
+  if (mainWindow && mainWindow.webContents.canGoForward()) {
+    mainWindow.webContents.goForward();
+    return true;
+  }
+  return false;
+});
+
+// Developer tools
+ipcMain.handle('open-dev-tools', () => {
+  if (mainWindow) {
+    mainWindow.webContents.openDevTools();
+    return true;
+  }
+  return false;
+});
+
+// Database check helper
+ipcMain.handle('check-database-connection', async () => {
+  return new Promise((resolve) => {
+    // Try to call the built-in health check endpoint that requires database access
+    const http = require('http');
+    const options = {
+      hostname: 'localhost',
+      port: FLASK_PORT,
+      path: '/healthz',
+      method: 'GET'
+    };
+    
+    const req = http.request(options, res => {
+      let data = '';
+      
+      res.on('data', chunk => {
+        data += chunk;
+      });
+      
+      res.on('end', () => {
+        try {
+          const result = JSON.parse(data);
+          resolve(result);
+        } catch (e) {
+          resolve({ status: 'error', message: 'Failed to parse response' });
+        }
+      });
+    });
+    
+    req.on('error', error => {
+      resolve({ status: 'error', message: error.message });
+    });
+    
+    req.end();
+  });
+});

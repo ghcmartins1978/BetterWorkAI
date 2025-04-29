@@ -968,6 +968,42 @@ def suggestion_action(suggestion_id):
     db_session.commit()
     return jsonify({'success': True, 'redirect': url_for('suggestions')})
 
+@app.route('/events')
+def events():
+    """View raw input events"""
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = 50
+        
+        # Get events ordered by timestamp (newest first) with pagination
+        event_query = db_session.query(Event).order_by(Event.timestamp.desc())
+        
+        # Count total events for pagination
+        total_events = event_query.count()
+        total_pages = (total_events + per_page - 1) // per_page
+        
+        # Apply pagination manually
+        offset = (page - 1) * per_page
+        events_list = event_query.limit(per_page).offset(offset).all()
+        
+        # Convert event data from JSON to Python objects for the template
+        for event in events_list:
+            try:
+                event.data_obj = json.loads(event.data)
+            except json.JSONDecodeError:
+                event.data_obj = {"error": "Invalid JSON data"}
+            except Exception as e:
+                event.data_obj = {"error": str(e)}
+        
+        return render_template('events.html', 
+                              events=events_list, 
+                              page=page,
+                              total_pages=total_pages,
+                              total_items=total_events)
+    except Exception as e:
+        logger.error(f"Error rendering events page: {e}")
+        return render_template('error.html', error=str(e))
+
 @app.route('/patterns')
 def patterns():
     """View detected patterns"""

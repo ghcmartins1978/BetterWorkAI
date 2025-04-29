@@ -16,6 +16,7 @@ from sqlalchemy import func
 from models import Event, EventSequence, Pattern, Suggestion, Macro, MacroStep, Setting, AIAnalysisReport, MacroVariable, MacroExecution, Metric
 import variable_detector
 from settings import Settings
+from data_transformer import DataTransformer, register_data_transformer_routes
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -4028,6 +4029,12 @@ def start_monitoring_components():
         pattern_detector = PatternDetector(settings)
         reasoning_engine = ReasoningEngine(settings)
         job_scheduler = JobScheduler(settings)
+        
+        # Initialize data transformer for media processing
+        data_transformer = DataTransformer(settings)
+        
+        # Register data transformer API routes
+        register_data_transformer_routes(app, data_transformer)
         
         # Connect components
         event_listener.set_analyzer(context_analyzer)

@@ -7,6 +7,13 @@ echo Setting up environment...
 :: Create data directory
 if not exist data mkdir data
 
+:: Clean up any existing processes
+echo Cleaning up any existing processes...
+taskkill /f /fi "WINDOWTITLE eq Flask Server*" > nul 2>&1
+taskkill /f /fi "WINDOWTITLE eq Mock Rust Helper*" > nul 2>&1
+:: Also try to kill by process name
+taskkill /f /im "node.exe" /fi "WINDOWTITLE eq Mock*" > nul 2>&1
+
 :: Set environment variables
 set NODE_ENV=development
 set RUNNING_IN_ELECTRON=1
@@ -50,6 +57,9 @@ echo Terminating Flask server and mock helper...
 :: Find and kill the Flask and mock helper processes
 taskkill /f /fi "WINDOWTITLE eq Flask Server*" > nul 2>&1
 taskkill /f /fi "WINDOWTITLE eq Mock Rust Helper*" > nul 2>&1
+:: Also try to kill by process name
+taskkill /f /im "node.exe" /fi "WINDOWTITLE eq Mock*" > nul 2>&1
+taskkill /f /im "python.exe" /fi "WINDOWTITLE eq Flask*" > nul 2>&1
 
 echo.
 echo Press any key to exit...

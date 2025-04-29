@@ -159,7 +159,37 @@ app.post('/api/stop-execution/:execution_id', (req, res) => {
   });
 });
 
+// Function to try different ports if the main one is in use
+function startServer(initialPort) {
+  let currentPort = initialPort;
+  const maxRetries = 5;
+  
+  function tryPort(port, retryCount = 0) {
+    const server = app.listen(port)
+      .on('listening', () => {
+        console.log(`Mock Rust helper server running at http://localhost:${port}`);
+        // Store the port we're actually using
+        process.env.MOCK_HELPER_PORT = port;
+      })
+      .on('error', (err) => {
+        if (err.code === 'EADDRINUSE' && retryCount < maxRetries) {
+          console.log(`Port ${port} is in use, trying port ${port + 1}...`);
+          server.close();
+          // Try the next port
+          tryPort(port + 1, retryCount + 1);
+        } else if (retryCount >= maxRetries) {
+          console.error(`Failed to find an available port after ${maxRetries} attempts.`);
+          process.exit(1);
+        } else {
+          console.error(`Error starting mock helper server: ${err.message}`);
+          process.exit(1);
+        }
+      });
+  }
+  
+  // Try to start on the initial port
+  tryPort(currentPort);
+}
+
 // Start the server
-app.listen(port, () => {
-  console.log(`Mock Rust helper server running at http://localhost:${port}`);
-});
+startServer(port);

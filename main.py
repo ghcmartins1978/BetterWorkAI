@@ -36,6 +36,14 @@ def handle_csrf_error(e):
     return render_template('error.html', 
                           title='Security Error',
                           message='CSRF token validation failed. Please try refreshing the page.'), 400
+                          
+# Add security headers to all responses
+@app.after_request
+def add_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdn.replit.com; img-src 'self' data:; font-src 'self' data:;"
+    return response
 
 # Check if running in Electron and configure accordingly
 try:
@@ -743,22 +751,49 @@ def inject_os():
 # Add global error handlers
 @app.errorhandler(404)
 def page_not_found(e):
+    if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+        return jsonify({"error": "Not found", "message": "The requested resource does not exist."}), 404
     return render_template('error.html', 
-                           error_title="Page Not Found",
-                           error_message="The page you are looking for does not exist."), 404
+                           title="Page Not Found",
+                           message="The page you are looking for does not exist.",
+                           status_code=404), 404
+
+@app.errorhandler(400)
+def bad_request(e):
+    if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+        return jsonify({"error": "Bad request", "message": str(e)}), 400
+    return render_template('error.html', 
+                           title="Bad Request",
+                           message=f"The server could not understand your request: {str(e)}",
+                           status_code=400), 400
+
+@app.errorhandler(403)
+def forbidden(e):
+    if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+        return jsonify({"error": "Forbidden", "message": "You don't have permission to access this resource."}), 403
+    return render_template('error.html', 
+                           title="Forbidden",
+                           message="You don't have permission to access this resource.",
+                           status_code=403), 403
 
 @app.errorhandler(500)
 def server_error(e):
+    if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+        return jsonify({"error": "Internal server error", "message": "Something went wrong on our end."}), 500
     return render_template('error.html', 
-                           error_title="Server Error",
-                           error_message="An internal server error occurred. Please try again later."), 500
+                           title="Server Error",
+                           message="An internal server error occurred. Please try again later.",
+                           status_code=500), 500
 
 @app.errorhandler(Exception)
 def handle_exception(e):
     logger.error(f"Unhandled exception: {str(e)}")
+    if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+        return jsonify({"error": "Unexpected error", "message": str(e)}), 500
     return render_template('error.html', 
-                           error_title="Application Error",
-                           error_message=f"An unexpected error occurred: {str(e)}"), 500
+                           title="Application Error",
+                           message=f"An unexpected error occurred: {str(e)}",
+                           status_code=500), 500
 
 @app.route('/')
 def index():

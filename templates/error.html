@@ -8,11 +8,12 @@
         <div class="col-md-8">
             <div class="card border-danger">
                 <div class="card-header bg-danger text-white">
-                    <h4 class="mb-0">{{ error_title }}</h4>
+                    <h4 class="mb-0">{{ title|default('Error') }}</h4>
                 </div>
                 <div class="card-body">
                     <div class="alert alert-danger">
-                        <p>{{ error_message }}</p>
+                        <p>{{ message }}</p>
+                        {% if status_code %}<small class="text-muted">Status code: {{ status_code }}</small>{% endif %}
                     </div>
                     
                     <div class="d-flex gap-2">
@@ -39,7 +40,7 @@
                 </div>
             </div>
             
-            {% if is_electron and error_title == "Database Connection Error" %}
+            {% if is_electron and title == "Database Connection Error" %}
             <div class="card mt-4">
                 <div class="card-header bg-info text-white">
                     <h5 class="mb-0">Troubleshooting</h5>

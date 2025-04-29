@@ -1455,51 +1455,37 @@ def logs():
 @app.route('/settings')
 def settings_page():
     """Settings page"""
-    all_settings = db_session.query(Setting).all()
-    
-    # Convert settings to a dictionary for the template
-    settings_dict = {}
-    for setting in all_settings:
-        if setting.value_type == 'boolean':
-            settings_dict[setting.name] = setting.value.lower() == 'true'
-        elif setting.value_type == 'number':
-            settings_dict[setting.name] = float(setting.value)
-            if settings_dict[setting.name].is_integer():
-                settings_dict[setting.name] = int(settings_dict[setting.name])
-        else:
-            settings_dict[setting.name] = setting.value
-    
-    # Add special settings
-    settings_dict['automation_server_url'] = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400')
-    
-    # Check connection status
-    import requests
-    from requests.exceptions import RequestException
-    
-    connection_status = {
-        'connected': False,
-        'screen_size': {'width': 0, 'height': 0},
-        'monitoring': False
-    }
-    
-    server_url = settings_dict.get('automation_server_url')
-    if server_url:
-        try:
-            response = requests.get(f"{server_url}/api/status", timeout=3)
-            if response.status_code == 200:
-                status_data = response.json()
-                connection_status = {
-                    'connected': True,
-                    'screen_size': status_data.get('screen_size', {'width': 1920, 'height': 1080}),
-                    'monitoring': status_data.get('monitoring', False)
-                }
-        except Exception:
-            # Connection failed
-            pass
-    
-    return render_template('settings.html', 
-                          settings=settings_dict,
-                          connection_status=connection_status)
+    try:
+        all_settings = db_session.query(Setting).all()
+        
+        # Convert settings to a dictionary for the template
+        settings_dict = {}
+        for setting in all_settings:
+            if setting.value_type == 'boolean':
+                settings_dict[setting.name] = setting.value.lower() == 'true'
+            elif setting.value_type == 'number':
+                settings_dict[setting.name] = float(setting.value)
+                if settings_dict[setting.name].is_integer():
+                    settings_dict[setting.name] = int(settings_dict[setting.name])
+            else:
+                settings_dict[setting.name] = setting.value
+        
+        # Add special settings
+        settings_dict['automation_server_url'] = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400')
+        
+        # Simple connection status
+        connection_status = {
+            'connected': False,
+            'screen_size': {'width': 1920, 'height': 1080},
+            'monitoring': False
+        }
+        
+        return render_template('settings.html', 
+                            settings=settings_dict,
+                            connection_status=connection_status)
+    except Exception as e:
+        logger.error(f"Error rendering settings page: {e}")
+        return render_template('error.html', error=str(e))
 
 @app.route('/settings/update', methods=['POST'])
 def update_settings():

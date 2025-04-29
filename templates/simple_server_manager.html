@@ -1,0 +1,194 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Server Configuration
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Server Configuration</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <p>Based on your logs, you need to configure these settings:</p>
+                        <ul>
+                            <li><strong>Rust Helper Port:</strong> Should be set to 17403</li>
+                            <li><strong>Mock Helper Port:</strong> Should be set to 17403</li>
+                            <li><strong>Flask Web Server Port:</strong> 5000 (already set correctly)</li>
+                        </ul>
+                        <p>Current Helper API URL: <code id="current-url">{{ server_url }}</code></p>
+                    </div>
+
+                    <form id="server-url-form" class="mb-4">
+                        <div class="mb-3">
+                            <label for="server-url-input" class="form-label">Helper API URL</label>
+                            <input type="text" class="form-control" id="server-url-input" value="http://127.0.0.1:17403">
+                            <div class="form-text">Update to <code>http://127.0.0.1:17403</code> to match your Mock Helper.</div>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="permanent-check" checked>
+                            <label class="form-check-label" for="permanent-check">Update environment variable permanently</label>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-primary" id="test-button">Test and Update URL</button>
+                        </div>
+                    </form>
+                    
+                    <div class="mb-4">
+                        <div class="alert alert-secondary d-none" id="status-alert">
+                            <div id="status-message">Testing connection...</div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <form id="mock-port-form">
+                        <div class="mb-3">
+                            <label for="mock-helper-port" class="form-label">Mock Helper Port</label>
+                            <input type="number" class="form-control" id="mock-helper-port" value="17403" min="1024" max="65535">
+                            <div class="form-text">This should match the port in your logs: 17403</div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-warning" id="update-port-button">Update Mock Helper Port</button>
+                        </div>
+                    </form>
+
+                    <div class="mt-3">
+                        <div class="alert alert-secondary d-none" id="port-status-alert">
+                            <div id="port-status-message"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const serverUrlInput = document.getElementById('server-url-input');
+    const permanentCheck = document.getElementById('permanent-check');
+    const testButton = document.getElementById('test-button');
+    const statusAlert = document.getElementById('status-alert');
+    const statusMessage = document.getElementById('status-message');
+    
+    const mockHelperPortInput = document.getElementById('mock-helper-port');
+    const updatePortButton = document.getElementById('update-port-button');
+    const portStatusAlert = document.getElementById('port-status-alert');
+    const portStatusMessage = document.getElementById('port-status-message');
+    
+    // Test and update the URL
+    testButton.addEventListener('click', function() {
+        const serverUrl = serverUrlInput.value.trim();
+        const permanent = permanentCheck.checked;
+        
+        if (!serverUrl) {
+            showStatus('Please enter a server URL', 'danger');
+            return;
+        }
+        
+        if (!serverUrl.startsWith('http://') && !serverUrl.startsWith('https://')) {
+            showStatus('Server URL must start with http:// or https://', 'danger');
+            return;
+        }
+        
+        // Show the testing status
+        showStatus('Testing connection to ' + serverUrl, 'info');
+        
+        // Make the test request
+        fetch('/api/update-server-url', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                server_url: serverUrl,
+                permanent: permanent
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showStatus('Success! Server URL updated to: ' + serverUrl, 'success');
+                document.getElementById('current-url').textContent = serverUrl;
+                
+                // Reload the page after a delay to reflect changes
+                if (permanent) {
+                    setTimeout(() => {
+                        location.reload();
+                    }, 3000);
+                }
+            } else {
+                showStatus('Error: ' + data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            showStatus('Error: ' + error.message, 'danger');
+        });
+    });
+    
+    // Update mock helper port
+    updatePortButton.addEventListener('click', function() {
+        const mockHelperPort = mockHelperPortInput.value.trim();
+        
+        if (!mockHelperPort) {
+            showPortStatus('Please enter a valid port number', 'danger');
+            return;
+        }
+        
+        showPortStatus('Updating mock helper port to ' + mockHelperPort + '...', 'info');
+        
+        fetch('/api/update-port-config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                helper_port: mockHelperPort,
+                mock_helper_port: mockHelperPort
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showPortStatus('Success! Mock helper port updated to: ' + mockHelperPort, 'success');
+                
+                // Update the server URL input to match the new port
+                serverUrlInput.value = 'http://127.0.0.1:' + mockHelperPort;
+                
+                // Show restart message if needed
+                if (data.restart_required) {
+                    showPortStatus('Port configuration updated. Application restart may be required to apply changes.', 'warning');
+                }
+            } else {
+                showPortStatus('Error: ' + data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            showPortStatus('Error: ' + error.message, 'danger');
+        });
+    });
+    
+    // Show a status message for the server URL form
+    function showStatus(message, type) {
+        statusAlert.classList.remove('d-none', 'alert-info', 'alert-success', 'alert-danger', 'alert-warning');
+        statusAlert.classList.add('alert-' + type);
+        statusMessage.innerHTML = message;
+    }
+    
+    // Show a status message for the port config form
+    function showPortStatus(message, type) {
+        portStatusAlert.classList.remove('d-none', 'alert-info', 'alert-success', 'alert-danger', 'alert-warning');
+        portStatusAlert.classList.add('alert-' + type);
+        portStatusMessage.innerHTML = message;
+    }
+});
+</script>
+{% endblock %}

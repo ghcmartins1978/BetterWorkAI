@@ -1849,6 +1849,12 @@ def server_url_manager():
                           current_port=current_port,
                           mock_helper_port=mock_helper_port or env_mock_port or "17402")
 
+@app.route('/simple-server-config')
+def simple_server_config():
+    """Simple Server Configuration page"""
+    server_url = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400')
+    return render_template('simple_server_manager.html', server_url=server_url)
+
 
 @app.route('/api/update-server-url', methods=['POST'])
 def update_server_url():
@@ -1978,12 +1984,13 @@ def update_port_config():
                 'message': 'Port numbers must be valid integers'
             })
         
-        # Check if ports are the same
-        if helper_port == mock_helper_port:
-            return jsonify({
-                'status': 'error',
-                'message': 'Helper port and mock helper port cannot be the same'
-            })
+        # In some cases, both ports can be the same (especially for testing)
+        # Allow same ports for helper and mock helper
+        # if helper_port == mock_helper_port:
+        #     return jsonify({
+        #         'status': 'error',
+        #         'message': 'Helper port and mock helper port cannot be the same'
+        #     })
             
         result = {
             'status': 'success',

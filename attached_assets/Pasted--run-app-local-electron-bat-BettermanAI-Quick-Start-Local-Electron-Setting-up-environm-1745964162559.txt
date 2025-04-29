@@ -1,0 +1,199 @@
+>run_app_local_electron.bat
+=== BettermanAI Quick Start (Local Electron) ===
+
+Setting up environment...
+Cleaning up any existing processes...
+ÔêÜ Environment variables set
+
+=== Starting BettermanAI ===
+
+If this is your first time running the app:
+  1. Make sure you've installed dependencies using: install_dependencies.bat
+  2. Install Electron locally using: install_electron.bat
+
+Press Ctrl+C to stop the application when done
+
+Waiting for Flask server to start...
+Waiting for mock helper to start...
+Starting Electron...
+
+18:58:05.526 > App starting...
+18:58:05.588 > App ready
+18:58:05.589 > Starting Flask server...
+18:58:05.636 > Starting Rust helper...
+18:58:05.638 > Using mock helper in development mode
+18:58:05.648 > Creating main window...
+18:58:05.760 > Creating tray icon...
+18:58:05.947 > Mock helper stdout: Successfully loaded Express and CORS modules from local installation
+
+18:58:05.952 > Mock helper stdout: Port 17402 is in use, trying port 17403...
+
+18:58:05.954 > Mock helper stdout: Mock Rust helper server running at http://localhost:17403
+
+18:58:05.956 > Detected mock helper running on port 17403, updating environment
+18:58:05.957 > Mock helper stdout: Wrote actual port 17403 to C:\Users\ghcma\BetterWorkAI\data\mock_helper_port.txt
+
+18:58:07.764 > Loading URL: http://localhost:5000
+18:58:07.977 > Flask stderr: INFO:electron_detection:Running in Electron: True
+
+18:58:07.985 > Flask stderr: INFO:electron_detection:Running in Electron: True
+INFO:electron_detection:Configuring application for Electron environment
+
+18:58:07.986 > Flask stderr: INFO:__main__:Application configured for Electron environment
+
+18:58:07.988 > Flask stderr: INFO:database:Initializing database
+
+18:58:08.015 > Flask stderr: INFO:database:Database initialization complete
+INFO:database:Checking database schema for updates...
+
+18:58:08.016 > Flask stderr: DEBUG:database:Database connection checked out from pool
+DEBUG:database:Database connection checked out from pool
+DEBUG:database:Database connection checked out from pool
+DEBUG:database:Database connection checked out from pool
+DEBUG:database:Database connection checked out from pool
+DEBUG:database:Database connection checked out from pool
+
+18:58:08.019 > Flask stderr: INFO:database:Database schema update complete
+INFO:database:Starting async database writer
+INFO:database:Database writer worker loop started
+DEBUG:database:Database connection checked out from pool
+INFO:__main__:Calling seed_demo_data()
+
+18:58:08.023 > Flask stderr: INFO:__main__:seed_demo_data() call completed
+
+18:58:08.078 > Flask stderr: DEBUG:__main__:CSRF exempted: /api/jobs/<int:job_id>/result
+DEBUG:__main__:CSRF exempted: /api/jobs/<int:job_id>/toggle
+DEBUG:__main__:CSRF exempted: /api/jobs/<int:job_id>/run-now
+DEBUG:__main__:CSRF exempted: /api/update_settings
+DEBUG:__main__:CSRF exempted: /api/update-server-url
+DEBUG:__main__:CSRF exempted: /api/update-port-config
+DEBUG:__main__:CSRF exempted: /api/check-port-status
+DEBUG:__main__:CSRF exempted: /api/check-port-files
+DEBUG:__main__:CSRF exempted: /api/audio/start_capture
+DEBUG:__main__:CSRF exempted: /api/audio/stop_capture
+DEBUG:__main__:CSRF exempted: /api/audio/transcribe
+DEBUG:__main__:CSRF exempted: /api/settings/openai_api_key
+DEBUG:__main__:CSRF exempted: /api/webcam/start_capture
+
+18:58:08.080 > Flask stderr: DEBUG:__main__:CSRF exempted: /api/webcam/stop_capture
+DEBUG:__main__:CSRF exempted: /api/webcam/frame
+DEBUG:__main__:CSRF exempted: /api/webcam/snapshot
+DEBUG:__main__:CSRF exempted: /api/webcam/detect_faces
+DEBUG:__main__:CSRF exempted: /api/stats
+DEBUG:__main__:CSRF exempted: /api/test_connection
+DEBUG:__main__:CSRF exempted: /api/context
+DEBUG:__main__:CSRF exempted: /api/monitoring/start
+DEBUG:__main__:CSRF exempted: /api/monitoring/stop
+DEBUG:__main__:CSRF exempted: /api/events
+DEBUG:__main__:CSRF exempted: /api/automation/macros
+DEBUG:__main__:CSRF exempted: /api/automation/macros/<macro_id>
+DEBUG:__main__:CSRF exempted: /api/automation/macros
+DEBUG:__main__:CSRF exempted: /api/automation/macros/<macro_id>
+DEBUG:__main__:CSRF exempted: /api/automation/macros/<macro_id>/execute
+DEBUG:__main__:CSRF exempted: /api/automation/macros/<macro_id>/status
+DEBUG:__main__:CSRF exempted: /api/automation/macros/<macro_id>/stop
+DEBUG:__main__:CSRF exempted: /api/automation/logs/<path:log_path>
+DEBUG:__main__:CSRF exempted: /api/logs
+DEBUG:__main__:CSRF exempted: /healthz
+DEBUG:__main__:CSRF exempted: /api/automation/sample
+DEBUG:__main__:CSRF exempted: /api/automation/yaml-compile
+DEBUG:__main__:CSRF exempted: /api/automation/macros/<macro_id>/export
+DEBUG:__main__:CSRF exempted: /api/automation/macros/import
+DEBUG:__main__:CSRF exempted: /api/automation/macros/<macro_id>/detect-variables
+DEBUG:__main__:CSRF exempted: /api/automation/macros/<macro_id>/register-variables
+DEBUG:__main__:CSRF exempted: /api/automation/macros/<macro_id>/variables
+DEBUG:__main__:CSRF exempted: /api/automation/variables/<variable_id>
+DEBUG:__main__:CSRF exempted: /api/metrics
+DEBUG:__main__:CSRF exempted: /api/kpi-metrics
+DEBUG:__main__:CSRF exempted: /api/metrics/macros
+
+18:58:08.105 > Flask stderr: DEBUG:database:Database connection checked out from pool
+
+18:58:08.114 > Flask stdout:  * Serving Flask app 'main'
+ * Debug mode: on
+
+18:58:08.157 > Flask stderr: INFO:werkzeug:WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.0.47:5000
+INFO:werkzeug:Press CTRL+C to quit
+
+18:58:08.161 > Flask stderr: INFO:werkzeug: * Restarting with stat
+
+18:58:10.654 > Flask stderr: INFO:electron_detection:Running in Electron: True
+
+18:58:10.660 > Flask stderr: INFO:electron_detection:Running in Electron: True
+INFO:electron_detection:Configuring application for Electron environment
+
+18:58:10.661 > Flask stderr: INFO:__main__:Application configured for Electron environment
+
+18:58:10.662 > Flask stderr: INFO:database:Initializing database
+
+18:58:10.685 > Flask stderr: INFO:database:Database initialization complete
+INFO:database:Checking database schema for updates...
+
+18:58:10.686 > Flask stderr: DEBUG:database:Database connection checked out from pool
+DEBUG:database:Database connection checked out from pool
+DEBUG:database:Database connection checked out from pool
+DEBUG:database:Database connection checked out from pool
+DEBUG:database:Database connection checked out from pool
+DEBUG:database:Database connection checked out from pool
+
+18:58:10.688 > Flask stderr: INFO:database:Database schema update complete
+INFO:database:Starting async database writer
+INFO:database:Database writer worker loop started
+DEBUG:database:Database connection checked out from pool
+
+18:58:10.690 > Flask stderr: INFO:__main__:Calling seed_demo_data()
+
+18:58:10.693 > Flask stderr: INFO:__main__:seed_demo_data() call completed
+
+18:58:10.743 > Flask stderr: DEBUG:__main__:CSRF exempted: /api/jobs/<int:job_id>/result
+DEBUG:__main__:CSRF exempted: /api/jobs/<int:job_id>/toggle
+DEBUG:__main__:CSRF exempted: /api/jobs/<int:job_id>/run-now
+DEBUG:__main__:CSRF exempted: /api/update_settings
+
+18:58:10.744 > Flask stderr: DEBUG:__main__:CSRF exempted: /api/update-server-url
+DEBUG:__main__:CSRF exempted: /api/update-port-config
+DEBUG:__main__:CSRF exempted: /api/check-port-status
+DEBUG:__main__:CSRF exempted: /api/check-port-files
+DEBUG:__main__:CSRF exempted: /api/audio/start_capture
+DEBUG:__main__:CSRF exempted: /api/audio/stop_capture
+DEBUG:__main__:CSRF exempted: /api/audio/transcribe
+DEBUG:__main__:CSRF exempted: /api/settings/openai_api_key
+DEBUG:__main__:CSRF exempted: /api/webcam/start_capture
+DEBUG:__main__:CSRF exempted: /api/webcam/stop_capture
+DEBUG:__main__:CSRF exempted: /api/webcam/frame
+DEBUG:__main__:CSRF exempted: /api/webcam/snapshot
+DEBUG:__main__:CSRF exempted: /api/webcam/detect_faces
+DEBUG:__main__:CSRF exempted: /api/stats
+DEBUG:__main__:CSRF exempted: /api/test_connection
+DEBUG:__main__:CSRF exempted: /api/context
+DEBUG:__main__:CSRF exempted: /api/monitoring/start
+DEBUG:__main__:CSRF exempted: /api/monitoring/stop
+DEBUG:__main__:CSRF exempted: /api/events
+DEBUG:__main__:CSRF exempted: /api/automation/macros
+DEBUG:__main__:CSRF exempted: /api/automation/macros/<macro_id>
+DEBUG:__main__:CSRF exempted: /api/automation/macros
+DEBUG:__main__:CSRF exempted: /api/automation/macros/<macro_id>
+DEBUG:__main__:CSRF exempted: /api/automation/macros/<macro_id>/execute
+DEBUG:__main__:CSRF exempted: /api/automation/macros/<macro_id>/status
+DEBUG:__main__:CSRF exempted: /api/automation/macros/<macro_id>/stop
+DEBUG:__main__:CSRF exempted: /api/automation/logs/<path:log_path>
+DEBUG:__main__:CSRF exempted: /api/logs
+DEBUG:__main__:CSRF exempted: /healthz
+DEBUG:__main__:CSRF exempted: /api/automation/sample
+DEBUG:__main__:CSRF exempted: /api/automation/yaml-compile
+DEBUG:__main__:CSRF exempted: /api/automation/macros/<macro_id>/export
+DEBUG:__main__:CSRF exempted: /api/automation/macros/import
+DEBUG:__main__:CSRF exempted: /api/automation/macros/<macro_id>/detect-variables
+DEBUG:__main__:CSRF exempted: /api/automation/macros/<macro_id>/register-variables
+DEBUG:__main__:CSRF exempted: /api/automation/macros/<macro_id>/variables
+DEBUG:__main__:CSRF exempted: /api/automation/variables/<variable_id>
+DEBUG:__main__:CSRF exempted: /api/metrics
+DEBUG:__main__:CSRF exempted: /api/kpi-metrics
+DEBUG:__main__:CSRF exempted: /api/metrics/macros
+
+18:58:10.745 > Flask stderr: DEBUG:database:Database connection checked out from pool
+
+18:58:10.772 > Flask stderr: WARNING:werkzeug: * Debugger is active!

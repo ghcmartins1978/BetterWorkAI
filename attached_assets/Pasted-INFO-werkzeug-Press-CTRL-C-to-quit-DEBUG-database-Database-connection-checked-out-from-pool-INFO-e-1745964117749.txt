@@ -1,0 +1,61 @@
+INFO:werkzeug:Press CTRL+C to quit
+DEBUG:database:Database connection checked out from pool
+INFO:electron_detection:Running in Electron: True
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:08] "GET / HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:08] "GET /static/css/style.css HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:08] "GET /static/css/electron.css HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:08] "GET /static/js/electron-navigation.js HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:08] "GET /static/js/kpi-cards.js HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:08] "GET /static/js/script.js HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:08] "GET /static/js/sidebar.js HTTP/1.1" 200 -
+DEBUG:database:Database connection created
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:09] "GET /healthz HTTP/1.1" 200 -
+DEBUG:database:Database connection created
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:09] "GET /api/kpi-metrics HTTP/1.1" 200 -
+INFO:monitor_controller:Monitor controller initialized with Rust helper URL: http://127.0.0.1:17400
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+ERROR:monitor_controller:Failed to connect to Rust helper: HTTPConnectionPool(host='127.0.0.1', port=17400): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x00000225C7B97190>: Failed to establish a new connection: [WinError 10061] Nenhuma conexão pôde ser feita porque a máquina de destino as recusou ativamente'))
+INFO:electron_detection:Running in Electron: True
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:22] "GET /monitor HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:22] "GET /static/css/electron.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:22] "GET /static/js/electron-navigation.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:22] "GET /static/css/style.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:22] "GET /static/js/script.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:22] "GET /static/js/sidebar.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:22] "GET /static/js/kpi-cards.js HTTP/1.1" 304 -
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:23] "GET /healthz HTTP/1.1" 200 -
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:23] "GET /api/kpi-metrics HTTP/1.1" 200 -
+INFO:monitor_controller:Monitor controller initialized with Rust helper URL: http://127.0.0.1:17400
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+ERROR:monitor_controller:Failed to start monitoring: HTTPConnectionPool(host='127.0.0.1', port=17400): Max retries exceeded with url: /api/monitoring (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x00000225C7BA16D0>: Failed to establish a new connection: [WinError 10061] Nenhuma conexão pôde ser feita porque a máquina de destino as recusou ativamente'))
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:26] "POST /api/monitoring/start HTTP/1.1" 200 -
+DEBUG:database:Database connection checked out from pool
+INFO:electron_detection:Running in Electron: True
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:39] "GET /settings HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:39] "GET /static/css/style.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:39] "GET /static/css/electron.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:39] "GET /static/js/settings.js HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:39] "GET /static/js/electron-navigation.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:39] "GET /static/js/script.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:39] "GET /static/js/sidebar.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:39] "GET /static/js/kpi-cards.js HTTP/1.1" 304 -
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:40] "GET /healthz HTTP/1.1" 200 -
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:40] "GET /api/kpi-metrics HTTP/1.1" 200 -
+INFO:flask_wtf.csrf:The CSRF token is missing.
+INFO:electron_detection:Running in Electron: True
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:52] "POST /settings/update HTTP/1.1" 400 -
+INFO:flask_wtf.csrf:The CSRF token is missing.
+INFO:flask_wtf.csrf:The CSRF token is missing.
+INFO:flask_wtf.csrf:The CSRF token is missing.
+INFO:electron_detection:Running in Electron: True
+INFO:electron_detection:Running in Electron: True
+INFO:flask_wtf.csrf:The CSRF token is missing.
+INFO:electron_detection:Running in Electron: True
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:53] "POST /settings/update HTTP/1.1" 400 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 18:58:53] "POST /settings/update HTTP/1.1" 400 -

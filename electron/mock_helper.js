@@ -185,6 +185,23 @@ function startServer(initialPort) {
         console.log(`Mock Rust helper server running at http://localhost:${port}`);
         // Store the port we're actually using (ensure it's a string for environment variable)
         process.env.MOCK_HELPER_PORT = port.toString();
+        
+        // Write the port to a file so the main app can find it
+        const fs = require('fs');
+        const path = require('path');
+        try {
+            const dataDir = path.join(__dirname, '..', 'data');
+            // Make sure the data directory exists
+            if (!fs.existsSync(dataDir)) {
+                fs.mkdirSync(dataDir, { recursive: true });
+                console.log(`Created data directory at ${dataDir}`);
+            }
+            const portFilePath = path.join(dataDir, 'mock_helper_port.txt');
+            fs.writeFileSync(portFilePath, port.toString(), 'utf8');
+            console.log(`Wrote actual port ${port} to ${portFilePath}`);
+        } catch (err) {
+            console.error(`Failed to write port to file: ${err.message}`);
+        }
       })
       .on('error', (err) => {
         if (err.code === 'EADDRINUSE' && retryCount < maxRetries) {

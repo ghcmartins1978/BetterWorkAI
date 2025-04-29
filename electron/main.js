@@ -117,7 +117,25 @@ function startRustHelper() {
         });
         
         rustHelper.stdout.on('data', (data) => {
-            log.info(`Mock helper stdout: ${data}`);
+            const dataStr = data.toString();
+            log.info(`Mock helper stdout: ${dataStr}`);
+            
+            // Check if this message contains port information
+            if (dataStr.includes('Mock Rust helper server running at http://localhost:')) {
+                try {
+                    // Extract the port number
+                    const portMatch = dataStr.match(/http:\/\/localhost:(\d+)/);
+                    if (portMatch && portMatch[1]) {
+                        const actualPort = portMatch[1];
+                        log.info(`Detected mock helper running on port ${actualPort}, updating environment`);
+                        
+                        // Update the environment variable for Flask
+                        process.env.AUTOMATION_SERVER_URL = `http://127.0.0.1:${actualPort}`;
+                    }
+                } catch (err) {
+                    log.error(`Error parsing port from mock helper output: ${err}`);
+                }
+            }
         });
         
         rustHelper.stderr.on('data', (data) => {

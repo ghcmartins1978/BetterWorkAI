@@ -8,14 +8,46 @@ import time
 # It translates local automation calls to API requests to the local Rust helper service
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-
-# The helper URL should be provided as an environment variable
-RUST_HELPER_URL = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17402')
 
 # Check if we're in development mode
 IS_DEVELOPMENT = os.environ.get('NODE_ENV') == 'development' or os.environ.get('REPLIT') is not None
+
+# The helper URL should be provided as an environment variable or read from a file
+def get_helper_url():
+    # First check the environment variable
+    url = os.environ.get('AUTOMATION_SERVER_URL')
+    if url:
+        return url
+        
+    # Next, try to read from the port file if in development mode
+    if IS_DEVELOPMENT:
+        try:
+            # Try multiple possible locations for the port file
+            possible_paths = [
+                os.path.join(os.path.dirname(__file__), 'data', 'mock_helper_port.txt'),
+                os.path.join(os.path.dirname(__file__), '..', 'data', 'mock_helper_port.txt'),
+                os.path.join('data', 'mock_helper_port.txt'),
+                'mock_helper_port.txt'
+            ]
+            
+            for port_file_path in possible_paths:
+                if os.path.exists(port_file_path):
+                    with open(port_file_path, 'r') as f:
+                        port = f.read().strip()
+                        if port:
+                            logger.info(f"Found mock helper port in file: {port} (path: {port_file_path})")
+                            return f"http://127.0.0.1:{port}"
+            
+            logger.warning("Mock helper port file not found in any of the expected locations")
+        except Exception as e:
+            logger.warning(f"Error reading mock helper port file: {e}")
+    
+    # Default fallback
+    return 'http://127.0.0.1:17402'
+
+RUST_HELPER_URL = get_helper_url()
 
 class AutomationClient:
     """
@@ -61,7 +93,7 @@ class AutomationClient:
         # that might be in environment variables
         if IS_DEVELOPMENT and "ngrok" in self.server_url:
             logger.info("Development mode detected with ngrok URL - using local mock helper instead")
-            self.server_url = "http://127.0.0.1:17402"
+            self.server_url = get_helper_url()
             
         # Wait a bit to allow the helper to start
         connection_attempts = 0

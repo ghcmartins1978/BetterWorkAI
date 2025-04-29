@@ -1948,6 +1948,230 @@ def update_server_url():
             'message': f'Error: {str(e)}'
         })
 
+@app.route('/api/update-port-config', methods=['POST'])
+def update_port_config():
+    """API endpoint to update port configuration for the application"""
+    try:
+        data = request.json
+        helper_port = data.get('helper_port', '')
+        mock_helper_port = data.get('mock_helper_port', '')
+        
+        if not helper_port or not mock_helper_port:
+            return jsonify({
+                'status': 'error',
+                'message': 'Both helper port and mock helper port must be provided'
+            })
+        
+        # Validate port numbers
+        try:
+            helper_port = int(helper_port)
+            mock_helper_port = int(mock_helper_port)
+            
+            if helper_port < 1024 or helper_port > 65535 or mock_helper_port < 1024 or mock_helper_port > 65535:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Port numbers must be between 1024 and 65535'
+                })
+        except ValueError:
+            return jsonify({
+                'status': 'error',
+                'message': 'Port numbers must be valid integers'
+            })
+        
+        # Check if ports are the same
+        if helper_port == mock_helper_port:
+            return jsonify({
+                'status': 'error',
+                'message': 'Helper port and mock helper port cannot be the same'
+            })
+            
+        result = {
+            'status': 'success',
+            'message': 'Port configuration updated successfully',
+            'restart_required': False,
+            'updated_files': []
+        }
+        
+        # Update server URL based on helper port
+        current_url = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400')
+        url_parts = current_url.split(':')
+        if len(url_parts) >= 3:
+            new_url = f"{url_parts[0]}:{url_parts[1]}:{helper_port}"
+            os.environ['AUTOMATION_SERVER_URL'] = new_url
+            settings.set_setting('automation_server_url', new_url)
+            result['updated_files'].append({
+                'name': 'Server URL',
+                'old_value': current_url,
+                'new_value': new_url
+            })
+        
+        # Set mock helper port in environment
+        os.environ['MOCK_HELPER_PORT'] = str(mock_helper_port)
+        result['updated_files'].append({
+            'name': 'MOCK_HELPER_PORT',
+            'old_value': os.environ.get('MOCK_HELPER_PORT', '17402'),
+            'new_value': str(mock_helper_port)
+        })
+        
+        # Try to create or update mock_helper_port.txt
+        try:
+            # Check multiple possible locations
+            possible_paths = [
+                os.path.join(os.path.dirname(__file__), 'data', 'mock_helper_port.txt'),
+                os.path.join(os.path.dirname(__file__), '..', 'data', 'mock_helper_port.txt'),
+                os.path.join('data', 'mock_helper_port.txt'),
+                'mock_helper_port.txt'
+            ]
+            
+            # First check if any of these exist
+            port_file_path = None
+            for path in possible_paths:
+                if os.path.exists(path):
+                    port_file_path = path
+                    break
+            
+            # If none exist, create in first path
+            if not port_file_path:
+                # Ensure data directory exists
+                data_dir = os.path.join(os.path.dirname(__file__), 'data')
+                if not os.path.exists(data_dir):
+                    os.makedirs(data_dir)
+                port_file_path = os.path.join(data_dir, 'mock_helper_port.txt')
+            
+            # Write to the file
+            with open(port_file_path, 'w') as f:
+                f.write(str(mock_helper_port))
+                
+            result['updated_files'].append({
+                'name': 'Port File',
+                'path': port_file_path,
+                'value': str(mock_helper_port)
+            })
+            
+            # Indicate restart required
+            result['restart_required'] = True
+            result['message'] += '. Application restart required to apply changes.'
+            
+        except Exception as e:
+            logger.warning(f"Could not update mock helper port file: {e}")
+            result['warnings'] = f"Could not update mock helper port file: {e}"
+        
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error updating port configuration: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Error: {str(e)}'
+        })
+
+@app.route('/api/check-port-status', methods=['POST'])
+def check_port_status():
+    """API endpoint to check if a port is available"""
+    try:
+        import socket
+        data = request.json
+        port = data.get('port', '')
+        
+        if not port:
+            return jsonify({
+                'status': 'error',
+                'message': 'No port provided'
+            })
+        
+        try:
+            port = int(port)
+            if port < 1024 or port > 65535:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Port must be between 1024 and 65535'
+                })
+        except ValueError:
+            return jsonify({
+                'status': 'error',
+                'message': 'Port must be a valid integer'
+            })
+        
+        # Check if port is in use
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        result = sock.connect_ex(('127.0.0.1', port))
+        
+        if result == 0:
+            # Port is in use
+            return jsonify({
+                'status': 'error',
+                'message': f'Port {port} is currently in use',
+                'in_use': True
+            })
+        else:
+            # Port is available
+            return jsonify({
+                'status': 'success',
+                'message': f'Port {port} is available',
+                'in_use': False
+            })
+    except Exception as e:
+        logger.error(f"Error checking port status: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Error: {str(e)}'
+        })
+
+@app.route('/api/check-port-files', methods=['POST'])
+def check_port_files():
+    """API endpoint to check port configuration files"""
+    try:
+        possible_paths = [
+            os.path.join(os.path.dirname(__file__), 'data', 'mock_helper_port.txt'),
+            os.path.join(os.path.dirname(__file__), '..', 'data', 'mock_helper_port.txt'),
+            os.path.join('data', 'mock_helper_port.txt'),
+            'mock_helper_port.txt'
+        ]
+        
+        files = []
+        
+        for path in possible_paths:
+            file_info = {
+                'name': path,
+                'exists': os.path.exists(path),
+                'content': None
+            }
+            
+            if file_info['exists']:
+                try:
+                    with open(path, 'r') as f:
+                        file_info['content'] = f.read().strip()
+                except Exception as e:
+                    file_info['error'] = str(e)
+            
+            files.append(file_info)
+        
+        # Check environment variables
+        env_vars = [
+            {
+                'name': 'AUTOMATION_SERVER_URL',
+                'exists': 'AUTOMATION_SERVER_URL' in os.environ,
+                'content': os.environ.get('AUTOMATION_SERVER_URL', 'Not set')
+            },
+            {
+                'name': 'MOCK_HELPER_PORT',
+                'exists': 'MOCK_HELPER_PORT' in os.environ,
+                'content': os.environ.get('MOCK_HELPER_PORT', 'Not set')
+            }
+        ]
+        
+        return jsonify({
+            'status': 'success',
+            'files': files,
+            'env_vars': env_vars,
+            'message': 'Port configuration files checked successfully'
+        })
+    except Exception as e:
+        logger.error(f"Error checking port files: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Error: {str(e)}'
+        })
+
 @app.route('/audio')
 def audio_settings():
     """Audio settings page"""

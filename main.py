@@ -24,6 +24,17 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "betterman_ai_secret")
 
+# Check if running in Electron and configure accordingly
+try:
+    from electron_detection import is_running_in_electron, configure_for_electron
+    is_electron = is_running_in_electron()
+    if is_electron:
+        configure_for_electron(app)
+        logger.info("Application configured for Electron environment")
+except ImportError:
+    logger.info("Electron detection module not found, running in standard mode")
+    is_electron = False
+
 # Import and register test routes
 from test_route import register_test_routes
 register_test_routes(app)

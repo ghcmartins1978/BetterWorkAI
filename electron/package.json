@@ -1,50 +1,51 @@
 {
-  "name": "betterman-ai",
+  "name": "bettermanai",
+  "productName": "BettermanAI",
   "version": "1.0.0",
   "description": "BettermanAI - Your Personal Workflow Optimizer",
   "main": "main.js",
-  "scripts": {
-    "start": "electron .",
-    "dev": "NODE_ENV=development electron .",
-    "win-dev": "set NODE_ENV=development && electron .",
-    "build": "electron-builder build --mac --win --linux",
-    "build:mac": "electron-builder build --mac",
-    "build:win": "electron-builder build --win",
-    "build:linux": "electron-builder build --linux"
-  },
-  "keywords": [
-    "automation",
-    "workflow",
-    "AI",
-    "productivity"
-  ],
   "author": "BettermanAI Team",
-  "license": "ISC",
+  "license": "Proprietary",
+  "homepage": "https://bettermanai.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bettermanai/bettermanai-app.git"
+  },
+  "scripts": {
+    "dev": "NODE_ENV=development electron .",
+    "win-dev": "set NODE_ENV=development&&electron .",
+    "start": "electron .",
+    "build": "electron-builder --config build-config.js",
+    "build:mac": "electron-builder --mac --config build-config.js",
+    "build:win": "electron-builder --win --config build-config.js",
+    "build:linux": "electron-builder --linux --config build-config.js",
+    "postinstall": "electron-builder install-app-deps"
+  },
   "dependencies": {
-    "concurrently": "^9.1.2",
-    "electron": "^36.0.0",
-    "python-shell": "^5.0.0",
-    "wait-on": "^8.0.3"
+    "electron-log": "^5.1.1",
+    "electron-updater": "^6.2.1"
   },
   "devDependencies": {
-    "electron-builder": "^26.0.12"
+    "electron": "^36.0.0",
+    "electron-builder": "^26.0.12",
+    "electron-builder-notarize": "^1.5.1"
   },
   "build": {
     "appId": "com.bettermanai.app",
     "productName": "BettermanAI",
-    "directories": {
-      "output": "dist"
-    },
+    "copyright": "Copyright © 2025 BettermanAI",
     "files": [
-      "main.js",
-      "preload.js",
-      "package.json",
-      "generated-icon.png",
-      "!node_modules/**/*",
-      "!**/*.db",
-      "!**/venv/**/*",
-      "!**/dist/**/*",
-      "!**/.git/**/*"
+      "**/*",
+      "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+      "!**/node_modules/*.d.ts",
+      "!**/node_modules/.bin",
+      "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
+      "!.editorconfig",
+      "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}",
+      "!**/{__pycache__,thumbs.db,.flowconfig,.idea,.vs,.nyc_output}",
+      "!**/{appveyor.yml,.travis.yml,circle.yml}",
+      "!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}"
     ],
     "extraResources": [
       {
@@ -59,32 +60,65 @@
           "**/*.jpg",
           "templates/**/*",
           "static/**/*",
-          "data/**/*",
-          "!node_modules/**/*",
           "!**/*.db",
-          "!**/venv/**/*",
-          "!**/dist/**/*",
-          "!**/.git/**/*"
-        ]
-      },
-      {
-        "from": "../rust_helper",
-        "to": "rust_helper",
-        "filter": [
-          "betterman_helper*"
+          "!**/__pycache__/**",
+          "!**/venv/**",
+          "!**/dist/**",
+          "!**/.git/**"
         ]
       }
     ],
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
     "mac": {
+      "target": ["dmg", "zip"],
       "category": "public.app-category.productivity",
-      "target": ["dmg", "zip"]
+      "darkModeSupport": true,
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "win": {
-      "target": ["nsis", "portable"]
+      "target": ["nsis", "portable"],
+      "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "linux": {
       "target": ["AppImage", "deb"],
-      "category": "Utility"
-    }
+      "category": "Utility",
+      "synopsis": "BettermanAI - Personal Workflow Optimizer"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "include": "installer.nsh"
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "bettermanai",
+        "repo": "bettermanai-app"
+      }
+    ],
+    "afterSign": "electron-builder-notarize"
   }
 }

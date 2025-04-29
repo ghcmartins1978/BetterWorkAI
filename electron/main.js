@@ -1,196 +1,362 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+/**
+ * BettermanAI Electron Application
+ * 
+ * Main process for the Electron application that packages the Flask web app
+ * and Rust helper together.
+ */
+
+const { app, BrowserWindow, ipcMain, dialog, shell, Menu, Tray } = require('electron');
 const path = require('path');
-const { spawn } = require('child_process');
-const waitOn = require('wait-on');
-const { PythonShell } = require('python-shell');
 const fs = require('fs');
+const { spawn } = require('child_process');
+const { autoUpdater } = require('electron-updater');
+const log = require('electron-log');
 
-// Keep a global reference of the window object to avoid garbage collection
-let mainWindow;
-let flaskProcess;
-let rustHelperProcess;
+// Configure logging
+log.transports.file.level = 'info';
+log.info('App starting...');
 
-// Flask server port
-const FLASK_PORT = 5000;
-const FLASK_URL = `http://localhost:${FLASK_PORT}`;
+// Global references to prevent garbage collection
+let mainWindow = null;
+let tray = null;
+let flaskServer = null;
+let rustHelper = null;
+let shuttingDown = false;
 
-// Rust helper port
-const RUST_HELPER_PORT = 17400;
-const RUST_HELPER_URL = `http://localhost:${RUST_HELPER_PORT}`;
+// Paths and environment variables
+const isDevelopment = process.env.NODE_ENV === 'development';
+const appRoot = path.join(__dirname, '..');
+const pythonScript = path.join(appRoot, 'main.py');
+const pythonInterpreter = isDevelopment ? 'python3' : path.join(process.resourcesPath, 'app', 'python', 'python');
+const rustHelperPath = isDevelopment ? 
+    path.join(appRoot, 'betterman_helper') : 
+    path.join(process.resourcesPath, 'app', 'rust_helper', getHelperExecutableName());
+
+// Get the correct executable name for the platform
+function getHelperExecutableName() {
+    switch(process.platform) {
+        case 'win32':
+            return 'betterman_helper.exe';
+        case 'darwin':
+        case 'linux':
+            return 'betterman_helper';
+        default:
+            return 'betterman_helper';
+    }
+}
+
+// Start the Flask server
+function startFlaskServer() {
+    log.info('Starting Flask server...');
+    
+    // Set environment variables
+    const env = Object.assign({}, process.env, {
+        'RUNNING_IN_ELECTRON': '1',
+        'FLASK_ENV': isDevelopment ? 'development' : 'production',
+        'PYTHONUNBUFFERED': '1'
+    });
+    
+    // Start Flask with Gunicorn in development, or directly in production
+    let args = [];
+    
+    if (isDevelopment) {
+        // In development, use Flask's built-in server
+        args = [pythonScript];
+    } else {
+        // In production, use gunicorn
+        args = ['-m', 'gunicorn', '--bind', '127.0.0.1:5000', 'main:app'];
+    }
+    
+    flaskServer = spawn(pythonInterpreter, args, {
+        cwd: appRoot,
+        env: env
+    });
+    
+    flaskServer.stdout.on('data', (data) => {
+        log.info(`Flask stdout: ${data}`);
+    });
+    
+    flaskServer.stderr.on('data', (data) => {
+        log.error(`Flask stderr: ${data}`);
+    });
+    
+    flaskServer.on('close', (code) => {
+        log.info(`Flask server process exited with code ${code}`);
+        if (!shuttingDown) {
+            // Attempt to restart if not shutting down
+            log.info('Attempting to restart Flask server...');
+            setTimeout(startFlaskServer, 1000);
+        }
+    });
+}
+
+// Start the Rust helper
+function startRustHelper() {
+    log.info('Starting Rust helper...');
+    log.info(`Rust helper path: ${rustHelperPath}`);
+    
+    // Check if Rust helper exists
+    if (!fs.existsSync(rustHelperPath)) {
+        log.error(`Rust helper not found at ${rustHelperPath}`);
+        dialog.showErrorBox(
+            'Error Starting BettermanAI',
+            `Could not find the helper application at ${rustHelperPath}. The application may not function correctly.`
+        );
+        return;
+    }
+    
+    // Make sure the helper is executable (for macOS and Linux)
+    if (process.platform !== 'win32') {
+        try {
+            fs.chmodSync(rustHelperPath, '755');
+        } catch (err) {
+            log.error(`Error making Rust helper executable: ${err}`);
+        }
+    }
+    
+    // Start the helper
+    const env = Object.assign({}, process.env, {
+        'RUST_LOG': isDevelopment ? 'debug' : 'info'
+    });
+    
+    rustHelper = spawn(rustHelperPath, [], {
+        cwd: appRoot,
+        env: env
+    });
+    
+    rustHelper.stdout.on('data', (data) => {
+        log.info(`Rust helper stdout: ${data}`);
+    });
+    
+    rustHelper.stderr.on('data', (data) => {
+        log.error(`Rust helper stderr: ${data}`);
+    });
+    
+    rustHelper.on('close', (code) => {
+        log.info(`Rust helper process exited with code ${code}`);
+        if (!shuttingDown) {
+            // Attempt to restart if not shutting down
+            log.info('Attempting to restart Rust helper...');
+            setTimeout(startRustHelper, 1000);
+        }
+    });
+}
 
 // Create the main application window
-function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    webPreferences: {
-      nodeIntegration: false, // For security
-      contextIsolation: true, // For security
-      preload: path.join(__dirname, 'preload.js') // For secure IPC
-    },
-    icon: path.join(__dirname, 'generated-icon.png')
-  });
-
-  // Load the Flask app URL when ready
-  mainWindow.loadURL(FLASK_URL);
-
-  // Open DevTools in development mode
-  if (process.env.NODE_ENV === 'development') {
-    mainWindow.webContents.openDevTools();
-  }
-
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
+function createMainWindow() {
+    log.info('Creating main window...');
+    
+    const windowConfig = {
+        width: 1200,
+        height: 800,
+        minWidth: 800,
+        minHeight: 600,
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            contextIsolation: true,
+            nodeIntegration: false,
+            spellcheck: true
+        },
+        icon: path.join(appRoot, 'generated-icon.png'),
+        show: false // Don't show the window until it's ready
+    };
+    
+    mainWindow = new BrowserWindow(windowConfig);
+    
+    // Load the Flask app URL
+    const appUrl = isDevelopment ? 
+        'http://localhost:5000' : 
+        'http://127.0.0.1:5000';
+    
+    // Set a timeout to load the app (give Flask time to start)
+    setTimeout(() => {
+        log.info(`Loading URL: ${appUrl}`);
+        mainWindow.loadURL(appUrl);
+    }, 2000);
+    
+    // Show window when ready
+    mainWindow.once('ready-to-show', () => {
+        mainWindow.show();
+    });
+    
+    // Handle window closed
+    mainWindow.on('closed', () => {
+        mainWindow = null;
+    });
+    
+    // Open external links in browser
+    mainWindow.webContents.on('will-navigate', (event, url) => {
+        if (!url.startsWith('http://localhost:5000') && !url.startsWith('http://127.0.0.1:5000')) {
+            event.preventDefault();
+            shell.openExternal(url);
+        }
+    });
+    
+    return mainWindow;
 }
 
-// Start the Flask server as a child process
-function startFlaskServer() {
-  console.log('Starting Flask server...');
-  
-  // Set environment variables for Flask
-  const env = { 
-    ...process.env,
-    FLASK_APP: 'main.py',
-    FLASK_ENV: 'production',
-    DATABASE_URL: process.env.DATABASE_URL || 'sqlite:///data/betterman.db',
-    AUTOMATION_SERVER_URL: RUST_HELPER_URL,
-  };
-
-  // Use python or pythonw depending on platform
-  const pythonExecutable = process.platform === 'win32' ? 'pythonw' : 'python';
-  
-  // Start Flask with gunicorn (or directly with Flask for Windows)
-  if (process.platform === 'win32') {
-    flaskProcess = spawn(pythonExecutable, [
-      '-m', 'flask', 'run', 
-      '--host=127.0.0.1', 
-      `--port=${FLASK_PORT}`
-    ], { env, shell: true });
-  } else {
-    flaskProcess = spawn('gunicorn', [
-      '--bind', `127.0.0.1:${FLASK_PORT}`,
-      '--reuse-port', 
-      '--reload',
-      'main:app'
-    ], { env, shell: true });
-  }
-
-  flaskProcess.stdout.on('data', (data) => {
-    console.log(`Flask: ${data}`);
-  });
-
-  flaskProcess.stderr.on('data', (data) => {
-    console.error(`Flask error: ${data}`);
-  });
-
-  flaskProcess.on('close', (code) => {
-    console.log(`Flask server process exited with code ${code}`);
-  });
+// Create system tray icon
+function createTray() {
+    log.info('Creating tray icon...');
+    
+    const iconPath = path.join(appRoot, 'generated-icon.png');
+    tray = new Tray(iconPath);
+    
+    const contextMenu = Menu.buildFromTemplate([
+        { 
+            label: 'Open BettermanAI', 
+            click: () => {
+                if (mainWindow) {
+                    mainWindow.show();
+                } else {
+                    createMainWindow();
+                }
+            } 
+        },
+        { type: 'separator' },
+        { 
+            label: 'Check for Updates', 
+            click: () => {
+                autoUpdater.checkForUpdatesAndNotify();
+            } 
+        },
+        { type: 'separator' },
+        { 
+            label: 'Quit', 
+            click: () => {
+                shuttingDown = true;
+                app.quit();
+            }
+        }
+    ]);
+    
+    tray.setToolTip('BettermanAI');
+    tray.setContextMenu(contextMenu);
+    
+    tray.on('click', () => {
+        if (mainWindow) {
+            mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
+        } else {
+            createMainWindow();
+        }
+    });
 }
 
-// Start the Rust helper process
-function startRustHelper() {
-  console.log('Starting Rust helper...');
-  
-  // Get the appropriate binary based on platform
-  let helperPath;
-  
-  if (process.platform === 'win32') {
-    helperPath = path.join(__dirname, 'rust_helper', 'betterman_helper.exe');
-  } else if (process.platform === 'darwin') {
-    helperPath = path.join(__dirname, 'rust_helper', 'betterman_helper');
-  } else {
-    // Linux
-    helperPath = path.join(__dirname, 'rust_helper', 'betterman_helper');
-  }
-  
-  // Check if helper exists
-  if (!fs.existsSync(helperPath)) {
-    console.error(`Rust helper not found at ${helperPath}`);
-    return;
-  }
-  
-  // Make sure the helper is executable on macOS/Linux
-  if (process.platform !== 'win32') {
-    try {
-      fs.chmodSync(helperPath, '755');
-    } catch (err) {
-      console.error(`Failed to make helper executable: ${err}`);
+// Check for updates
+function checkForUpdates() {
+    if (!isDevelopment) {
+        log.info('Checking for updates...');
+        autoUpdater.checkForUpdatesAndNotify();
     }
-  }
-  
-  // Start the helper
-  rustHelperProcess = spawn(helperPath, [], { shell: true });
-  
-  rustHelperProcess.stdout.on('data', (data) => {
-    console.log(`Rust helper: ${data}`);
-  });
-  
-  rustHelperProcess.stderr.on('data', (data) => {
-    console.error(`Rust helper error: ${data}`);
-  });
-  
-  rustHelperProcess.on('close', (code) => {
-    console.log(`Rust helper process exited with code ${code}`);
-  });
 }
 
-// Quit when all windows are closed
+// Handle auto-updater events
+autoUpdater.on('checking-for-update', () => {
+    log.info('Checking for update...');
+});
+
+autoUpdater.on('update-available', (info) => {
+    log.info('Update available:', info);
+    dialog.showMessageBox({
+        type: 'info',
+        title: 'Update Available',
+        message: 'A new version of BettermanAI is available. It will be downloaded in the background and installed when you restart the application.',
+        buttons: ['OK']
+    });
+});
+
+autoUpdater.on('update-not-available', () => {
+    log.info('Update not available');
+});
+
+autoUpdater.on('error', (err) => {
+    log.error('Error in auto-updater:', err);
+});
+
+autoUpdater.on('download-progress', (progressObj) => {
+    let log_message = `Download speed: ${progressObj.bytesPerSecond}`;
+    log_message = `${log_message} - Downloaded ${progressObj.percent}%`;
+    log_message = `${log_message} (${progressObj.transferred}/${progressObj.total})`;
+    log.info(log_message);
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+    log.info('Update downloaded:', info);
+    dialog.showMessageBox({
+        type: 'info',
+        title: 'Update Ready',
+        message: 'A new version of BettermanAI has been downloaded. Restart the application to apply the updates.',
+        buttons: ['Restart', 'Later']
+    }).then((returnValue) => {
+        if (returnValue.response === 0) {
+            autoUpdater.quitAndInstall();
+        }
+    });
+});
+
+// App event handlers
+app.on('ready', () => {
+    log.info('App ready');
+    
+    // Start the Flask server and Rust helper
+    startFlaskServer();
+    startRustHelper();
+    
+    // Create the main window
+    createMainWindow();
+    
+    // Create system tray icon
+    createTray();
+    
+    // Check for updates
+    setTimeout(checkForUpdates, 5000);
+});
+
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+    log.info('All windows closed');
+    if (process.platform !== 'darwin') {
+        app.quit();
+    }
 });
 
 app.on('activate', () => {
-  if (mainWindow === null) {
-    createWindow();
-  }
-});
-
-// Initialize the app
-app.on('ready', async () => {
-  // Start the Flask server
-  startFlaskServer();
-  
-  // Start the Rust helper
-  startRustHelper();
-  
-  // Wait for the Flask server to be available
-  try {
-    await waitOn({ resources: [FLASK_URL], timeout: 30000 });
-    console.log('Flask server is running');
-    createWindow();
-  } catch (err) {
-    console.error('Flask server failed to start:', err);
-    app.quit();
-  }
-});
-
-// Clean up processes when app is closing
-app.on('will-quit', () => {
-  console.log('Cleaning up processes...');
-  
-  if (flaskProcess) {
-    console.log('Terminating Flask server...');
-    if (process.platform === 'win32') {
-      spawn('taskkill', ['/pid', flaskProcess.pid, '/f', '/t']);
-    } else {
-      flaskProcess.kill('SIGTERM');
+    log.info('App activated');
+    if (mainWindow === null) {
+        createMainWindow();
     }
-  }
-  
-  if (rustHelperProcess) {
-    console.log('Terminating Rust helper...');
-    if (process.platform === 'win32') {
-      spawn('taskkill', ['/pid', rustHelperProcess.pid, '/f', '/t']);
-    } else {
-      rustHelperProcess.kill('SIGTERM');
-    }
-  }
 });
 
-// IPC handlers for communication between renderer and main process
-ipcMain.handle('get-app-path', () => app.getAppPath());
-ipcMain.handle('get-platform', () => process.platform);
+app.on('before-quit', () => {
+    log.info('App before-quit');
+    shuttingDown = true;
+    
+    // Kill child processes
+    if (flaskServer) {
+        log.info('Killing Flask server...');
+        flaskServer.kill();
+    }
+    
+    if (rustHelper) {
+        log.info('Killing Rust helper...');
+        rustHelper.kill();
+    }
+});
+
+// IPC handlers
+ipcMain.handle('get-version', () => {
+    return app.getVersion();
+});
+
+ipcMain.handle('get-app-path', () => {
+    return app.getAppPath();
+});
+
+ipcMain.handle('show-open-dialog', async (event, options) => {
+    const result = await dialog.showOpenDialog(options);
+    return result.filePaths;
+});
+
+ipcMain.handle('show-save-dialog', async (event, options) => {
+    const result = await dialog.showSaveDialog(options);
+    return result.filePath;
+});

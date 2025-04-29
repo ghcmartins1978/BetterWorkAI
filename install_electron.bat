@@ -20,8 +20,8 @@ if not exist package.json (
   echo Created package.json
 )
 
-echo Installing Electron locally...
-npm install --save electron cross-env
+echo Installing Electron and required dependencies...
+npm install --save electron electron-updater electron-builder electron-log cross-env
 if %ERRORLEVEL% NEQ 0 (
   echo Failed to install Electron. Please make sure npm is installed and working.
   pause

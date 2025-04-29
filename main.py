@@ -1336,6 +1336,13 @@ def new_macro():
                               error_message="Unable to connect to the database. Please try again later.",
                               back_link=url_for('macros'))
 
+@app.route('/macro-editor')
+def macro_editor():
+    """Macro editor hub page that lists all macros and provides new macro creation"""
+    # Get all macros
+    macros = db_session.query(Macro).order_by(Macro.creation_time.desc()).all()
+    return render_template('macro_editor.html', macros=macros, active_page='macro-editor')
+
 @app.route('/macro/<int:macro_id>/edit')
 def edit_macro(macro_id):
     """Edit a macro"""

@@ -88,8 +88,8 @@ class AutomationClient:
         if server_url:
             self.server_url = server_url
         else:
-            # Directly use RUST_HELPER_URL which is set to the correct local URL
-            self.server_url = RUST_HELPER_URL
+            # Directly use HELPER_URL which is set to the correct local URL
+            self.server_url = HELPER_URL
         
         if not self.server_url:
             logger.warning("No helper URL provided. Remote automation will not work.")

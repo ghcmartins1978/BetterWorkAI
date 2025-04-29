@@ -11,11 +11,11 @@ logger = logging.getLogger(__name__)
 
 class MonitorController:
     """
-    Controls monitoring on the local Rust helper
+    Controls monitoring on the local helper (Rust or Python implementation)
     """
     
     def __init__(self, server_url=None):
-        """Initialize the monitor controller for the Rust helper"""
+        """Initialize the monitor controller for the helper"""
         # Force using the default URL to avoid the problematic environment variable
         if server_url:
             self.server_url = server_url
@@ -45,10 +45,10 @@ class MonitorController:
             except Exception as e:
                 logger.warning(f"Error reading mock helper port file, using default: {e}")
                 self.server_url = 'http://127.0.0.1:17403'
-        logger.info(f"Monitor controller initialized with Rust helper URL: {self.server_url}")
+        logger.info(f"Monitor controller initialized with helper URL: {self.server_url}")
     
     def is_connected(self):
-        """Check if we can connect to the Rust helper's REST API"""
+        """Check if we can connect to the helper's REST API"""
         if not self.server_url:
             return False
             
@@ -56,13 +56,13 @@ class MonitorController:
             response = requests.get(f"{self.server_url}/api/status", timeout=3)
             return response.status_code == 200
         except Exception as e:
-            logger.error(f"Failed to connect to Rust helper: {e}")
+            logger.error(f"Failed to connect to helper: {e}")
             return False
     
     def get_status(self):
         """Get the current status of the monitoring"""
         if not self.server_url:
-            return {'monitoring': False, 'error': 'No Rust helper URL provided'}
+            return {'monitoring': False, 'error': 'No helper URL provided'}
             
         try:
             response = requests.get(f"{self.server_url}/api/status", timeout=3)

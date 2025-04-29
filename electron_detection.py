@@ -46,7 +46,12 @@ def configure_for_electron(app):
     
     # Use SQLite by default in Electron
     if 'DATABASE_URL' not in os.environ:
-        db_path = os.path.join(os.getcwd(), 'data', 'betterman.db')
+        # Make sure the data directory exists
+        data_dir = os.path.join(os.getcwd(), 'data')
+        if not os.path.exists(data_dir):
+            os.makedirs(data_dir)
+            
+        db_path = os.path.join(data_dir, 'betterman.db')
         os.environ['DATABASE_URL'] = f"sqlite:///{db_path}"
         logger.info(f"Setting SQLite database path: {db_path}")
     

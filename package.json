@@ -15,8 +15,10 @@
   "description": "",
   "dependencies": {
     "concurrently": "^9.1.2",
+    "cors": "^2.8.5",
     "electron": "^36.0.0",
     "electron-builder": "^26.0.12",
+    "express": "^5.1.0",
     "python-shell": "^5.0.0",
     "wait-on": "^8.0.3"
   }

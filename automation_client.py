@@ -61,7 +61,7 @@ def get_helper_url():
     logger.info(f"Using default helper URL: http://127.0.0.1:{RUST_HELPER_DEFAULT_PORT}")
     return f'http://127.0.0.1:{RUST_HELPER_DEFAULT_PORT}'
 
-RUST_HELPER_URL = get_helper_url()
+HELPER_URL = get_helper_url()
 
 class AutomationClient:
     """
@@ -137,7 +137,7 @@ class AutomationClient:
                     logger.info(f"Helper not ready, waiting 2 seconds (attempt {connection_attempts}/{max_attempts})")
                     time.sleep(2)
             except Exception as e:
-                logger.error(f"Failed to connect to Rust helper: {e}")
+                logger.error(f"Failed to connect to helper: {e}")
                 connection_attempts += 1
                 if connection_attempts < max_attempts:
                     logger.info(f"Connection error, waiting 2 seconds (attempt {connection_attempts}/{max_attempts})")
@@ -208,8 +208,8 @@ class AutomationClient:
     def mouse_click(self, x, y, button='left', clicks=1):
         """Click at the specified position"""
         if not self.server_url:
-            logger.warning("Cannot click mouse: No Rust helper URL")
-            return {'status': 'error', 'message': 'No Rust helper URL provided'}
+            logger.warning("Cannot click mouse: No helper URL")
+            return {'status': 'error', 'message': 'No helper URL provided'}
             
         # In development mode, return mock success
         if IS_DEVELOPMENT:
@@ -233,8 +233,8 @@ class AutomationClient:
     def keyboard_type(self, text):
         """Type the specified text"""
         if not self.server_url:
-            logger.warning("Cannot type text: No Rust helper URL")
-            return {'status': 'error', 'message': 'No Rust helper URL provided'}
+            logger.warning("Cannot type text: No helper URL")
+            return {'status': 'error', 'message': 'No helper URL provided'}
             
         # In development mode, return mock success
         if IS_DEVELOPMENT:
@@ -257,8 +257,8 @@ class AutomationClient:
     def keyboard_press(self, key):
         """Press a single key"""
         if not self.server_url:
-            logger.warning("Cannot press key: No Rust helper URL")
-            return {'status': 'error', 'message': 'No Rust helper URL provided'}
+            logger.warning("Cannot press key: No helper URL")
+            return {'status': 'error', 'message': 'No helper URL provided'}
             
         # In development mode, return mock success
         if IS_DEVELOPMENT:
@@ -281,8 +281,8 @@ class AutomationClient:
     def keyboard_hotkey(self, *keys):
         """Press a hotkey combination (multiple keys)"""
         if not self.server_url:
-            logger.warning("Cannot press hotkey: No Rust helper URL")
-            return {'status': 'error', 'message': 'No Rust helper URL provided'}
+            logger.warning("Cannot press hotkey: No helper URL")
+            return {'status': 'error', 'message': 'No helper URL provided'}
             
         # In development mode, return mock success
         if IS_DEVELOPMENT:
@@ -308,7 +308,7 @@ class AutomationClient:
     def get_window_list(self):
         """Get a list of all window titles"""
         if not self.server_url:
-            logger.warning("Cannot get window list: No Rust helper URL")
+            logger.warning("Cannot get window list: No helper URL")
             return []
             
         # In development mode, return mock window list
@@ -361,8 +361,8 @@ class AutomationClient:
     def focus_window(self, title):
         """Focus a window by its title"""
         if not self.server_url:
-            logger.warning("Cannot focus window: No Rust helper URL")
-            return {'status': 'error', 'message': 'No Rust helper URL provided'}
+            logger.warning("Cannot focus window: No helper URL")
+            return {'status': 'error', 'message': 'No helper URL provided'}
             
         # In development mode, return mock success
         if IS_DEVELOPMENT:

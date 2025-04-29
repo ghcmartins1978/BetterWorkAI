@@ -1,0 +1,90 @@
+{
+  "name": "betterman-ai",
+  "version": "1.0.0",
+  "description": "BettermanAI - Your Personal Workflow Optimizer",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "NODE_ENV=development electron .",
+    "win-dev": "set NODE_ENV=development && electron .",
+    "build": "electron-builder build --mac --win --linux",
+    "build:mac": "electron-builder build --mac",
+    "build:win": "electron-builder build --win",
+    "build:linux": "electron-builder build --linux"
+  },
+  "keywords": [
+    "automation",
+    "workflow",
+    "AI",
+    "productivity"
+  ],
+  "author": "BettermanAI Team",
+  "license": "ISC",
+  "dependencies": {
+    "concurrently": "^9.1.2",
+    "electron": "^36.0.0",
+    "python-shell": "^5.0.0",
+    "wait-on": "^8.0.3"
+  },
+  "devDependencies": {
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.bettermanai.app",
+    "productName": "BettermanAI",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json",
+      "generated-icon.png",
+      "!node_modules/**/*",
+      "!**/*.db",
+      "!**/venv/**/*",
+      "!**/dist/**/*",
+      "!**/.git/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "..",
+        "to": "app",
+        "filter": [
+          "**/*.py",
+          "**/*.html",
+          "**/*.css",
+          "**/*.js",
+          "**/*.png",
+          "**/*.jpg",
+          "templates/**/*",
+          "static/**/*",
+          "data/**/*",
+          "!node_modules/**/*",
+          "!**/*.db",
+          "!**/venv/**/*",
+          "!**/dist/**/*",
+          "!**/.git/**/*"
+        ]
+      },
+      {
+        "from": "../rust_helper",
+        "to": "rust_helper",
+        "filter": [
+          "betterman_helper*"
+        ]
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": ["dmg", "zip"]
+    },
+    "win": {
+      "target": ["nsis", "portable"]
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Utility"
+    }
+  }
+}

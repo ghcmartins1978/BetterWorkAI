@@ -21,31 +21,39 @@ def get_helper_url():
     if url:
         return url
         
-    # Next, try to read from the port file if in development mode
-    if IS_DEVELOPMENT:
-        try:
-            # Try multiple possible locations for the port file
-            possible_paths = [
-                os.path.join(os.path.dirname(__file__), 'data', 'mock_helper_port.txt'),
-                os.path.join(os.path.dirname(__file__), '..', 'data', 'mock_helper_port.txt'),
-                os.path.join('data', 'mock_helper_port.txt'),
-                'mock_helper_port.txt'
-            ]
-            
-            for port_file_path in possible_paths:
-                if os.path.exists(port_file_path):
-                    with open(port_file_path, 'r') as f:
-                        port = f.read().strip()
-                        if port:
-                            logger.info(f"Found mock helper port in file: {port} (path: {port_file_path})")
-                            return f"http://127.0.0.1:{port}"
-            
-            logger.warning("Mock helper port file not found in any of the expected locations")
-        except Exception as e:
-            logger.warning(f"Error reading mock helper port file: {e}")
+    # Try to find the Rust helper port file
+    try:
+        # Try multiple possible locations for the port file
+        possible_paths = [
+            # Rust helper port files
+            os.path.join(os.path.dirname(__file__), 'data', 'rust_helper_port.txt'),
+            os.path.join(os.path.dirname(__file__), '..', 'data', 'rust_helper_port.txt'),
+            os.path.join('data', 'rust_helper_port.txt'),
+            'rust_helper_port.txt',
+            os.path.join(os.path.dirname(__file__), 'data', 'helper_port.txt'),
+            # Fallback to mock helper port files if in development mode
+            os.path.join(os.path.dirname(__file__), 'data', 'mock_helper_port.txt'),
+            os.path.join(os.path.dirname(__file__), '..', 'data', 'mock_helper_port.txt'),
+            os.path.join('data', 'mock_helper_port.txt'),
+            'mock_helper_port.txt'
+        ]
+        
+        for port_file_path in possible_paths:
+            if os.path.exists(port_file_path):
+                with open(port_file_path, 'r') as f:
+                    port = f.read().strip()
+                    if port:
+                        is_rust = "rust" in port_file_path or "helper_port" in port_file_path
+                        helper_type = "Rust" if is_rust else "mock"
+                        logger.info(f"Found {helper_type} helper port in file: {port} (path: {port_file_path})")
+                        return f"http://127.0.0.1:{port}"
+        
+        logger.warning("Helper port file not found in any of the expected locations")
+    except Exception as e:
+        logger.warning(f"Error reading helper port file: {e}")
     
-    # Default fallback
-    return 'http://127.0.0.1:17403'
+    # Default fallback - prefer the Rust helper port
+    return 'http://127.0.0.1:17400'
 
 RUST_HELPER_URL = get_helper_url()
 

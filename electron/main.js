@@ -94,112 +94,123 @@ function startFlaskServer() {
 function startRustHelper() {
     log.info('Starting Rust helper...');
     
-    // In development mode, use the mock helper
+    // Use the Rust helper in all modes
+    // Check for the rust helper binary in development mode
+    let helperBinaryPath = '';
+    
     if (isDevelopment) {
-        log.info('Using mock helper in development mode');
-        const mockHelperPath = path.join(__dirname, 'mock_helper.js');
+        // Look in several possible locations for the helper binary
+        const possiblePaths = [
+            path.join(appRoot, 'electron', 'rust_helper', getHelperExecutableName()),
+            path.join(appRoot, 'rust_helper', 'target', 'release', getHelperExecutableName()),
+            path.join(__dirname, 'rust_helper', getHelperExecutableName()),
+            rustHelperPath
+        ];
         
-        if (!fs.existsSync(mockHelperPath)) {
-            log.error(`Mock helper not found at ${mockHelperPath}`);
-            dialog.showErrorBox(
-                'Error Starting BettermanAI',
-                `Could not find the mock helper at ${mockHelperPath}. The application may not function correctly.`
-            );
-            return;
+        for (const tryPath of possiblePaths) {
+            if (fs.existsSync(tryPath)) {
+                helperBinaryPath = tryPath;
+                log.info(`Found Rust helper at ${helperBinaryPath}`);
+                break;
+            }
         }
         
-        // Start the mock helper
-        const env = Object.assign({}, process.env);
-        
-        rustHelper = spawn('node', [mockHelperPath], {
-            cwd: appRoot,
-            env: env
-        });
-        
-        rustHelper.stdout.on('data', (data) => {
-            const dataStr = data.toString();
-            log.info(`Mock helper stdout: ${dataStr}`);
-            
-            // Check if this message contains port information
-            if (dataStr.includes('Mock Rust helper server running at http://localhost:')) {
-                try {
-                    // Extract the port number
-                    const portMatch = dataStr.match(/http:\/\/localhost:(\d+)/);
-                    if (portMatch && portMatch[1]) {
-                        const actualPort = portMatch[1];
-                        log.info(`Detected mock helper running on port ${actualPort}, updating environment`);
-                        
-                        // Update the environment variable for Flask
-                        process.env.AUTOMATION_SERVER_URL = `http://127.0.0.1:${actualPort}`;
+        // If not found, use the Python implementation as fallback
+        if (!helperBinaryPath) {
+            const pyHelperPath = path.join(appRoot, 'rust_helper.py');
+            if (fs.existsSync(pyHelperPath)) {
+                log.info(`Using Python helper implementation at ${pyHelperPath}`);
+                
+                // Start the Python implementation 
+                const env = Object.assign({}, process.env);
+                
+                rustHelper = spawn('python', [pyHelperPath], {
+                    cwd: appRoot,
+                    env: env
+                });
+                
+                rustHelper.stdout.on('data', (data) => {
+                    const dataStr = data.toString();
+                    log.info(`Python helper stdout: ${dataStr}`);
+                });
+                
+                rustHelper.stderr.on('data', (data) => {
+                    log.error(`Python helper stderr: ${data}`);
+                });
+                
+                rustHelper.on('close', (code) => {
+                    log.info(`Python helper process exited with code ${code}`);
+                    if (!shuttingDown) {
+                        log.info('Attempting to restart Python helper...');
+                        setTimeout(startRustHelper, 1000);
                     }
-                } catch (err) {
-                    log.error(`Error parsing port from mock helper output: ${err}`);
-                }
+                });
+                
+                // Set the automation server URL environment variable
+                process.env.AUTOMATION_SERVER_URL = 'http://127.0.0.1:17400';
+                return;
             }
-        });
-        
-        rustHelper.stderr.on('data', (data) => {
-            log.error(`Mock helper stderr: ${data}`);
-        });
-        
-        rustHelper.on('close', (code) => {
-            log.info(`Mock helper process exited with code ${code}`);
-            if (!shuttingDown) {
-                // Attempt to restart if not shutting down
-                log.info('Attempting to restart mock helper...');
-                setTimeout(startRustHelper, 1000);
-            }
-        });
-    } else {
-        // Use the real Rust helper in production
-        log.info(`Rust helper path: ${rustHelperPath}`);
-        
-        // Check if Rust helper exists
-        if (!fs.existsSync(rustHelperPath)) {
-            log.error(`Rust helper not found at ${rustHelperPath}`);
+            
+            // If no helper implementation found, show error
+            log.error('No Rust helper or Python fallback found');
             dialog.showErrorBox(
                 'Error Starting BettermanAI',
-                `Could not find the helper application at ${rustHelperPath}. The application may not function correctly.`
+                'Could not find the helper application. The application may not function correctly.'
             );
             return;
         }
-        
-        // Make sure the helper is executable (for macOS and Linux)
-        if (process.platform !== 'win32') {
-            try {
-                fs.chmodSync(rustHelperPath, '755');
-            } catch (err) {
-                log.error(`Error making Rust helper executable: ${err}`);
-            }
-        }
-        
-        // Start the helper
-        const env = Object.assign({}, process.env, {
-            'RUST_LOG': isDevelopment ? 'debug' : 'info'
-        });
-        
-        rustHelper = spawn(rustHelperPath, [], {
-            cwd: appRoot,
-            env: env
-        });
-        
-        rustHelper.stdout.on('data', (data) => {
-            log.info(`Rust helper stdout: ${data}`);
-        });
-        
-        rustHelper.stderr.on('data', (data) => {
-            log.error(`Rust helper stderr: ${data}`);
-        });
-        
-        rustHelper.on('close', (code) => {
-            log.info(`Rust helper process exited with code ${code}`);
-            if (!shuttingDown) {
-                // Attempt to restart if not shutting down
-                log.info('Attempting to restart Rust helper...');
-                setTimeout(startRustHelper, 1000);
-            }
-        });
+    } else {
+        // In production mode, use the path defined above
+        helperBinaryPath = rustHelperPath;
     }
+    
+    log.info(`Using Rust helper at: ${helperBinaryPath}`);
+    
+    // Check if Rust helper exists
+    if (!fs.existsSync(helperBinaryPath)) {
+        log.error(`Rust helper not found at ${helperBinaryPath}`);
+        dialog.showErrorBox(
+            'Error Starting BettermanAI',
+            `Could not find the helper application at ${helperBinaryPath}. The application may not function correctly.`
+        );
+        return;
+    }
+    
+    // Make sure the helper is executable (for macOS and Linux)
+    if (process.platform !== 'win32') {
+        try {
+            fs.chmodSync(helperBinaryPath, '755');
+        } catch (err) {
+            log.error(`Error making Rust helper executable: ${err}`);
+        }
+    }
+    
+    // Start the helper
+    const env = Object.assign({}, process.env, {
+        'RUST_LOG': isDevelopment ? 'debug' : 'info'
+    });
+    
+    rustHelper = spawn(helperBinaryPath, [], {
+        cwd: appRoot,
+        env: env
+    });
+    
+    rustHelper.stdout.on('data', (data) => {
+        log.info(`Rust helper stdout: ${data}`);
+    });
+    
+    rustHelper.stderr.on('data', (data) => {
+        log.error(`Rust helper stderr: ${data}`);
+    });
+    
+    rustHelper.on('close', (code) => {
+        log.info(`Rust helper process exited with code ${code}`);
+        if (!shuttingDown) {
+            // Attempt to restart if not shutting down
+            log.info('Attempting to restart Rust helper...');
+            setTimeout(startRustHelper, 1000);
+        }
+    });
 }
 
 // Create the main application window

@@ -8,7 +8,7 @@ controller = MonitorController()
 
 # Check if we can connect
 if controller.is_connected():
-    print("Successfully connected to Rust helper!")
+    print("Successfully connected to Helper!")
     
     # Get current status
     status = controller.get_status()
@@ -47,6 +47,6 @@ if controller.is_connected():
     else:
         print(f"Failed to start monitoring: {result.get('error', 'Unknown error')}")
 else:
-    print("Failed to connect to Rust helper.")
-    print("Make sure the local Rust helper is running and the URL is correct.")
+    print("Failed to connect to Helper.")
+    print("Make sure the local Helper is running and the URL is correct.")
     print(f"Current helper URL: {controller.server_url}")

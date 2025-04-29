@@ -22,10 +22,10 @@ class TestPatternGenerator:
     def __init__(self, server_url=None):
         self.server_url = server_url or os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400')
         if not self.server_url:
-            logger.warning("No Rust helper URL provided.")
+            logger.warning("No Helper URL provided.")
     
     def is_connected(self):
-        """Check if we can connect to the Rust helper"""
+        """Check if we can connect to the Helper"""
         if not self.server_url:
             return False
             
@@ -33,7 +33,7 @@ class TestPatternGenerator:
             response = requests.get(f"{self.server_url}/api/status", timeout=3)
             return response.status_code == 200
         except Exception as e:
-            logger.error(f"Failed to connect to Rust helper: {e}")
+            logger.error(f"Failed to connect to Helper: {e}")
             return False
             
     def start_monitoring(self):

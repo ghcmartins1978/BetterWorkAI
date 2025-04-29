@@ -55,7 +55,7 @@ def configure_for_electron(app):
         os.environ['DATABASE_URL'] = f"sqlite:///{db_path}"
         logger.info(f"Setting SQLite database path: {db_path}")
     
-    # Set Rust helper URL for local connection
+    # Set Helper URL for local connection
     if 'AUTOMATION_SERVER_URL' not in os.environ:
         os.environ['AUTOMATION_SERVER_URL'] = 'http://127.0.0.1:17400'
     

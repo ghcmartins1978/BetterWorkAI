@@ -37,7 +37,7 @@ class TestPatternGenerator:
             return False
             
     def start_monitoring(self):
-        """Start monitoring on the Rust helper"""
+        """Start monitoring on the Helper"""
         if not self.server_url:
             return False
             

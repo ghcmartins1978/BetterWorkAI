@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 IS_DEVELOPMENT = os.environ.get('NODE_ENV') == 'development' or os.environ.get('REPLIT') is not None
 
 # Default helper ports
-RUST_HELPER_DEFAULT_PORT = 17400  # Default port for the Rust helper
-PYTHON_HELPER_DEFAULT_PORT = 17400  # Default port for the Python helper (same as Rust)
+HELPER_DEFAULT_PORT = 17400  # Default port for the Helper
+PYTHON_HELPER_DEFAULT_PORT = 17400  # Default port for the Python helper (same as above)
 
 # The helper URL should be provided as an environment variable or read from a file
 def get_helper_url():
@@ -30,12 +30,12 @@ def get_helper_url():
     try:
         # Try multiple possible locations for the port file
         possible_paths = [
-            # Helper port files - prioritize Rust helper
-            os.path.join(os.path.dirname(__file__), 'data', 'rust_helper_port.txt'),
-            os.path.join(os.path.dirname(__file__), '..', 'data', 'rust_helper_port.txt'),
-            os.path.join('data', 'rust_helper_port.txt'),
-            'rust_helper_port.txt',
+            # Helper port files - prioritize primary helper
             os.path.join(os.path.dirname(__file__), 'data', 'helper_port.txt'),
+            os.path.join(os.path.dirname(__file__), '..', 'data', 'helper_port.txt'),
+            os.path.join('data', 'helper_port.txt'),
+            'helper_port.txt',
+            os.path.join(os.path.dirname(__file__), 'data', 'rust_helper_port.txt'),  # Legacy name
             # Only use mock helper as a last resort
             os.path.join(os.path.dirname(__file__), 'data', 'mock_helper_port.txt'),
             os.path.join(os.path.dirname(__file__), '..', 'data', 'mock_helper_port.txt'),
@@ -48,8 +48,8 @@ def get_helper_url():
                 with open(port_file_path, 'r') as f:
                     port = f.read().strip()
                     if port:
-                        is_rust = "rust" in port_file_path or "helper_port" in port_file_path
-                        helper_type = "Rust/Python" if is_rust else "mock"
+                        is_helper = "helper_port" in port_file_path or "rust" in port_file_path
+                        helper_type = "primary/fallback" if is_helper else "mock"
                         logger.info(f"Found {helper_type} helper port in file: {port} (path: {port_file_path})")
                         return f"http://127.0.0.1:{port}"
         
@@ -57,9 +57,9 @@ def get_helper_url():
     except Exception as e:
         logger.warning(f"Error reading helper port file: {e}")
     
-    # Default fallback - use Rust/Python helper port
-    logger.info(f"Using default helper URL: http://127.0.0.1:{RUST_HELPER_DEFAULT_PORT}")
-    return f'http://127.0.0.1:{RUST_HELPER_DEFAULT_PORT}'
+    # Default fallback - use Helper port
+    logger.info(f"Using default helper URL: http://127.0.0.1:{HELPER_DEFAULT_PORT}")
+    return f'http://127.0.0.1:{HELPER_DEFAULT_PORT}'
 
 HELPER_URL = get_helper_url()
 
@@ -69,8 +69,8 @@ class AutomationClient:
     control mouse, keyboard, and window actions on the user's computer
     by sending requests to either:
     
-    1. The Rust helper's Actix-Web API running on 127.0.0.1:17400, or
-    2. The Python fallback helper running on 127.0.0.1:17400
+    1. The primary Helper (Rust implementation) running on 127.0.0.1:17400, or
+    2. The Python fallback Helper running on 127.0.0.1:17400
     
     The helper provides system-level automation capabilities through a REST API.
     Both implementations provide the same API interface, so they can be used

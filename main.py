@@ -1367,13 +1367,16 @@ def statistics():
     
     # Get event type distribution
     event_types = {}
-    event_type_results = db_session.query(Event.type, db_session.func.count(Event.id)).group_by(Event.type).all()
+    # Import func directly from sqlalchemy
+    from sqlalchemy import func
+    event_type_results = db_session.query(Event.type, func.count(Event.id)).group_by(Event.type).all()
     for event_type, count in event_type_results:
         event_types[event_type] = count
     
     # Get pattern status distribution
     pattern_status = {}
-    pattern_status_results = db_session.query(Pattern.status, db_session.func.count(Pattern.id)).group_by(Pattern.status).all()
+    # Using the already imported func from sqlalchemy
+    pattern_status_results = db_session.query(Pattern.status, func.count(Pattern.id)).group_by(Pattern.status).all()
     for status, count in pattern_status_results:
         pattern_status[status] = count
     

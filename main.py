@@ -1611,7 +1611,7 @@ def update_settings():
 
 @app.route('/test_connection')
 def test_connection():
-    """Test connection to Rust helper"""
+    """Test connection to helper"""
     from automation_client import AutomationClient
     import requests
     
@@ -1641,7 +1641,7 @@ def test_connection():
         else:
             return jsonify({
                 'connected': False,
-                'error': 'Failed to connect to Rust helper'
+                'error': 'Failed to connect to helper'
             })
     except Exception as e:
         return jsonify({

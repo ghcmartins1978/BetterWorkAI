@@ -47,7 +47,7 @@ class EventListener:
         self.running = False
         
     def _fetch_events(self):
-        """Fetch events from the Rust helper"""
+        """Fetch events from the helper"""
         if not self.monitor_controller.is_connected():
             logger.warning("Cannot fetch events: Monitor controller not connected")
             return []
@@ -84,7 +84,7 @@ class EventListener:
                     
                 self.last_check_time = now
                 
-                # Fetch events from Rust helper
+                # Fetch events from helper
                 events = self._fetch_events()
                 
                 if events:

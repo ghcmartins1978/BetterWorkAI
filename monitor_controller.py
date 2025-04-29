@@ -75,9 +75,9 @@ class MonitorController:
             return {'monitoring': False, 'error': str(e)}
     
     def start_monitoring(self):
-        """Start monitoring on the Rust helper"""
+        """Start monitoring on the helper"""
         if not self.server_url:
-            return {'success': False, 'error': 'No Rust helper URL provided'}
+            return {'success': False, 'error': 'No helper URL provided'}
             
         try:
             response = requests.post(
@@ -95,9 +95,9 @@ class MonitorController:
             return {'success': False, 'error': str(e)}
     
     def stop_monitoring(self):
-        """Stop monitoring on the Rust helper"""
+        """Stop monitoring on the helper"""
         if not self.server_url:
-            return {'success': False, 'error': 'No Rust helper URL provided'}
+            return {'success': False, 'error': 'No helper URL provided'}
             
         try:
             response = requests.post(
@@ -115,7 +115,7 @@ class MonitorController:
             return {'success': False, 'error': str(e)}
     
     def get_events(self, count=100, event_type=None):
-        """Get events from the Rust helper"""
+        """Get events from the helper"""
         if not self.server_url:
             return []
             

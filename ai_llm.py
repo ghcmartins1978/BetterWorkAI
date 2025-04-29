@@ -34,10 +34,15 @@ class AILLMHelper:
         self.client = None
         
         if self.api_key:
-            self.client = OpenAI(api_key=self.api_key)
-            logger.info("OpenAI client initialized")
+            try:
+                self.client = OpenAI(api_key=self.api_key)
+                logger.info("OpenAI client initialized")
+            except Exception as e:
+                logger.error(f"Error initializing OpenAI client: {e}")
+                self.client = None
         else:
-            logger.warning("OpenAI API key not available")
+            # Just log an info message instead of a warning to reduce log noise
+            logger.info("OpenAI API key not available - AI features will be disabled")
             
     def is_available(self) -> bool:
         """Check if OpenAI API is available"""

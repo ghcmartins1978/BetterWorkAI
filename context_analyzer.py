@@ -15,6 +15,55 @@ logger = logging.getLogger(__name__)
 _context_cache = {}
 _last_cache_update = 0
 
+class ContextAnalyzer:
+    """
+    Class for analyzing application context to enhance automation
+    """
+    
+    def __init__(self, settings):
+        """
+        Initialize the context analyzer
+        
+        Args:
+            settings: Application settings object
+        """
+        self.settings = settings
+        logger.debug("ContextAnalyzer initialized")
+        
+    def get_current_context(self) -> Dict[str, Any]:
+        """
+        Get the current context from all sources
+        
+        Returns:
+            Dictionary containing all context data
+        """
+        return get_current_context()
+        
+    def summarize_context(self, context_data: Dict[str, Any]) -> str:
+        """
+        Create a human-readable summary of the context data
+        
+        Args:
+            context_data: Dictionary containing context data
+            
+        Returns:
+            String with summarized context information
+        """
+        return summarize_context(context_data)
+        
+    def enrich_macro_with_context(self, macro_id: int) -> Dict[str, Any]:
+        """
+        Add context information to a macro
+        
+        Args:
+            macro_id: ID of the macro to enrich
+            
+        Returns:
+            Dictionary with enrichment results
+        """
+        context_data = self.get_current_context()
+        return enrich_macro_with_context(macro_id, context_data)
+
 def get_current_context(refresh: bool = False, cache_lifetime_seconds: int = 10) -> Dict[str, Any]:
     """
     Get the current context from all enabled context enrichers

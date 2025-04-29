@@ -36,7 +36,8 @@ try {
 }
 
 const app = express();
-const port = process.env.MOCK_HELPER_PORT || 17402; // Use environment variable or default to 17402
+// Ensure port is always treated as a number
+const port = parseInt(process.env.MOCK_HELPER_PORT || "17402");
 
 // Enable CORS
 app.use(cors());
@@ -77,6 +78,20 @@ app.get('/api/events', (req, res) => {
 app.post('/api/start-monitoring', (req, res) => {
   state.isMonitoring = true;
   res.json({ success: true, message: 'Monitoring started' });
+});
+
+app.post('/api/monitoring', (req, res) => {
+  // Support both start and stop operations
+  const action = req.body?.action || 'start';
+  if (action === 'start') {
+    state.isMonitoring = true;
+    res.json({ success: true, message: 'Monitoring started' });
+  } else if (action === 'stop') {
+    state.isMonitoring = false;
+    res.json({ success: true, message: 'Monitoring stopped' });
+  } else {
+    res.status(400).json({ success: false, message: 'Invalid action' });
+  }
 });
 
 app.post('/api/stop-monitoring', (req, res) => {
@@ -168,15 +183,17 @@ function startServer(initialPort) {
     const server = app.listen(port)
       .on('listening', () => {
         console.log(`Mock Rust helper server running at http://localhost:${port}`);
-        // Store the port we're actually using
-        process.env.MOCK_HELPER_PORT = port;
+        // Store the port we're actually using (ensure it's a string for environment variable)
+        process.env.MOCK_HELPER_PORT = port.toString();
       })
       .on('error', (err) => {
         if (err.code === 'EADDRINUSE' && retryCount < maxRetries) {
-          console.log(`Port ${port} is in use, trying port ${port + 1}...`);
+          // Convert to number to ensure proper addition
+          const nextPort = parseInt(port) + 1;
+          console.log(`Port ${port} is in use, trying port ${nextPort}...`);
           server.close();
           // Try the next port
-          tryPort(port + 1, retryCount + 1);
+          tryPort(nextPort, retryCount + 1);
         } else if (retryCount >= maxRetries) {
           console.error(`Failed to find an available port after ${maxRetries} attempts.`);
           process.exit(1);

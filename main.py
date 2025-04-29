@@ -1971,13 +1971,13 @@ def update_server_url():
                 })
             else:
                 tests.append({
-                    'name': 'Rust Helper API Connectivity',
+                    'name': 'Helper API Connectivity',
                     'status': 'failed',
                     'message': f'Helper returned status code {status_response.status_code}'
                 })
         except Exception as e:
             tests.append({
-                'name': 'Rust Helper API Connectivity',
+                'name': 'Helper API Connectivity',
                 'status': 'failed',
                 'message': f'Failed to connect: {str(e)}'
             })
@@ -1989,19 +1989,19 @@ def update_server_url():
             window_list = client.get_window_list()
             if isinstance(window_list, list):
                 tests.append({
-                    'name': 'Rust Helper Window API',
+                    'name': 'Helper Window API',
                     'status': 'success',
                     'message': f'Retrieved window list with {len(window_list)} windows'
                 })
             else:
                 tests.append({
-                    'name': 'Rust Helper Window API',
+                    'name': 'Helper Window API',
                     'status': 'failed',
                     'message': 'Failed to get window list'
                 })
         except Exception as e:
             tests.append({
-                'name': 'Rust Helper Window API',
+                'name': 'Helper Window API',
                 'status': 'failed',
                 'message': f'Error getting window list: {str(e)}'
             })
@@ -2022,13 +2022,13 @@ def update_server_url():
             
             return jsonify({
                 'status': 'success',
-                'message': 'Successfully connected to the Rust Helper API',
+                'message': 'Successfully connected to the Helper API',
                 'tests': tests
             })
         else:
             return jsonify({
                 'status': 'error',
-                'message': 'Failed to connect to the Rust Helper API',
+                'message': 'Failed to connect to the Helper API',
                 'tests': tests
             })
     except Exception as e:

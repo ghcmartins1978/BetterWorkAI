@@ -40,36 +40,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const fixPortsButton = document.getElementById('fix-ports-button');
     const statusMessage = document.getElementById('status-message');
     
-    fixPortsButton.addEventListener('click', function() {
-        // Update the status message
-        showStatus('Applying direct port fix...', 'info');
-        
-        // First update the server URL
-        fetch('/api/direct-port-fix', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                showStatus(data.message, 'success');
-                
-                // Show restart information if needed
-                if (data.restart_required) {
-                    const message = statusMessage.innerHTML + '<hr><p>Application restart required to apply all changes. Please restart your application now.</p>';
-                    showStatusHTML(message, 'warning');
-                }
-            } else {
-                showStatus('Error: ' + data.message, 'danger');
-            }
-        })
-        .catch(error => {
-            showStatus('Error: ' + error.message, 'danger');
-        });
-    });
-    
     // Helper function to show status messages
     function showStatus(message, type) {
         statusMessage.textContent = message;
@@ -80,6 +50,39 @@ document.addEventListener('DOMContentLoaded', function() {
         statusMessage.innerHTML = html;
         statusMessage.className = 'alert alert-' + type;
     }
+    
+    fixPortsButton.addEventListener('click', function() {
+        // Update the status message
+        showStatus('Applying direct port fix...', 'info');
+        
+        // First update the server URL
+        fetch('/api/direct-port-fix', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({})
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            if (data.status === 'success') {
+                showStatus(data.message, 'success');
+                
+                // Show restart information if needed
+                if (data.restart_required) {
+                    var message = statusMessage.innerHTML + '<hr><p>Application restart required to apply all changes. Please restart your application now.</p>';
+                    showStatusHTML(message, 'warning');
+                }
+            } else {
+                showStatus('Error: ' + data.message, 'danger');
+            }
+        })
+        .catch(function(error) {
+            showStatus('Error: ' + error.message, 'danger');
+        });
+    });
 });
 </script>
 {% endblock %}

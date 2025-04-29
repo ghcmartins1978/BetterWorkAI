@@ -93,7 +93,17 @@ def utility_processor():
                 
         return executions_data
     
-    return dict(get_recent_executions=get_recent_executions)
+    # Add flag to templates indicating if we're running in Electron
+    try:
+        from electron_detection import is_running_in_electron
+        is_electron = is_running_in_electron()
+    except ImportError:
+        is_electron = False
+    
+    return dict(
+        get_recent_executions=get_recent_executions,
+        is_electron=is_electron
+    )
 
 # Initialize database
 init_db()
@@ -1654,6 +1664,13 @@ def about():
 def privacy():
     """Privacy information"""
     return render_template('privacy.html')
+
+@app.route('/electron-info')
+def electron_info():
+    """Electron application information"""
+    import sys
+    python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    return render_template('electron_info.html', python_version=python_version)
 
 
 @app.route('/context-test')

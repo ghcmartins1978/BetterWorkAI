@@ -8,7 +8,18 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% if is_electron %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/electron.css') }}">
+    {% endif %}
     {% block head %}{% endblock %}
+    <script>
+        // Detect if running in Electron
+        const isElectron = typeof window !== 'undefined' && typeof window.process === 'object' && window.process.type === 'renderer';
+        if (isElectron) {
+            document.documentElement.classList.add('electron-app');
+            document.documentElement.classList.add(`platform-${window.electron.platform}`);
+        }
+    </script>
 </head>
 <body>
     <!-- Top Navigation Bar -->

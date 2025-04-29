@@ -1,0 +1,152 @@
+/**
+ * BettermanAI Electron-specific CSS
+ * 
+ * This file contains styles specific to the Electron app version
+ * It's loaded only when running inside the Electron wrapper
+ */
+
+/* Added to body when running in Electron */
+body.electron-app {
+    /* Custom scrollbar styling */
+    scrollbar-width: thin;
+    scrollbar-color: var(--bs-dark) var(--bs-secondary);
+}
+
+/* Electron-specific scrollbar styling for WebKit (Chrome) */
+body.electron-app::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+body.electron-app::-webkit-scrollbar-track {
+    background: var(--bs-secondary);
+    border-radius: 4px;
+}
+
+body.electron-app::-webkit-scrollbar-thumb {
+    background-color: var(--bs-dark);
+    border-radius: 4px;
+}
+
+/* Platform-specific adjustments */
+body.electron-app.platform-darwin {
+    /* macOS spacing adjustments */
+    padding-top: 3px; /* Traffic lights offset */
+}
+
+body.electron-app.platform-win32 {
+    /* Windows adjustments */
+}
+
+body.electron-app.platform-linux {
+    /* Linux adjustments */
+}
+
+/* Adjust app navigation for desktop context */
+body.electron-app .navbar {
+    -webkit-app-region: drag; /* Allows dragging the window by the navbar */
+}
+
+body.electron-app .navbar button,
+body.electron-app .navbar a,
+body.electron-app .navbar input,
+body.electron-app .navbar .dropdown-toggle {
+    -webkit-app-region: no-drag; /* Don't drag interactive elements */
+}
+
+/* Electron-specific button improvements for better desktop feel */
+body.electron-app button {
+    outline: none !important;
+}
+
+body.electron-app button:focus {
+    box-shadow: 0 0 0 0.2rem rgba(0, 196, 255, 0.25);
+}
+
+/* Remove web-specific elements when running in Electron */
+body.electron-app .web-only {
+    display: none !important;
+}
+
+/* Show Electron-specific elements when running in Electron */
+.electron-only {
+    display: none;
+}
+
+body.electron-app .electron-only {
+    display: block;
+}
+
+body.electron-app .electron-only.inline {
+    display: inline;
+}
+
+body.electron-app .electron-only.inline-block {
+    display: inline-block;
+}
+
+body.electron-app .electron-only.flex {
+    display: flex;
+}
+
+/* Improve focus states for keyboard navigation in desktop context */
+body.electron-app a:focus,
+body.electron-app button:focus,
+body.electron-app input:focus,
+body.electron-app select:focus,
+body.electron-app textarea:focus {
+    outline: 2px solid #00C4FF;
+    outline-offset: 2px;
+}
+
+/* Native application feel for modals in Electron */
+body.electron-app .modal-content {
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* Desktop-friendly form elements */
+body.electron-app input[type="text"],
+body.electron-app input[type="email"],
+body.electron-app input[type="password"],
+body.electron-app textarea,
+body.electron-app select {
+    padding: 8px 12px;
+}
+
+/* Better tooltips for desktop */
+body.electron-app .tooltip {
+    font-size: 12px;
+}
+
+/* Apply platform-specific font stack */
+body.electron-app.platform-darwin {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+body.electron-app.platform-win32 {
+    font-family: "Segoe UI", Tahoma, sans-serif;
+}
+
+body.electron-app.platform-linux {
+    font-family: "Noto Sans", "Ubuntu", "Droid Sans", sans-serif;
+}
+
+/* Ensure consistent touch targets for desktop */
+body.electron-app button,
+body.electron-app .btn,
+body.electron-app .nav-link {
+    min-height: 36px;
+}
+
+/* Improve dropdown menus in desktop context */
+body.electron-app .dropdown-menu {
+    border-radius: 6px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    animation: dropdown-fade 0.15s ease-out;
+}
+
+@keyframes dropdown-fade {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}

@@ -4051,6 +4051,22 @@ def start_monitoring_components():
 # Initialize components dict
 monitoring_components = {}
 
+# Exempt API routes from CSRF protection
+def exempt_api_routes():
+    """Exempt API routes from CSRF protection"""
+    # Get all endpoints defined in the application
+    for rule in app.url_map.iter_rules():
+        # If the route starts with '/api/' or is a health check endpoint or contains 'callback'
+        if rule.rule.startswith('/api/') or rule.endpoint == 'health_check' or 'callback' in rule.rule:
+            # Get the view function
+            view_func = app.view_functions[rule.endpoint]
+            # Exempt it from CSRF protection
+            csrf.exempt(view_func)
+            logger.debug(f"CSRF exempted: {rule.rule}")
+
+# Run CSRF exemptions
+exempt_api_routes()
+
 if __name__ == '__main__':
     try:
         # Initialize default settings

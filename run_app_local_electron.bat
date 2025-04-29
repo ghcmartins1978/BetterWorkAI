@@ -18,8 +18,8 @@ taskkill /f /im "node.exe" /fi "WINDOWTITLE eq Mock*" > nul 2>&1
 set NODE_ENV=development
 set RUNNING_IN_ELECTRON=1
 set DATABASE_URL=sqlite:///%CD%\data\betterman.db
-set AUTOMATION_SERVER_URL=http://127.0.0.1:17402
-set MOCK_HELPER_PORT=17402
+set AUTOMATION_SERVER_URL=http://127.0.0.1:17403
+set MOCK_HELPER_PORT=17403
 set FLASK_APP=main.py
 echo √ Environment variables set
 

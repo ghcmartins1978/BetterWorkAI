@@ -37,7 +37,7 @@ try {
 
 const app = express();
 // Ensure port is always treated as a number
-const port = parseInt(process.env.MOCK_HELPER_PORT || "17402");
+const port = parseInt(process.env.MOCK_HELPER_PORT || "17403");
 
 // Enable CORS
 app.use(cors());

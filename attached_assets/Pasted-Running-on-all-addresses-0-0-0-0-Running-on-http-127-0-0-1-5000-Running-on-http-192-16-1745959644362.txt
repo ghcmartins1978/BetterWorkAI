@@ -1,0 +1,133 @@
+Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.0.47:5000
+INFO:werkzeug:Press CTRL+C to quit
+DEBUG:database:Database connection checked out from pool
+INFO:electron_detection:Running in Electron: True
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:25] "GET / HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:25] "GET /static/css/style.css HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:25] "GET /static/js/sidebar.js HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:25] "GET /static/js/electron-navigation.js HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:25] "GET /static/js/script.js HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:25] "GET /static/css/electron.css HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:26] "GET /static/js/kpi-cards.js HTTP/1.1" 200 -
+DEBUG:database:Database connection created
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:26] "GET /healthz HTTP/1.1" 200 -
+DEBUG:database:Database connection created
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:26] "GET /api/kpi-metrics HTTP/1.1" 200 -
+INFO:monitor_controller:Monitor controller initialized with Rust helper URL: http://127.0.0.1:17400
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/status HTTP/1.1" 200 78
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/status HTTP/1.1" 200 78
+INFO:electron_detection:Running in Electron: True
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:48] "GET /monitor HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:48] "GET /static/css/electron.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:48] "GET /static/js/electron-navigation.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:48] "GET /static/css/style.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:48] "GET /static/js/script.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:48] "GET /static/js/sidebar.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:48] "GET /static/js/kpi-cards.js HTTP/1.1" 304 -
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:48] "GET /healthz HTTP/1.1" 200 -
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:48] "GET /api/kpi-metrics HTTP/1.1" 200 -
+DEBUG:database:Database connection checked out from pool
+INFO:electron_detection:Running in Electron: True
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:53] "GET / HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:53] "GET /static/css/electron.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:53] "GET /static/css/style.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:53] "GET /static/js/electron-navigation.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:53] "GET /static/js/script.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:53] "GET /static/js/sidebar.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:53] "GET /static/js/kpi-cards.js HTTP/1.1" 304 -
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:53] "GET /healthz HTTP/1.1" 200 -
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:43:53] "GET /api/kpi-metrics HTTP/1.1" 200 -
+DEBUG:database:Database connection checked out from pool
+INFO:electron_detection:Running in Electron: True
+ERROR:main:Error rendering events page: 'max' is undefined
+INFO:electron_detection:Running in Electron: True
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:04] "GET /events HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:04] "GET /static/css/electron.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:04] "GET /static/css/style.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:04] "GET /static/js/electron-navigation.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:04] "GET /static/js/script.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:04] "GET /static/js/sidebar.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:04] "GET /static/js/kpi-cards.js HTTP/1.1" 304 -
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:04] "GET /healthz HTTP/1.1" 200 -
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:04] "GET /api/kpi-metrics HTTP/1.1" 200 -
+DEBUG:database:Database connection created
+DEBUG:database:Database connection checked out from pool
+INFO:electron_detection:Running in Electron: True
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:06] "GET /patterns HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:07] "GET /static/css/style.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:07] "GET /static/css/electron.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:07] "GET /static/js/electron-navigation.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:07] "GET /static/js/script.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:07] "GET /static/js/sidebar.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:07] "GET /static/js/kpi-cards.js HTTP/1.1" 304 -
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:07] "GET /healthz HTTP/1.1" 200 -
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:07] "GET /api/kpi-metrics HTTP/1.1" 200 -
+DEBUG:database:Database connection checked out from pool
+INFO:electron_detection:Running in Electron: True
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:16] "GET / HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:17] "GET /static/js/electron-navigation.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:17] "GET /static/css/electron.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:17] "GET /static/css/style.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:17] "GET /static/js/script.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:17] "GET /static/js/sidebar.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:17] "GET /static/js/kpi-cards.js HTTP/1.1" 304 -
+DEBUG:database:Database connection created
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:17] "GET /healthz HTTP/1.1" 200 -
+DEBUG:database:Database connection created
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:17] "GET /api/kpi-metrics HTTP/1.1" 200 -
+INFO:monitor_controller:Monitor controller initialized with Rust helper URL: http://127.0.0.1:17400
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/status HTTP/1.1" 200 78
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/status HTTP/1.1" 200 78
+INFO:electron_detection:Running in Electron: True
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:24] "GET /monitor HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:24] "GET /static/css/electron.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:24] "GET /static/css/style.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:25] "GET /static/js/electron-navigation.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:25] "GET /static/js/script.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:25] "GET /static/js/sidebar.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:25] "GET /static/js/kpi-cards.js HTTP/1.1" 304 -
+DEBUG:database:Database connection checked out from pool
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:25] "GET /healthz HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:25] "GET /api/kpi-metrics HTTP/1.1" 200 -
+INFO:monitor_controller:Monitor controller initialized with Rust helper URL: http://127.0.0.1:17400
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "POST /api/monitoring HTTP/1.1" 404 154
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:43] "POST /api/monitoring/start HTTP/1.1" 200 -
+DEBUG:database:Database connection checked out from pool
+INFO:electron_detection:Running in Electron: True
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:48] "GET / HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:49] "GET /static/css/style.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:49] "GET /static/css/electron.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:49] "GET /static/js/script.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:49] "GET /static/js/electron-navigation.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:49] "GET /static/js/sidebar.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:49] "GET /static/js/kpi-cards.js HTTP/1.1" 304 -
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:49] "GET /healthz HTTP/1.1" 200 -
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:44:49] "GET /api/kpi-metrics HTTP/1.1" 200 -
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:45:19] "GET /api/kpi-metrics HTTP/1.1" 200 -
+DEBUG:database:Database connection checked out from pool
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:45:49] "GET /healthz HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [29/Apr/2025 17:45:49] "GET /api/kpi-metrics HTTP/1.1" 200

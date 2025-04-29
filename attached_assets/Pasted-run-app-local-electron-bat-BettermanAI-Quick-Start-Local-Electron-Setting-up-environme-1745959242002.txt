@@ -1,0 +1,120 @@
+run_app_local_electron.bat
+=== BettermanAI Quick Start (Local Electron) ===
+
+Setting up environment...
+Cleaning up any existing processes...
+ÔêÜ Environment variables set
+
+=== Starting BettermanAI ===
+
+If this is your first time running the app:
+  1. Make sure you've installed dependencies using: install_dependencies.bat
+  2. Install Electron locally using: install_electron.bat
+
+Press Ctrl+C to stop the application when done
+
+Waiting for Flask server to start...
+Waiting for mock helper to start...
+Starting Electron...
+
+17:39:47.938 > App starting...
+17:39:48.003 > App ready
+17:39:48.004 > Starting Flask server...
+17:39:48.117 > Starting Rust helper...
+17:39:48.118 > Using mock helper in development mode
+17:39:48.130 > Creating main window...
+17:39:48.259 > Creating tray icon...
+17:39:48.484 > Mock helper stdout: Successfully loaded Express and CORS modules from local installation
+
+17:39:48.488 > Mock helper stdout: Port 17400 is in use, trying port 17401...
+
+17:39:48.490 > Mock helper stdout: Mock Rust helper server running at http://localhost:17401
+
+17:39:48.718 > Flask stderr: Traceback (most recent call last):
+  File "C:\Users\ghcma\BetterWorkAI\main.py", line 9, in <module>
+
+17:39:48.720 > Flask stderr:     from flask_wtf.csrf import CSRFProtect, generate_csrf, CSRFError
+ModuleNotFoundError: No module named 'flask_wtf'
+
+17:39:48.754 > Flask server process exited with code 1
+17:39:48.755 > Attempting to restart Flask server...
+17:39:49.761 > Starting Flask server...
+17:39:50.262 > Loading URL: http://localhost:5000
+17:39:50.349 > Flask stderr: Traceback (most recent call last):
+  File "C:\Users\ghcma\BetterWorkAI\main.py", line 9, in <module>
+
+17:39:50.350 > Flask stderr:     from flask_wtf.csrf import CSRFProtect, generate_csrf, CSRFError
+ModuleNotFoundError: No module named 'flask_wtf'
+
+17:39:50.392 > Flask server process exited with code 1
+17:39:50.394 > Attempting to restart Flask server...
+17:39:51.410 > Starting Flask server...
+17:39:51.943 > Flask stderr: Traceback (most recent call last):
+  File "C:\Users\ghcma\BetterWorkAI\main.py", line 9, in <module>
+
+17:39:51.944 > Flask stderr:     from flask_wtf.csrf import CSRFProtect, generate_csrf, CSRFError
+ModuleNotFoundError: No module named 'flask_wtf'
+
+17:39:51.982 > Flask server process exited with code 1
+17:39:51.983 > Attempting to restart Flask server...
+(node:9956) electron: Failed to load URL: http://localhost:5000/ with error: ERR_CONNECTION_REFUSED
+(Use `electron --trace-warnings ...` to show where the warning was created)
+17:39:52.987 > Starting Flask server...
+17:39:53.619 > Flask stderr: Traceback (most recent call last):
+  File "C:\Users\ghcma\BetterWorkAI\main.py", line 9, in <module>
+
+17:39:53.621 > Flask stderr:     from flask_wtf.csrf import CSRFProtect, generate_csrf, CSRFError
+ModuleNotFoundError: No module named 'flask_wtf'
+
+17:39:53.666 > Flask server process exited with code 1
+17:39:53.667 > Attempting to restart Flask server...
+17:39:54.680 > Starting Flask server...
+17:39:55.442 > Flask stderr: Traceback (most recent call last):
+  File "C:\Users\ghcma\BetterWorkAI\main.py", line 9, in <module>
+
+17:39:55.444 > Flask stderr:     from flask_wtf.csrf import CSRFProtect, generate_csrf, CSRFError
+ModuleNotFoundError: No module named 'flask_wtf'
+
+17:39:55.502 > Flask server process exited with code 1
+17:39:55.504 > Attempting to restart Flask server...
+17:39:56.515 > Starting Flask server...
+17:39:57.101 > Flask stderr: Traceback (most recent call last):
+  File "C:\Users\ghcma\BetterWorkAI\main.py", line 9, in <module>
+
+17:39:57.103 > Flask stderr:     from flask_wtf.csrf import CSRFProtect, generate_csrf, CSRFError
+ModuleNotFoundError: No module named 'flask_wtf'
+
+17:39:57.144 > Flask server process exited with code 1
+17:39:57.145 > Attempting to restart Flask server...
+17:39:58.159 > Starting Flask server...
+17:39:58.783 > Flask stderr: Traceback (most recent call last):
+  File "C:\Users\ghcma\BetterWorkAI\main.py", line 9, in <module>
+
+17:39:58.784 > Flask stderr:     from flask_wtf.csrf import CSRFProtect, generate_csrf, CSRFError
+ModuleNotFoundError: No module named 'flask_wtf'
+
+17:39:58.821 > Flask server process exited with code 1
+17:39:58.822 > Attempting to restart Flask server...
+17:39:59.824 > Starting Flask server...
+17:40:00.394 > Flask stderr: Traceback (most recent call last):
+  File "C:\Users\ghcma\BetterWorkAI\main.py", line 9, in <module>
+
+17:40:00.396 > Flask stderr:     from flask_wtf.csrf import CSRFProtect, generate_csrf, CSRFError
+ModuleNotFoundError: No module named 'flask_wtf'
+
+17:40:00.432 > Flask server process exited with code 1
+17:40:00.433 > Attempting to restart Flask server...
+17:40:01.446 > Starting Flask server...
+17:40:02.036 > Flask stderr: Traceback (most recent call last):
+  File "C:\Users\ghcma\BetterWorkAI\main.py", line 9, in <module>
+
+17:40:02.037 > Flask stderr:     from flask_wtf.csrf import CSRFProtect, generate_csrf, CSRFError
+ModuleNotFoundError: No module named 'flask_wtf'
+
+17:40:02.078 > Flask server process exited with code 1
+17:40:02.079 > Attempting to restart Flask server...
+17:40:03.095 > Starting Flask server...
+17:40:03.841 > Flask stderr: Traceback (most recent call last):
+  File "C:\Users\ghcma\BetterWorkAI\main.py", line 9, in <module>
+    from flask_wtf.csrf import CSRFProtect, generate_csrf, CSRFError
+ModuleNotFoundError: No module named 'flask_wtf'

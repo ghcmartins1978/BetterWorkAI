@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # The helper URL should be provided as an environment variable
-RUST_HELPER_URL = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400')
+RUST_HELPER_URL = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17402')
 
 # Check if we're in development mode
 IS_DEVELOPMENT = os.environ.get('NODE_ENV') == 'development' or os.environ.get('REPLIT') is not None
@@ -61,7 +61,7 @@ class AutomationClient:
         # that might be in environment variables
         if IS_DEVELOPMENT and "ngrok" in self.server_url:
             logger.info("Development mode detected with ngrok URL - using local mock helper instead")
-            self.server_url = "http://127.0.0.1:17400"
+            self.server_url = "http://127.0.0.1:17402"
             
         # Wait a bit to allow the helper to start
         connection_attempts = 0

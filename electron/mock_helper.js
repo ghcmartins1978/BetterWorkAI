@@ -36,7 +36,7 @@ try {
 }
 
 const app = express();
-const port = 17400;
+const port = process.env.MOCK_HELPER_PORT || 17402; // Use environment variable or default to 17402
 
 // Enable CORS
 app.use(cors());

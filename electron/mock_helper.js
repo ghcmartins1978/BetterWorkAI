@@ -5,8 +5,36 @@
  * for development purposes.
  */
 
-const express = require('express');
-const cors = require('cors');
+// Try loading dependencies, with fallbacks for different installation locations
+let express, cors;
+
+try {
+    // Try loading from local first
+    express = require('express');
+    cors = require('cors');
+    console.log('Successfully loaded Express and CORS modules from local installation');
+} catch (error) {
+    // If that fails, try loading from parent directory
+    try {
+        express = require('../node_modules/express');
+        cors = require('../node_modules/cors');
+        console.log('Successfully loaded Express and CORS modules from parent directory');
+    } catch (innerError) {
+        // If that also fails, try loading from global installation
+        try {
+            // This assumes Node.js can find globally installed modules
+            express = require('express');
+            cors = require('cors');
+            console.log('Successfully loaded Express and CORS modules from global installation');
+        } catch (finalError) {
+            console.error('Failed to load Express and CORS modules from any location!');
+            console.error('Please install them using: npm install express cors');
+            console.error('Original error:', error.message);
+            process.exit(1);
+        }
+    }
+}
+
 const app = express();
 const port = 17400;
 

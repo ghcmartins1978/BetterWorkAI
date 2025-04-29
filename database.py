@@ -24,13 +24,23 @@ if not database_url:
     logger.info(f"DATABASE_URL not set, using default SQLite database: {default_db_path}")
 
 # Configure SQLAlchemy engine with improved connection pooling settings
+connect_args = {}
+if database_url.startswith('sqlite'):
+    # SQLite connect_args - these vary by SQLite version
+    try:
+        # Try with check_same_thread for most SQLite versions
+        connect_args = {"check_same_thread": False}
+    except:
+        # Fallback with no special args
+        connect_args = {}
+
 engine = create_engine(
     database_url, 
     pool_recycle=1800,      # Recycle connections after 30 minutes idle
     pool_pre_ping=True,     # Check connection validity before using
     pool_size=10,           # Maximum number of connections to keep
     max_overflow=20,        # Maximum overflow connections
-    connect_args={"encoding": "utf8"} if database_url.startswith('sqlite') else {}  # UTF-8 fix for SQLite
+    connect_args=connect_args
 )
 
 # Create a session factory

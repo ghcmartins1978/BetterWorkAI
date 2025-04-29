@@ -68,6 +68,14 @@ echo.
 echo √ Python dependencies installation completed with necessary components
 
 echo.
+echo Installing Express and CORS globally for mock helper...
+npm install -g express cors
+if %ERRORLEVEL% NEQ 0 (
+    echo Warning: Failed to install Express and CORS globally.
+    echo Attempting to continue with local installation...
+)
+
+echo.
 echo Installing Node.js dependencies...
 cd electron
 npm install
@@ -75,6 +83,14 @@ if %ERRORLEVEL% NEQ 0 (
     echo Failed to install Node.js dependencies. Check the error messages above.
     pause
     exit /b 1
+)
+
+echo.
+echo Installing Express and CORS locally in electron folder...
+npm install express cors
+if %ERRORLEVEL% NEQ 0 (
+    echo Warning: Failed to install Express and CORS locally.
+    echo The mock helper may not work properly.
 )
 echo √ Node.js dependencies installed
 

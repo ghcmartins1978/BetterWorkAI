@@ -10,8 +10,8 @@ if %ERRORLEVEL% NEQ 0 (
     echo X Python not found. Please install Python 3.8 or higher: https://www.python.org/
     exit /b 1
 ) else (
-    for /f "tokens=*" %%i in ('python --version') do set python_version=%%i
-    echo √ Python found: %python_version%
+    python -c "import sys; print('Python', sys.version.split()[0])"
+    echo √ Python found and working
 )
 
 :: Check pip
@@ -20,8 +20,7 @@ if %ERRORLEVEL% NEQ 0 (
     echo X pip not found. Please install pip: https://pip.pypa.io/en/stable/installation/
     exit /b 1
 ) else (
-    for /f "tokens=*" %%i in ('pip --version') do set pip_version=%%i
-    echo √ pip found: %pip_version%
+    echo √ pip found and working
 )
 
 :: Check Node.js
@@ -30,8 +29,7 @@ if %ERRORLEVEL% NEQ 0 (
     echo X Node.js not found. Please install Node.js 18 or higher: https://nodejs.org/
     exit /b 1
 ) else (
-    for /f "tokens=*" %%i in ('node --version') do set node_version=%%i
-    echo √ Node.js found: %node_version%
+    echo √ Node.js found and working
 )
 
 :: Check npm
@@ -40,8 +38,7 @@ if %ERRORLEVEL% NEQ 0 (
     echo X npm not found. Please install Node.js which includes npm: https://nodejs.org/
     exit /b 1
 ) else (
-    for /f "tokens=*" %%i in ('npm --version') do set npm_version=%%i
-    echo √ npm found: %npm_version%
+    echo √ npm found and working
 )
 
 echo.

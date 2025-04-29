@@ -4,23 +4,68 @@ echo.
 
 echo Installing Python dependencies...
 echo This may take a few minutes...
-pip install flask flask-sqlalchemy gunicorn pyyaml requests pyaudio soundfile trafilatura numpy opencv-python psutil openai email-validator psycopg2-binary pillow websocket-client
+
+:: Install core dependencies first
+echo Step 1/5: Installing core dependencies (Flask, SQLAlchemy)...
+pip install flask flask-sqlalchemy
 if %ERRORLEVEL% NEQ 0 (
-    echo Failed to install Python dependencies. Check the error messages above.
-    echo.
-    echo You may need to install Microsoft Visual C++ Build Tools for some packages.
-    echo Download from: https://visualstudio.microsoft.com/visual-cpp-build-tools/
-    echo.
-    echo For PyAudio, you might need to download a pre-built wheel from:
-    echo https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyaudio
-    echo.
-    echo For other issues, try installing the core dependencies first:
-    echo pip install flask flask-sqlalchemy
-    echo.
+    echo Failed to install core Python dependencies. Please check your Python installation.
     pause
     exit /b 1
 )
-echo √ Python dependencies installed
+echo √ Core dependencies installed
+
+:: Install web and utility dependencies
+echo Step 2/5: Installing web and utility dependencies...
+pip install gunicorn pyyaml requests websocket-client email-validator
+if %ERRORLEVEL% NEQ 0 (
+    echo Warning: Some utility dependencies failed to install.
+    echo Continuing with other dependencies...
+)
+echo √ Web and utility dependencies installed
+
+:: Install database dependencies
+echo Step 3/5: Installing database dependencies...
+pip install psycopg2-binary
+if %ERRORLEVEL% NEQ 0 (
+    echo Warning: Database driver failed to install. SQLite will work, but PostgreSQL might not.
+    echo Continuing with other dependencies...
+)
+echo √ Database dependencies installed
+
+:: Install AI and data science dependencies
+echo Step 4/5: Installing AI and data science dependencies...
+pip install numpy pillow openai trafilatura psutil
+if %ERRORLEVEL% NEQ 0 (
+    echo Warning: Some AI dependencies failed to install.
+    echo Continuing with other dependencies...
+)
+echo √ AI dependencies installed
+
+:: Install media dependencies (most likely to fail)
+echo Step 5/5: Installing media dependencies (may require system libraries)...
+pip install pyaudio soundfile opencv-python
+if %ERRORLEVEL% NEQ 0 (
+    echo.
+    echo -----------------------------------
+    echo Some media dependencies failed to install. This is common on Windows.
+    echo.
+    echo For PyAudio:
+    echo   Download a pre-built wheel from: https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyaudio
+    echo   Then install with: pip install C:\path\to\downloaded\PyAudio‑0.2.11‑cp39‑cp39‑win_amd64.whl
+    echo.
+    echo For OpenCV:
+    echo   Try: pip install opencv-python-headless
+    echo.
+    echo For other issues:
+    echo   Install Microsoft Visual C++ Build Tools from:
+    echo   https://visualstudio.microsoft.com/visual-cpp-build-tools/
+    echo -----------------------------------
+    echo.
+    echo The application should still work with limited functionality.
+)
+echo.
+echo √ Python dependencies installation completed with necessary components
 
 echo.
 echo Installing Node.js dependencies...

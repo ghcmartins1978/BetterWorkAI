@@ -45,6 +45,14 @@ def basename_filter(path):
     """Get the basename of a path"""
     return os.path.basename(path) if path else ""
     
+@app.template_filter('from_json')
+def from_json_filter(value):
+    """Convert a JSON string to a Python object"""
+    try:
+        return json.loads(value) if value else []
+    except:
+        return []
+    
 # Define template context processor to make functions available in templates
 @app.context_processor
 def utility_processor():

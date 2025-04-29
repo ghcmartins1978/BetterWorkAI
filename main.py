@@ -1808,13 +1808,13 @@ def context_test():
 @app.route('/helper-api-manager')
 def helper_api_manager():
     """Rust Helper API Manager page"""
-    server_url = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400')
+    server_url = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17403')
     return render_template('server_url_manager.html', server_url=server_url)
 
 @app.route('/server-url-manager')
 def server_url_manager():
     """Enhanced Server URL Manager page with port configuration"""
-    server_url = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400')
+    server_url = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17403')
     
     # Check for current mock helper port
     mock_helper_port = None
@@ -1852,7 +1852,7 @@ def server_url_manager():
 @app.route('/simple-server-config')
 def simple_server_config():
     """Simple Server Configuration page"""
-    server_url = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400')
+    server_url = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17403')
     return render_template('simple_server_manager.html', server_url=server_url)
 
 @app.route('/direct-port-fix')
@@ -2084,7 +2084,7 @@ def update_port_config():
         }
         
         # Update server URL based on helper port
-        current_url = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400')
+        current_url = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17403')
         url_parts = current_url.split(':')
         if len(url_parts) >= 3:
             new_url = f"{url_parts[0]}:{url_parts[1]}:{helper_port}"

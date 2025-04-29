@@ -20,8 +20,31 @@ class MonitorController:
         if server_url:
             self.server_url = server_url
         else:
-            # Temporarily overriding the environment variable with the correct default URL
-            self.server_url = 'http://127.0.0.1:17400'
+            # Use the mock helper port
+            try:
+                # Try to read from the port file
+                mock_helper_port = '17403'  # Default fallback
+                
+                possible_paths = [
+                    os.path.join(os.path.dirname(__file__), 'data', 'mock_helper_port.txt'),
+                    os.path.join(os.path.dirname(__file__), '..', 'data', 'mock_helper_port.txt'),
+                    os.path.join('data', 'mock_helper_port.txt'),
+                    'mock_helper_port.txt'
+                ]
+                
+                for path in possible_paths:
+                    if os.path.exists(path):
+                        with open(path, 'r') as f:
+                            port = f.read().strip()
+                            if port:
+                                mock_helper_port = port
+                                logger.info(f"Found mock helper port in file: {port} (path: {path})")
+                                break
+                
+                self.server_url = f'http://127.0.0.1:{mock_helper_port}'
+            except Exception as e:
+                logger.warning(f"Error reading mock helper port file, using default: {e}")
+                self.server_url = 'http://127.0.0.1:17403'
         logger.info(f"Monitor controller initialized with Rust helper URL: {self.server_url}")
     
     def is_connected(self):

@@ -45,7 +45,7 @@ def get_helper_url():
             logger.warning(f"Error reading mock helper port file: {e}")
     
     # Default fallback
-    return 'http://127.0.0.1:17402'
+    return 'http://127.0.0.1:17403'
 
 RUST_HELPER_URL = get_helper_url()
 

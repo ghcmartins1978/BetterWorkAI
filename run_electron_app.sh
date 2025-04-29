@@ -48,8 +48,34 @@ fi
 python_version=$($python_cmd --version)
 echo -e "${GREEN}✓ Python found: $python_version${NC}"
 
+# Check pip
+pip_cmd="pip"
+if ! command_exists $pip_cmd; then
+  pip_cmd="pip3"
+  if ! command_exists $pip_cmd; then
+    echo -e "${RED}✗ pip not found. Please install pip: https://pip.pypa.io/en/stable/installation/${NC}"
+    exit 1
+  fi
+fi
+pip_version=$($pip_cmd --version)
+echo -e "${GREEN}✓ pip found: $pip_version${NC}"
+
 # Set up environment
 echo -e "\n${BLUE}Setting up environment...${NC}"
+
+# Install Python dependencies
+echo -e "\n${YELLOW}Installing Python dependencies...${NC}"
+$pip_cmd install flask flask-sqlalchemy gunicorn pyyaml requests pyaudio soundfile trafilatura numpy opencv-python psutil openai email-validator psycopg2-binary pillow websocket-client
+if [ $? -ne 0 ]; then
+  echo -e "${RED}Failed to install Python dependencies. Check the error messages above.${NC}"
+  echo -e "${YELLOW}You may need to install some system-level dependencies. On Ubuntu/Debian:${NC}"
+  echo -e "${YELLOW}sudo apt-get install python3-dev portaudio19-dev libsndfile1-dev${NC}"
+  echo -e "${YELLOW}On Windows, you might need Visual C++ Build Tools.${NC}"
+  echo -e "${RED}Try to install the dependencies manually:${NC}"
+  echo -e "${YELLOW}pip install flask flask-sqlalchemy gunicorn${NC}"
+  exit 1
+fi
+echo -e "${GREEN}✓ Python dependencies installed${NC}"
 
 # Install Node.js dependencies
 echo -e "\n${YELLOW}Installing Node.js dependencies...${NC}"

@@ -6,7 +6,7 @@ import logging
 import base64
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, abort, send_file, Response, make_response
-from flask_wtf.csrf import CSRFProtect, generate_csrf
+from flask_wtf.csrf import CSRFProtect, generate_csrf, CSRFError
 import signal
 import sys
 import random
@@ -27,6 +27,15 @@ app.secret_key = os.environ.get("SESSION_SECRET", "betterman_ai_secret")
 
 # Initialize CSRF protection
 csrf = CSRFProtect(app)
+
+# Create a custom CSRF error handler
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+        return jsonify({"error": "CSRF token validation failed"}), 400
+    return render_template('error.html', 
+                          title='Security Error',
+                          message='CSRF token validation failed. Please try refreshing the page.'), 400
 
 # Check if running in Electron and configure accordingly
 try:

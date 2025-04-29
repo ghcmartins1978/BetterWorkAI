@@ -130,6 +130,28 @@
                     </div>
                 </div>
                 
+                <!-- Tools Group -->
+                <div class="nav-group mb-4">
+                    <h6 class="nav-group-title" data-bs-toggle="collapse" data-bs-target="#toolsSubmenu">
+                        <span><i class="bi bi-tools me-2"></i>Tools</span>
+                        <i class="bi bi-chevron-down chevron"></i>
+                    </h6>
+                    <div id="toolsSubmenu" class="submenu">
+                        <ul class="nav flex-column">
+                            <li class="nav-item">
+                                <a class="nav-link {% if active_page == 'data-transformation' %}active{% endif %}" href="/data-transformation">
+                                    <i class="bi bi-arrow-repeat me-2"></i>Data Transformation
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/yaml-compiler">
+                                    <i class="bi bi-code-square me-2"></i>YAML Compiler
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
                 <!-- Metrics Group -->
                 <div class="nav-group mb-4">
                     <h6 class="nav-group-title" data-bs-toggle="collapse" data-bs-target="#metricsSubmenu">

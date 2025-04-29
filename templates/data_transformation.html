@@ -1,0 +1,882 @@
+{% extends 'layout.html' %}
+
+{% block title %}Data Transformation{% endblock %}
+
+{% block styles %}
+<style>
+  .upload-area {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    margin-bottom: 1rem;
+    background-color: rgba(var(--bs-dark-rgb), 0.05);
+    transition: all 0.3s;
+  }
+  
+  .upload-area:hover {
+    border-color: var(--bs-primary);
+    background-color: rgba(var(--bs-primary-rgb), 0.05);
+  }
+  
+  .preview-container img {
+    max-width: 100%;
+    max-height: 300px;
+    object-fit: contain;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+  }
+  
+  .audio-player {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+  
+  .pdf-preview {
+    width: 100%;
+    height: 300px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+  }
+  
+  .output-card {
+    transition: all 0.3s;
+    max-height: 500px;
+    overflow-y: auto;
+  }
+  
+  #url-form .input-group {
+    margin-bottom: 1rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row mb-4">
+    <div class="col-md-12">
+      <h1><i class="bi bi-arrow-repeat me-2"></i>Data Transformation</h1>
+      <p class="lead">Transform different types of data into formats that can be analyzed by LLMs</p>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-lg-12">
+      <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white">
+          <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>About Data Transformation</h5>
+        </div>
+        <div class="card-body">
+          <p>
+            BettermanAI can transform various types of data into formats that can be easily analyzed by Large Language Models (LLMs).
+            This enables more comprehensive workflow analysis and automation opportunities.
+          </p>
+          
+          <div class="row g-4 py-3">
+            <div class="col-md-3 text-center">
+              <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                  <i class="bi bi-image text-primary display-5 mb-3"></i>
+                  <h5>Image Analysis</h5>
+                  <p class="small text-muted">Converts images to detailed textual descriptions using AI vision models</p>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3 text-center">
+              <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                  <i class="bi bi-mic text-success display-5 mb-3"></i>
+                  <h5>Audio Transcription</h5>
+                  <p class="small text-muted">Transcribes speech in audio recordings to text using advanced STT models</p>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3 text-center">
+              <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                  <i class="bi bi-file-earmark-text text-danger display-5 mb-3"></i>
+                  <h5>PDF Extraction</h5>
+                  <p class="small text-muted">Extracts and structures text content from PDF documents for analysis</p>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3 text-center">
+              <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                  <i class="bi bi-globe text-info display-5 mb-3"></i>
+                  <h5>Web Content</h5>
+                  <p class="small text-muted">Extracts main content from web pages, filtering out navigation and ads</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs for different transformation types -->
+  <div class="row">
+    <div class="col-md-12">
+      <div class="card shadow-sm">
+        <div class="card-header bg-dark">
+          <ul class="nav nav-tabs card-header-tabs" id="transformationTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="image-tab" data-bs-toggle="tab" data-bs-target="#image-tab-pane" type="button" role="tab" aria-controls="image-tab-pane" aria-selected="true">
+                <i class="bi bi-image me-2"></i>Image
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="audio-tab" data-bs-toggle="tab" data-bs-target="#audio-tab-pane" type="button" role="tab" aria-controls="audio-tab-pane" aria-selected="false">
+                <i class="bi bi-mic me-2"></i>Audio
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="pdf-tab" data-bs-toggle="tab" data-bs-target="#pdf-tab-pane" type="button" role="tab" aria-controls="pdf-tab-pane" aria-selected="false">
+                <i class="bi bi-file-earmark-text me-2"></i>PDF
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="url-tab" data-bs-toggle="tab" data-bs-target="#url-tab-pane" type="button" role="tab" aria-controls="url-tab-pane" aria-selected="false">
+                <i class="bi bi-globe me-2"></i>URL
+              </button>
+            </li>
+          </ul>
+        </div>
+        <div class="card-body">
+          <div class="tab-content" id="transformationTabContent">
+            <!-- Image Transformation Tab -->
+            <div class="tab-pane fade show active" id="image-tab-pane" role="tabpanel" aria-labelledby="image-tab" tabindex="0">
+              <div class="row">
+                <div class="col-md-6">
+                  <h5 class="mb-3">Upload Image</h5>
+                  <div class="upload-area" id="image-upload-area">
+                    <i class="bi bi-cloud-arrow-up display-4 text-muted mb-3"></i>
+                    <p>Drag & drop an image file here, or click to select</p>
+                    <input type="file" id="image-upload" class="d-none" accept="image/*">
+                    <button class="btn btn-primary" id="image-upload-btn">
+                      <i class="bi bi-upload me-2"></i>Select Image
+                    </button>
+                  </div>
+                  <div class="preview-container" id="image-preview-container" style="display: none;">
+                    <img id="image-preview" src="" alt="Preview">
+                    <div class="d-flex justify-content-between">
+                      <button class="btn btn-success" id="transform-image-btn">
+                        <i class="bi bi-arrow-repeat me-2"></i>Transform
+                      </button>
+                      <button class="btn btn-outline-secondary" id="clear-image-btn">
+                        <i class="bi bi-x-circle me-2"></i>Clear
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <h5 class="mb-3">Output</h5>
+                  <div class="card output-card" id="image-output-card">
+                    <div class="card-body">
+                      <div id="image-loading" style="display: none;">
+                        <div class="d-flex justify-content-center">
+                          <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                          </div>
+                        </div>
+                        <p class="text-center mt-3">Analyzing image...</p>
+                      </div>
+                      <div id="image-output-container" style="display: none;">
+                        <h6>AI-Generated Description:</h6>
+                        <p id="image-output-text" class="border-start border-primary ps-3"></p>
+                        <div class="mt-3">
+                          <div class="text-muted small mb-2">Processing Details</div>
+                          <div class="row">
+                            <div class="col-4">
+                              <div class="text-muted small">Engine:</div>
+                            </div>
+                            <div class="col-8">
+                              <div id="image-engine" class="small"></div>
+                            </div>
+                          </div>
+                          <div class="row">
+                            <div class="col-4">
+                              <div class="text-muted small">Processed at:</div>
+                            </div>
+                            <div class="col-8">
+                              <div id="image-timestamp" class="small"></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div id="image-error-container" style="display: none;">
+                        <div class="alert alert-danger" role="alert">
+                          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                          <span id="image-error-message"></span>
+                        </div>
+                      </div>
+                      <div id="image-empty-state">
+                        <div class="text-center py-5">
+                          <i class="bi bi-image text-muted display-3"></i>
+                          <p class="mt-3 text-muted">Upload an image and click "Transform" to generate a description</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Audio Transformation Tab -->
+            <div class="tab-pane fade" id="audio-tab-pane" role="tabpanel" aria-labelledby="audio-tab" tabindex="0">
+              <div class="row">
+                <div class="col-md-6">
+                  <h5 class="mb-3">Upload Audio</h5>
+                  <div class="upload-area" id="audio-upload-area">
+                    <i class="bi bi-cloud-arrow-up display-4 text-muted mb-3"></i>
+                    <p>Drag & drop an audio file here, or click to select</p>
+                    <input type="file" id="audio-upload" class="d-none" accept="audio/*">
+                    <button class="btn btn-primary" id="audio-upload-btn">
+                      <i class="bi bi-upload me-2"></i>Select Audio
+                    </button>
+                  </div>
+                  <div class="preview-container" id="audio-preview-container" style="display: none;">
+                    <audio id="audio-preview" controls class="audio-player"></audio>
+                    <div class="d-flex justify-content-between">
+                      <button class="btn btn-success" id="transform-audio-btn">
+                        <i class="bi bi-arrow-repeat me-2"></i>Transcribe
+                      </button>
+                      <button class="btn btn-outline-secondary" id="clear-audio-btn">
+                        <i class="bi bi-x-circle me-2"></i>Clear
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <h5 class="mb-3">Output</h5>
+                  <div class="card output-card" id="audio-output-card">
+                    <div class="card-body">
+                      <div id="audio-loading" style="display: none;">
+                        <div class="d-flex justify-content-center">
+                          <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                          </div>
+                        </div>
+                        <p class="text-center mt-3">Transcribing audio...</p>
+                      </div>
+                      <div id="audio-output-container" style="display: none;">
+                        <h6>Transcription:</h6>
+                        <p id="audio-output-text" class="border-start border-primary ps-3"></p>
+                        <div class="mt-3">
+                          <div class="text-muted small mb-2">Processing Details</div>
+                          <div class="row">
+                            <div class="col-4">
+                              <div class="text-muted small">Engine:</div>
+                            </div>
+                            <div class="col-8">
+                              <div id="audio-engine" class="small"></div>
+                            </div>
+                          </div>
+                          <div class="row">
+                            <div class="col-4">
+                              <div class="text-muted small">Processed at:</div>
+                            </div>
+                            <div class="col-8">
+                              <div id="audio-timestamp" class="small"></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div id="audio-error-container" style="display: none;">
+                        <div class="alert alert-danger" role="alert">
+                          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                          <span id="audio-error-message"></span>
+                        </div>
+                      </div>
+                      <div id="audio-empty-state">
+                        <div class="text-center py-5">
+                          <i class="bi bi-mic text-muted display-3"></i>
+                          <p class="mt-3 text-muted">Upload an audio file and click "Transcribe" to convert speech to text</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- PDF Transformation Tab -->
+            <div class="tab-pane fade" id="pdf-tab-pane" role="tabpanel" aria-labelledby="pdf-tab" tabindex="0">
+              <div class="row">
+                <div class="col-md-6">
+                  <h5 class="mb-3">Upload PDF</h5>
+                  <div class="upload-area" id="pdf-upload-area">
+                    <i class="bi bi-cloud-arrow-up display-4 text-muted mb-3"></i>
+                    <p>Drag & drop a PDF file here, or click to select</p>
+                    <input type="file" id="pdf-upload" class="d-none" accept="application/pdf">
+                    <button class="btn btn-primary" id="pdf-upload-btn">
+                      <i class="bi bi-upload me-2"></i>Select PDF
+                    </button>
+                  </div>
+                  <div class="preview-container" id="pdf-preview-container" style="display: none;">
+                    <div id="pdf-preview" class="pdf-preview">
+                      <div class="d-flex justify-content-center align-items-center h-100">
+                        <div class="text-center">
+                          <i class="bi bi-file-earmark-pdf text-danger display-3"></i>
+                          <p id="pdf-filename" class="mt-2"></p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                      <button class="btn btn-success" id="transform-pdf-btn">
+                        <i class="bi bi-arrow-repeat me-2"></i>Extract Text
+                      </button>
+                      <button class="btn btn-outline-secondary" id="clear-pdf-btn">
+                        <i class="bi bi-x-circle me-2"></i>Clear
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <h5 class="mb-3">Output</h5>
+                  <div class="card output-card" id="pdf-output-card">
+                    <div class="card-body">
+                      <div id="pdf-loading" style="display: none;">
+                        <div class="d-flex justify-content-center">
+                          <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                          </div>
+                        </div>
+                        <p class="text-center mt-3">Extracting text from PDF...</p>
+                      </div>
+                      <div id="pdf-output-container" style="display: none;">
+                        <h6>Extracted Text:</h6>
+                        <div id="pdf-output-text" class="border-start border-primary ps-3 small" style="white-space: pre-wrap;"></div>
+                        <div class="mt-3">
+                          <div class="text-muted small mb-2">Processing Details</div>
+                          <div class="row">
+                            <div class="col-4">
+                              <div class="text-muted small">Pages:</div>
+                            </div>
+                            <div class="col-8">
+                              <div id="pdf-pages" class="small"></div>
+                            </div>
+                          </div>
+                          <div class="row">
+                            <div class="col-4">
+                              <div class="text-muted small">Engine:</div>
+                            </div>
+                            <div class="col-8">
+                              <div id="pdf-engine" class="small"></div>
+                            </div>
+                          </div>
+                          <div class="row">
+                            <div class="col-4">
+                              <div class="text-muted small">Processed at:</div>
+                            </div>
+                            <div class="col-8">
+                              <div id="pdf-timestamp" class="small"></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div id="pdf-error-container" style="display: none;">
+                        <div class="alert alert-danger" role="alert">
+                          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                          <span id="pdf-error-message"></span>
+                        </div>
+                      </div>
+                      <div id="pdf-empty-state">
+                        <div class="text-center py-5">
+                          <i class="bi bi-file-earmark-text text-muted display-3"></i>
+                          <p class="mt-3 text-muted">Upload a PDF file and click "Extract Text" to extract its content</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- URL Transformation Tab -->
+            <div class="tab-pane fade" id="url-tab-pane" role="tabpanel" aria-labelledby="url-tab" tabindex="0">
+              <div class="row">
+                <div class="col-md-6">
+                  <h5 class="mb-3">Enter URL</h5>
+                  <form id="url-form">
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="bi bi-globe"></i></span>
+                      <input type="url" id="url-input" class="form-control" placeholder="https://example.com" required>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Content Type</label>
+                      <div class="form-check">
+                        <input class="form-check-input" type="radio" name="contentType" id="contentTypeAuto" value="auto" checked>
+                        <label class="form-check-label" for="contentTypeAuto">
+                          Auto-detect
+                        </label>
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="radio" name="contentType" id="contentTypeWebpage" value="webpage">
+                        <label class="form-check-label" for="contentTypeWebpage">
+                          Webpage (HTML)
+                        </label>
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="radio" name="contentType" id="contentTypeImage" value="image">
+                        <label class="form-check-label" for="contentTypeImage">
+                          Image
+                        </label>
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="radio" name="contentType" id="contentTypePdf" value="pdf">
+                        <label class="form-check-label" for="contentTypePdf">
+                          PDF Document
+                        </label>
+                      </div>
+                    </div>
+                    <div class="d-flex">
+                      <button type="submit" class="btn btn-success me-2" id="transform-url-btn">
+                        <i class="bi bi-arrow-repeat me-2"></i>Transform
+                      </button>
+                      <button type="reset" class="btn btn-outline-secondary" id="clear-url-btn">
+                        <i class="bi bi-x-circle me-2"></i>Clear
+                      </button>
+                    </div>
+                  </form>
+                </div>
+                <div class="col-md-6">
+                  <h5 class="mb-3">Output</h5>
+                  <div class="card output-card" id="url-output-card">
+                    <div class="card-body">
+                      <div id="url-loading" style="display: none;">
+                        <div class="d-flex justify-content-center">
+                          <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                          </div>
+                        </div>
+                        <p class="text-center mt-3">Processing URL content...</p>
+                      </div>
+                      <div id="url-output-container" style="display: none;">
+                        <h6>Transformed Content:</h6>
+                        <div id="url-output-text" class="border-start border-primary ps-3 small" style="white-space: pre-wrap;"></div>
+                        <div class="mt-3">
+                          <div class="text-muted small mb-2">Processing Details</div>
+                          <div class="row">
+                            <div class="col-4">
+                              <div class="text-muted small">Engine:</div>
+                            </div>
+                            <div class="col-8">
+                              <div id="url-engine" class="small"></div>
+                            </div>
+                          </div>
+                          <div class="row">
+                            <div class="col-4">
+                              <div class="text-muted small">Processed at:</div>
+                            </div>
+                            <div class="col-8">
+                              <div id="url-timestamp" class="small"></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div id="url-error-container" style="display: none;">
+                        <div class="alert alert-danger" role="alert">
+                          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                          <span id="url-error-message"></span>
+                        </div>
+                      </div>
+                      <div id="url-empty-state">
+                        <div class="text-center py-5">
+                          <i class="bi bi-globe text-muted display-3"></i>
+                          <p class="mt-3 text-muted">Enter a URL and click "Transform" to extract and process its content</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Image section
+    const imageUploadBtn = document.getElementById('image-upload-btn');
+    const imageUpload = document.getElementById('image-upload');
+    const imagePreviewContainer = document.getElementById('image-preview-container');
+    const imagePreview = document.getElementById('image-preview');
+    const transformImageBtn = document.getElementById('transform-image-btn');
+    const clearImageBtn = document.getElementById('clear-image-btn');
+    const imageEmptyState = document.getElementById('image-empty-state');
+    const imageLoading = document.getElementById('image-loading');
+    const imageOutputContainer = document.getElementById('image-output-container');
+    const imageOutputText = document.getElementById('image-output-text');
+    const imageEngine = document.getElementById('image-engine');
+    const imageTimestamp = document.getElementById('image-timestamp');
+    const imageErrorContainer = document.getElementById('image-error-container');
+    const imageErrorMessage = document.getElementById('image-error-message');
+    
+    // Audio section
+    const audioUploadBtn = document.getElementById('audio-upload-btn');
+    const audioUpload = document.getElementById('audio-upload');
+    const audioPreviewContainer = document.getElementById('audio-preview-container');
+    const audioPreview = document.getElementById('audio-preview');
+    const transformAudioBtn = document.getElementById('transform-audio-btn');
+    const clearAudioBtn = document.getElementById('clear-audio-btn');
+    const audioEmptyState = document.getElementById('audio-empty-state');
+    const audioLoading = document.getElementById('audio-loading');
+    const audioOutputContainer = document.getElementById('audio-output-container');
+    const audioOutputText = document.getElementById('audio-output-text');
+    const audioEngine = document.getElementById('audio-engine');
+    const audioTimestamp = document.getElementById('audio-timestamp');
+    const audioErrorContainer = document.getElementById('audio-error-container');
+    const audioErrorMessage = document.getElementById('audio-error-message');
+    
+    // PDF section
+    const pdfUploadBtn = document.getElementById('pdf-upload-btn');
+    const pdfUpload = document.getElementById('pdf-upload');
+    const pdfPreviewContainer = document.getElementById('pdf-preview-container');
+    const pdfFilename = document.getElementById('pdf-filename');
+    const transformPdfBtn = document.getElementById('transform-pdf-btn');
+    const clearPdfBtn = document.getElementById('clear-pdf-btn');
+    const pdfEmptyState = document.getElementById('pdf-empty-state');
+    const pdfLoading = document.getElementById('pdf-loading');
+    const pdfOutputContainer = document.getElementById('pdf-output-container');
+    const pdfOutputText = document.getElementById('pdf-output-text');
+    const pdfPages = document.getElementById('pdf-pages');
+    const pdfEngine = document.getElementById('pdf-engine');
+    const pdfTimestamp = document.getElementById('pdf-timestamp');
+    const pdfErrorContainer = document.getElementById('pdf-error-container');
+    const pdfErrorMessage = document.getElementById('pdf-error-message');
+    
+    // URL section
+    const urlForm = document.getElementById('url-form');
+    const urlInput = document.getElementById('url-input');
+    const transformUrlBtn = document.getElementById('transform-url-btn');
+    const clearUrlBtn = document.getElementById('clear-url-btn');
+    const urlEmptyState = document.getElementById('url-empty-state');
+    const urlLoading = document.getElementById('url-loading');
+    const urlOutputContainer = document.getElementById('url-output-container');
+    const urlOutputText = document.getElementById('url-output-text');
+    const urlEngine = document.getElementById('url-engine');
+    const urlTimestamp = document.getElementById('url-timestamp');
+    const urlErrorContainer = document.getElementById('url-error-container');
+    const urlErrorMessage = document.getElementById('url-error-message');
+    
+    // Image Upload
+    imageUploadBtn.addEventListener('click', function() {
+      imageUpload.click();
+    });
+    
+    imageUpload.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          imagePreview.src = event.target.result;
+          imagePreviewContainer.style.display = 'block';
+          imageEmptyState.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+    
+    clearImageBtn.addEventListener('click', function() {
+      imageUpload.value = '';
+      imagePreview.src = '';
+      imagePreviewContainer.style.display = 'none';
+      imageEmptyState.style.display = 'block';
+      imageOutputContainer.style.display = 'none';
+      imageErrorContainer.style.display = 'none';
+    });
+    
+    transformImageBtn.addEventListener('click', function() {
+      // Reset output state
+      imageOutputContainer.style.display = 'none';
+      imageErrorContainer.style.display = 'none';
+      imageLoading.style.display = 'block';
+      
+      // Create FormData and append image
+      const formData = new FormData();
+      if (imageUpload.files[0]) {
+        formData.append('image', imageUpload.files[0]);
+      } else if (imagePreview.src) {
+        // For drag and drop or pasted images
+        formData.append('image_base64', imagePreview.src.split(',')[1]);
+      }
+      
+      // Send request to API
+      fetch('/api/transform/image', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        imageLoading.style.display = 'none';
+        
+        if (data.success) {
+          imageOutputText.textContent = data.text;
+          imageEngine.textContent = data.engine || 'N/A';
+          imageTimestamp.textContent = new Date(data.timestamp).toLocaleString();
+          imageOutputContainer.style.display = 'block';
+        } else {
+          imageErrorMessage.textContent = data.error || 'An unknown error occurred';
+          imageErrorContainer.style.display = 'block';
+        }
+      })
+      .catch(error => {
+        imageLoading.style.display = 'none';
+        imageErrorMessage.textContent = 'Error: ' + error.message;
+        imageErrorContainer.style.display = 'block';
+      });
+    });
+    
+    // Audio Upload
+    audioUploadBtn.addEventListener('click', function() {
+      audioUpload.click();
+    });
+    
+    audioUpload.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const url = URL.createObjectURL(file);
+        audioPreview.src = url;
+        audioPreviewContainer.style.display = 'block';
+        audioEmptyState.style.display = 'none';
+      }
+    });
+    
+    clearAudioBtn.addEventListener('click', function() {
+      audioUpload.value = '';
+      audioPreview.src = '';
+      audioPreviewContainer.style.display = 'none';
+      audioEmptyState.style.display = 'block';
+      audioOutputContainer.style.display = 'none';
+      audioErrorContainer.style.display = 'none';
+    });
+    
+    transformAudioBtn.addEventListener('click', function() {
+      // Reset output state
+      audioOutputContainer.style.display = 'none';
+      audioErrorContainer.style.display = 'none';
+      audioLoading.style.display = 'block';
+      
+      // Create FormData and append audio
+      const formData = new FormData();
+      if (audioUpload.files[0]) {
+        formData.append('audio', audioUpload.files[0]);
+      } else {
+        audioLoading.style.display = 'none';
+        audioErrorMessage.textContent = 'No audio file selected';
+        audioErrorContainer.style.display = 'block';
+        return;
+      }
+      
+      // Send request to API
+      fetch('/api/transform/audio', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        audioLoading.style.display = 'none';
+        
+        if (data.success) {
+          audioOutputText.textContent = data.text;
+          audioEngine.textContent = data.engine || 'N/A';
+          audioTimestamp.textContent = new Date(data.timestamp).toLocaleString();
+          audioOutputContainer.style.display = 'block';
+        } else {
+          audioErrorMessage.textContent = data.error || 'An unknown error occurred';
+          audioErrorContainer.style.display = 'block';
+        }
+      })
+      .catch(error => {
+        audioLoading.style.display = 'none';
+        audioErrorMessage.textContent = 'Error: ' + error.message;
+        audioErrorContainer.style.display = 'block';
+      });
+    });
+    
+    // PDF Upload
+    pdfUploadBtn.addEventListener('click', function() {
+      pdfUpload.click();
+    });
+    
+    pdfUpload.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        pdfFilename.textContent = file.name;
+        pdfPreviewContainer.style.display = 'block';
+        pdfEmptyState.style.display = 'none';
+      }
+    });
+    
+    clearPdfBtn.addEventListener('click', function() {
+      pdfUpload.value = '';
+      pdfFilename.textContent = '';
+      pdfPreviewContainer.style.display = 'none';
+      pdfEmptyState.style.display = 'block';
+      pdfOutputContainer.style.display = 'none';
+      pdfErrorContainer.style.display = 'none';
+    });
+    
+    transformPdfBtn.addEventListener('click', function() {
+      // Reset output state
+      pdfOutputContainer.style.display = 'none';
+      pdfErrorContainer.style.display = 'none';
+      pdfLoading.style.display = 'block';
+      
+      // Create FormData and append PDF
+      const formData = new FormData();
+      if (pdfUpload.files[0]) {
+        formData.append('pdf', pdfUpload.files[0]);
+      } else {
+        pdfLoading.style.display = 'none';
+        pdfErrorMessage.textContent = 'No PDF file selected';
+        pdfErrorContainer.style.display = 'block';
+        return;
+      }
+      
+      // Send request to API
+      fetch('/api/transform/pdf', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        pdfLoading.style.display = 'none';
+        
+        if (data.success) {
+          pdfOutputText.textContent = data.text;
+          pdfPages.textContent = data.pages || 'N/A';
+          pdfEngine.textContent = data.engine || 'N/A';
+          pdfTimestamp.textContent = new Date(data.timestamp).toLocaleString();
+          pdfOutputContainer.style.display = 'block';
+        } else {
+          pdfErrorMessage.textContent = data.error || 'An unknown error occurred';
+          pdfErrorContainer.style.display = 'block';
+        }
+      })
+      .catch(error => {
+        pdfLoading.style.display = 'none';
+        pdfErrorMessage.textContent = 'Error: ' + error.message;
+        pdfErrorContainer.style.display = 'block';
+      });
+    });
+    
+    // URL Transformation
+    urlForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      // Reset output state
+      urlOutputContainer.style.display = 'none';
+      urlErrorContainer.style.display = 'none';
+      urlLoading.style.display = 'block';
+      
+      // Get URL and content type
+      const url = urlInput.value.trim();
+      const contentType = document.querySelector('input[name="contentType"]:checked').value;
+      
+      if (!url) {
+        urlLoading.style.display = 'none';
+        urlErrorMessage.textContent = 'Please enter a URL';
+        urlErrorContainer.style.display = 'block';
+        return;
+      }
+      
+      // Create FormData
+      const formData = new FormData();
+      formData.append('url', url);
+      formData.append('content_type', contentType);
+      
+      // Send request to API
+      fetch('/api/transform/url', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        urlLoading.style.display = 'none';
+        
+        if (data.success) {
+          urlOutputText.textContent = data.text;
+          urlEngine.textContent = data.engine || 'N/A';
+          urlTimestamp.textContent = new Date(data.timestamp).toLocaleString();
+          urlOutputContainer.style.display = 'block';
+          urlEmptyState.style.display = 'none';
+        } else {
+          urlErrorMessage.textContent = data.error || 'An unknown error occurred';
+          urlErrorContainer.style.display = 'block';
+          urlEmptyState.style.display = 'none';
+        }
+      })
+      .catch(error => {
+        urlLoading.style.display = 'none';
+        urlErrorMessage.textContent = 'Error: ' + error.message;
+        urlErrorContainer.style.display = 'block';
+        urlEmptyState.style.display = 'none';
+      });
+    });
+    
+    clearUrlBtn.addEventListener('click', function() {
+      urlInput.value = '';
+      urlOutputContainer.style.display = 'none';
+      urlErrorContainer.style.display = 'none';
+      urlEmptyState.style.display = 'block';
+    });
+    
+    // Drag and drop for image
+    const imageUploadArea = document.getElementById('image-upload-area');
+    
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      imageUploadArea.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    ['dragenter', 'dragover'].forEach(eventName => {
+      imageUploadArea.addEventListener(eventName, highlight, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+      imageUploadArea.addEventListener(eventName, unhighlight, false);
+    });
+    
+    function highlight() {
+      imageUploadArea.classList.add('bg-light');
+    }
+    
+    function unhighlight() {
+      imageUploadArea.classList.remove('bg-light');
+    }
+    
+    imageUploadArea.addEventListener('drop', handleImageDrop, false);
+    
+    function handleImageDrop(e) {
+      const dt = e.dataTransfer;
+      const files = dt.files;
+      
+      if (files.length && files[0].type.match('image.*')) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          imagePreview.src = event.target.result;
+          imagePreviewContainer.style.display = 'block';
+          imageEmptyState.style.display = 'none';
+        };
+        reader.readAsDataURL(files[0]);
+      }
+    }
+    
+    // Similar drag and drop handlers for audio and PDF can be added here
+  });
+</script>
+{% endblock %}

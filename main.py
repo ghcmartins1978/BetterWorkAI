@@ -1337,6 +1337,23 @@ def new_macro():
                               error_message="Unable to connect to the database. Please try again later.",
                               back_link=url_for('macros'))
 
+@app.route('/data-transformation')
+def data_transformation():
+    """Data transformation page for demonstrating media processing capabilities"""
+    # Check if OpenAI API key is available
+    openai_api_key = os.environ.get('OPENAI_API_KEY')
+    anthropic_api_key = os.environ.get('ANTHROPIC_API_KEY')
+    
+    missing_apis = []
+    if not openai_api_key:
+        missing_apis.append('OpenAI')
+    if not anthropic_api_key:
+        missing_apis.append('Anthropic/Claude')
+    
+    return render_template('data_transformation.html', 
+                          missing_apis=missing_apis, 
+                          active_page='data-transformation')
+
 @app.route('/macro-editor')
 def macro_editor():
     """Macro editor hub page that lists all macros and provides new macro creation"""

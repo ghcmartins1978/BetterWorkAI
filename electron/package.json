@@ -6,7 +6,7 @@
   "scripts": {
     "start": "electron .",
     "dev": "NODE_ENV=development electron .",
-    "win-dev": "set NODE_ENV=development && electron .",
+    "win-dev": "set NODE_ENV=development && .\\node_modules\\.bin\\electron .",
     "build": "electron-builder"
   },
   "repository": {

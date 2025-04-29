@@ -65,6 +65,8 @@ class RustHelperHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         
     def do_GET(self):
         # Handle GET requests
+        global monitoring_enabled, last_events
+        
         path = self.path.split('?')[0]  # Remove query string if present
         
         if path == '/api/status':
@@ -88,7 +90,6 @@ class RustHelperHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             
         elif path == '/api/events':
             # Events endpoint
-            global last_events
             if monitoring_enabled and not last_events:
                 last_events = [
                     {'type': 'mouse_move', 'x': 500, 'y': 300, 'timestamp': time.time() - 5},
@@ -143,6 +144,8 @@ class RustHelperHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             
     def do_POST(self):
         # Handle POST requests
+        global monitoring_enabled, last_events
+        
         content_length = int(self.headers['Content-Length']) if 'Content-Length' in self.headers else 0
         post_data = self.rfile.read(content_length).decode('utf-8')
         
@@ -220,7 +223,6 @@ class RustHelperHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             
         elif path == '/api/monitoring/start':
             # Start monitoring endpoint
-            global monitoring_enabled
             monitoring_enabled = True
             logger.info("Mock monitoring started")
             
@@ -231,7 +233,6 @@ class RustHelperHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             
         elif path == '/api/monitoring/stop':
             # Stop monitoring endpoint
-            global monitoring_enabled
             monitoring_enabled = False
             logger.info("Mock monitoring stopped")
             

@@ -4,8 +4,8 @@ import logging
 import json
 import time
 
-# This module acts as a client to the Rust helper's REST API running on the user's machine
-# It translates local automation calls to API requests to the local Rust helper service
+# This module acts as a client to the helper's REST API running on the user's machine
+# It translates local automation calls to API requests to the local helper service
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -14,24 +14,29 @@ logger = logging.getLogger(__name__)
 # Check if we're in development mode
 IS_DEVELOPMENT = os.environ.get('NODE_ENV') == 'development' or os.environ.get('REPLIT') is not None
 
+# Default helper ports
+RUST_HELPER_DEFAULT_PORT = 17400  # Default port for the Rust helper
+PYTHON_HELPER_DEFAULT_PORT = 17400  # Default port for the Python helper (same as Rust)
+
 # The helper URL should be provided as an environment variable or read from a file
 def get_helper_url():
     # First check the environment variable
     url = os.environ.get('AUTOMATION_SERVER_URL')
     if url:
+        logger.info(f"Using helper URL from environment variable: {url}")
         return url
         
-    # Try to find the Rust helper port file
+    # Try to find the helper port file
     try:
         # Try multiple possible locations for the port file
         possible_paths = [
-            # Rust helper port files
+            # Helper port files - prioritize Rust helper
             os.path.join(os.path.dirname(__file__), 'data', 'rust_helper_port.txt'),
             os.path.join(os.path.dirname(__file__), '..', 'data', 'rust_helper_port.txt'),
             os.path.join('data', 'rust_helper_port.txt'),
             'rust_helper_port.txt',
             os.path.join(os.path.dirname(__file__), 'data', 'helper_port.txt'),
-            # Fallback to mock helper port files if in development mode
+            # Only use mock helper as a last resort
             os.path.join(os.path.dirname(__file__), 'data', 'mock_helper_port.txt'),
             os.path.join(os.path.dirname(__file__), '..', 'data', 'mock_helper_port.txt'),
             os.path.join('data', 'mock_helper_port.txt'),
@@ -44,7 +49,7 @@ def get_helper_url():
                     port = f.read().strip()
                     if port:
                         is_rust = "rust" in port_file_path or "helper_port" in port_file_path
-                        helper_type = "Rust" if is_rust else "mock"
+                        helper_type = "Rust/Python" if is_rust else "mock"
                         logger.info(f"Found {helper_type} helper port in file: {port} (path: {port_file_path})")
                         return f"http://127.0.0.1:{port}"
         
@@ -52,27 +57,32 @@ def get_helper_url():
     except Exception as e:
         logger.warning(f"Error reading helper port file: {e}")
     
-    # Default fallback - prefer the Rust helper port
-    return 'http://127.0.0.1:17400'
+    # Default fallback - use Rust/Python helper port
+    logger.info(f"Using default helper URL: http://127.0.0.1:{RUST_HELPER_DEFAULT_PORT}")
+    return f'http://127.0.0.1:{RUST_HELPER_DEFAULT_PORT}'
 
 RUST_HELPER_URL = get_helper_url()
 
 class AutomationClient:
     """
-    Client for the Rust helper's REST API. This allows the application to
+    Client for the helper's REST API. This allows the application to
     control mouse, keyboard, and window actions on the user's computer
-    by sending requests to the Rust helper's Actix-Web API running on 127.0.0.1:17400.
+    by sending requests to either:
     
-    The Rust helper is a standalone application running on the user's system that
-    provides system-level automation capabilities through a REST API.
+    1. The Rust helper's Actix-Web API running on 127.0.0.1:17400, or
+    2. The Python fallback helper running on 127.0.0.1:17400
+    
+    The helper provides system-level automation capabilities through a REST API.
+    Both implementations provide the same API interface, so they can be used
+    interchangeably based on the user's environment and capabilities.
     """
     
     def __init__(self, server_url=None):
         """
-        Initialize the automation client for interacting with the Rust helper
+        Initialize the automation client for interacting with the helper
         
         Args:
-            server_url: URL of the Rust helper's REST API (typically http://127.0.0.1:17400)
+            server_url: URL of the helper's REST API (typically http://127.0.0.1:17400)
         """
         # Force use of the correct server URL
         if server_url:
@@ -82,18 +92,18 @@ class AutomationClient:
             self.server_url = RUST_HELPER_URL
         
         if not self.server_url:
-            logger.warning("No Rust helper URL provided. Remote automation will not work.")
+            logger.warning("No helper URL provided. Remote automation will not work.")
         else:
-            logger.info(f"Automation client initialized with Rust helper URL: {self.server_url}")
+            logger.info(f"Automation client initialized with helper URL: {self.server_url}")
     
     def set_server_url(self, url):
-        """Update the Rust helper URL"""
+        """Update the helper URL"""
         self.server_url = url
-        logger.info(f"Updated Rust helper URL to: {self.server_url}")
+        logger.info(f"Updated helper URL to: {self.server_url}")
         return self.is_connected()
     
     def is_connected(self):
-        """Check if the Rust helper's REST API is accessible"""
+        """Check if the helper's REST API is accessible"""
         if not self.server_url:
             logger.warning("No server URL provided, using built-in fallback")
             return True
@@ -138,10 +148,10 @@ class AutomationClient:
         return True
             
     def _handle_response(self, response):
-        """Handle a response from the Rust helper, with proper error checking"""
+        """Handle a response from the helper, with proper error checking"""
         if response.status_code != 200:
-            logger.error(f"Rust helper returned non-200 status code: {response.status_code}")
-            return {'status': 'error', 'message': f'Rust helper returned status code {response.status_code}'}
+            logger.error(f"Helper returned non-200 status code: {response.status_code}")
+            return {'status': 'error', 'message': f'Helper returned status code {response.status_code}'}
             
         # Check if response is JSON
         try:
@@ -156,10 +166,10 @@ class AutomationClient:
             
             # Check if it's HTML (probably an error page)
             if 'text/html' in content_type or response.text.strip().startswith(('<!DOCTYPE', '<html')):
-                logger.error("Received HTML response instead of JSON - this likely indicates an error occurred on the Rust helper")
+                logger.error("Received HTML response instead of JSON - this likely indicates an error occurred on the helper")
                 return {
                     'status': 'error', 
-                    'message': 'Received HTML response instead of JSON. The Rust helper may be returning an error page.',
+                    'message': 'Received HTML response instead of JSON. The helper may be returning an error page.',
                     'html_response': True
                 }
             
@@ -174,8 +184,8 @@ class AutomationClient:
     def mouse_move(self, x, y):
         """Move mouse to absolute position"""
         if not self.server_url:
-            logger.warning("Cannot move mouse: No Rust helper URL")
-            return {'status': 'error', 'message': 'No Rust helper URL provided'}
+            logger.warning("Cannot move mouse: No helper URL")
+            return {'status': 'error', 'message': 'No helper URL provided'}
             
         # In development mode, return mock success
         if IS_DEVELOPMENT:

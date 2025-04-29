@@ -22,4 +22,6 @@ dependencies = [
     "trafilatura>=2.0.0",
     "websocket-client>=1.8.0",
     "anthropic>=0.50.0",
+    "pytesseract>=0.3.13",
+    "pdfminer-six>=20250416",
 ]

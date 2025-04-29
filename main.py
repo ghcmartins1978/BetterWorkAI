@@ -1807,7 +1807,7 @@ def context_test():
 
 @app.route('/helper-api-manager')
 def helper_api_manager():
-    """Rust Helper API Manager page"""
+    """Helper API Manager page"""
     server_url = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17403')
     return render_template('server_url_manager.html', server_url=server_url)
 
@@ -1942,7 +1942,7 @@ def apply_direct_port_fix():
 
 @app.route('/api/update-server-url', methods=['POST'])
 def update_server_url():
-    """API endpoint to test and update the Rust Helper API URL"""
+    """API endpoint to test and update the Helper API URL"""
     try:
         data = request.json
         server_url = data.get('server_url', '')
@@ -1965,7 +1965,7 @@ def update_server_url():
             status_response = requests.get(f"{server_url}/api/status", timeout=3)
             if status_response.status_code == 200:
                 tests.append({
-                    'name': 'Rust Helper API Connectivity',
+                    'name': 'Helper API Connectivity',
                     'status': 'success',
                     'message': 'Successfully connected to the Helper API'
                 })
@@ -2561,7 +2561,7 @@ def api_stats():
 
 @app.route('/api/test_connection', methods=['POST'])
 def api_test_connection():
-    """Test connection to the local Rust helper's REST API"""
+    """Test connection to the local helper's REST API"""
     import requests
     from requests.exceptions import RequestException
 
@@ -2573,7 +2573,7 @@ def api_test_connection():
         return jsonify({'success': False, 'error': 'No Helper API URL provided'})
     
     try:
-        # Try to get the status of the Rust helper
+        # Try to get the status of the helper
         response = requests.get(f"{server_url}/api/status", timeout=5)
         
         if response.status_code == 200:
@@ -2694,7 +2694,7 @@ def stop_monitoring():
     
 @app.route('/api/events')
 def get_events():
-    """Get events from the local Rust helper"""
+    """Get events from the local helper"""
     from monitor_controller import MonitorController
     import logging
     
@@ -2706,7 +2706,7 @@ def get_events():
     
     try:
         events = controller.get_events(count=count, event_type=event_type)
-        logging.info(f"Retrieved {len(events)} events from Rust helper")
+        logging.info(f"Retrieved {len(events)} events from helper")
         
         # Apply offset if provided
         if offset > 0 and offset < len(events):

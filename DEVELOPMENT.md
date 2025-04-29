@@ -1,158 +1,131 @@
-# BettermanAI - Development Guide
+# BettermanAI Development Guide
 
-This document provides an overview of the BettermanAI development process and architecture.
+This document outlines the development setup and processes for the BettermanAI application.
 
-## Development Environment Setup
+## Architecture Overview
+
+BettermanAI uses a hybrid architecture:
+
+- **Web UI**: Flask-based web interface
+- **System Automation**: Rust helper application running locally
+- **Desktop Integration**: Electron wrapper for packaging
+
+The application is designed to work in two modes:
+
+1. **Development Mode**: Mock Rust helper, SQLite database
+2. **Production Mode**: Real Rust helper, PostgreSQL database
+
+## Development Setup
 
 ### Prerequisites
 
-- Node.js 18+ with npm
-- Python 3.8+ with pip
-- Rust toolchain (for building the helper)
-- PostgreSQL (for development, optional)
+- Node.js 18+ and npm
+- Python 3.8+
+- (Optional) Rust toolchain for building the helper
 
-### Initial Setup
+### Setting Up the Development Environment
 
-1. Clone the repository:
-   ```
-   git clone https://github.com/bettermanai/bettermanai-app.git
-   cd bettermanai-app
-   ```
+1. Clone the repository
 
-2. Install Node.js dependencies:
-   ```
-   npm install
-   cd electron
-   npm install
-   cd ..
-   ```
-
-3. Install Python dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
-
-4. Set up environment variables:
-   ```
-   # Create a .env file with the following variables
-   OPENAI_API_KEY=your_openai_api_key  # Required for AI features
-   DATABASE_URL=your_database_url      # PostgreSQL connection string (or SQLite)
-   AUTOMATION_SERVER_URL=http://127.0.0.1:17400  # Local Rust helper URL
-   ```
-
-### Running in Development Mode
-
-#### Running Flask App Directly
-
-```
-python main.py
+```bash
+git clone https://github.com/yourusername/bettermanai.git
+cd bettermanai
 ```
 
-This will start the Flask application on port 5000.
+2. Install Python dependencies
 
-#### Running in Electron
-
+```bash
+pip install -r requirements.txt
 ```
+
+3. Install Electron dependencies
+
+```bash
+cd electron
+npm install
+cd ..
+```
+
+4. Run the application in development mode
+
+```bash
+# Option 1: Using the convenience script
+./run_electron_app.sh
+
+# Option 2: Manually
 cd electron
 npm run dev  # On macOS/Linux
 npm run win-dev  # On Windows
 ```
 
-This will:
-1. Start the Flask server as a child process
-2. Start the Rust helper as a child process
-3. Launch the Electron app pointing to the Flask server
+## Development Mode Features
 
-### Building for Production
+In development mode, the application uses:
 
-```
+- Mock JavaScript version of the Rust helper API (runs on port 17400)
+- SQLite database in the `data` directory
+- Automatic creation of required directories
+- Mock responses for automation functions
+
+## Mock Rust Helper
+
+The mock Rust helper (`electron/mock_helper.js`) provides a simple Express server that mimics the real Rust helper's API. It responds to the same endpoints but provides mock data instead of actually controlling the system.
+
+If you need to add new endpoints to the mock helper, update both the mock helper and the `automation_client.py` file.
+
+## Database
+
+The application uses SQLAlchemy with a database URL specified in the `DATABASE_URL` environment variable. In development mode, it defaults to a SQLite database in the `data` directory.
+
+Database schema updates are handled in `database.py` through the `check_and_update_schema()` function.
+
+## Building for Production
+
+To build the application for production:
+
+```bash
 cd electron
-npm run build  # Build for all platforms
-npm run build:mac  # Build for macOS
-npm run build:win  # Build for Windows
-npm run build:linux  # Build for Linux
+npm run build
 ```
 
-The built applications will be in the `electron/dist` directory.
+This will create platform-specific packages in the `electron/dist` directory.
 
-## Project Architecture
+## Rust Helper Development
 
-BettermanAI follows a hybrid architecture with three main components:
+The Rust helper source code is located in the `rust_helper` directory. To build it:
 
-### 1. Flask Web Application
+1. Install Rust (https://rustup.rs/)
+2. Build the helper:
 
-- Location: Repository root
-- Purpose: Provides the UI and core application logic
-- Key files:
-  - `main.py`: Main Flask application
-  - `models.py`: SQLAlchemy database models
-  - `database.py`: Database connection handling
-  - `ai_llm.py`: OpenAI integration
-  - `templates/`: HTML templates
-  - `static/`: CSS, JavaScript, and static assets
-
-### 2. Rust Helper
-
-- Location: External repository, packaged in `electron/rust_helper/`
-- Purpose: Provides system-level monitoring and automation capabilities
-- Key components:
-  - REST API for communication with Flask
-  - TagUI integration for automation execution
-  - Event listening for workflow monitoring
-
-### 3. Electron Wrapper
-
-- Location: `electron/`
-- Purpose: Packages the Flask app and Rust helper into a desktop application
-- Key files:
-  - `main.js`: Main Electron process
-  - `preload.js`: Secure bridge to web content
-  - `package.json`: Application configuration
-  - `build-config.js`: Build configuration
-
-## Feature Development Process
-
-When developing new features:
-
-1. Begin with the Flask application logic
-2. Update the database models if needed
-3. Implement the UI in HTML/CSS/JavaScript
-4. If needed, extend the Rust helper API
-5. Test in development mode
-6. Package with Electron and test distribution
-
-## Testing
-
-Run Python tests with:
-```
-python -m unittest discover tests
+```bash
+cd rust_helper
+cargo build --release
 ```
 
-Run Electron tests with:
-```
-cd electron
-npm test
-```
+The built binary will be placed in `rust_helper/target/release/`.
 
-## Database Migrations
+## Troubleshooting
 
-When changing the database schema:
+### Connection Issues
 
-1. Update the models in `models.py`
-2. Use SQLAlchemy's automatic migration handling
-3. Test the migration thoroughly
+If you see connection errors to the Rust helper in development mode, ensure:
 
-## Contribution Guidelines
+1. The mock helper is running (check logs in Electron's console)
+2. No other application is using port 17400
+3. The `AUTOMATION_SERVER_URL` environment variable is set to `http://127.0.0.1:17400`
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Write tests
-5. Submit a pull request
+### Database Issues
 
-## Versioning
+If you encounter database errors:
 
-BettermanAI follows semantic versioning:
-- MAJOR version for incompatible API changes
-- MINOR version for new features
-- PATCH version for bug fixes
+1. Check if the `data` directory exists and is writable
+2. Delete the SQLite database file to start fresh: `rm data/betterman.db`
+3. Check the database URL in environment variables
+
+### Electron Packaging Issues
+
+If Electron packaging fails:
+
+1. Clear the `dist` directory: `rm -rf electron/dist`
+2. Clear npm cache: `npm cache clean --force`
+3. Reinstall dependencies: `cd electron && npm install`

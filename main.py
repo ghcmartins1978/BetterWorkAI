@@ -1855,6 +1855,90 @@ def simple_server_config():
     server_url = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400')
     return render_template('simple_server_manager.html', server_url=server_url)
 
+@app.route('/direct-port-fix')
+def direct_port_fix():
+    """Direct port fix page"""
+    return render_template('direct_port_fix.html')
+
+@app.route('/api/direct-port-fix', methods=['POST'])
+def apply_direct_port_fix():
+    """Directly apply the port fix from the logs"""
+    try:
+        # Fixed values from logs
+        correct_port = "17403"
+        
+        # Set environment variables
+        os.environ['AUTOMATION_SERVER_URL'] = f"http://127.0.0.1:{correct_port}"
+        os.environ['MOCK_HELPER_PORT'] = correct_port
+        
+        # Update settings in database if available
+        try:
+            settings.set_setting('automation_server_url', f"http://127.0.0.1:{correct_port}")
+        except Exception as db_error:
+            logger.warning(f"Could not update settings in database: {db_error}")
+        
+        # Update port file
+        updated_files = []
+        port_file_written = False
+        
+        possible_paths = [
+            os.path.join(os.path.dirname(__file__), 'data', 'mock_helper_port.txt'),
+            os.path.join(os.path.dirname(__file__), '..', 'data', 'mock_helper_port.txt'),
+            os.path.join('data', 'mock_helper_port.txt'),
+            'mock_helper_port.txt'
+        ]
+        
+        # Try to write to an existing file first
+        for path in possible_paths:
+            if os.path.exists(path):
+                try:
+                    with open(path, 'w') as f:
+                        f.write(correct_port)
+                    updated_files.append(path)
+                    port_file_written = True
+                    break
+                except Exception as e:
+                    logger.warning(f"Could not write to existing port file {path}: {e}")
+        
+        # If no existing file was found, create a new one
+        if not port_file_written:
+            try:
+                # Try to create in data directory first
+                data_dir = os.path.join(os.path.dirname(__file__), 'data')
+                if not os.path.exists(data_dir):
+                    os.makedirs(data_dir)
+                port_file_path = os.path.join(data_dir, 'mock_helper_port.txt')
+                
+                with open(port_file_path, 'w') as f:
+                    f.write(correct_port)
+                updated_files.append(port_file_path)
+                port_file_written = True
+            except Exception as e:
+                logger.warning(f"Could not create new port file: {e}")
+                
+                # Fall back to current directory
+                try:
+                    with open('mock_helper_port.txt', 'w') as f:
+                        f.write(correct_port)
+                    updated_files.append('mock_helper_port.txt')
+                    port_file_written = True
+                except Exception as e:
+                    logger.warning(f"Could not create fallback port file: {e}")
+        
+        return jsonify({
+            'status': 'success',
+            'message': f"Port configuration fixed to use port {correct_port}. Server URL set to http://127.0.0.1:{correct_port}, Mock Helper Port set to {correct_port}.",
+            'updated_files': updated_files,
+            'restart_required': True,
+            'port': correct_port
+        })
+    except Exception as e:
+        logger.error(f"Error applying direct port fix: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f"Error applying port fix: {str(e)}"
+        })
+
 
 @app.route('/api/update-server-url', methods=['POST'])
 def update_server_url():
@@ -4363,6 +4447,9 @@ def exempt_api_routes():
             # Exempt it from CSRF protection
             csrf.exempt(view_func)
             logger.debug(f"CSRF exempted: {rule.rule}")
+            
+    # Explicitly exempt our direct port fix API
+    csrf.exempt(apply_direct_port_fix)
 
 # Run CSRF exemptions
 exempt_api_routes()

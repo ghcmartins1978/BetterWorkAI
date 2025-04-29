@@ -1,0 +1,85 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Direct Port Fix
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Direct Port Fix</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h5>Emergency Port Configuration</h5>
+                        <p>This page will directly update your port settings to use the values from your logs:</p>
+                        <ul>
+                            <li><strong>Rust Helper URL:</strong> <code>http://127.0.0.1:17403</code></li>
+                            <li><strong>Mock Helper Port:</strong> <code>17403</code></li>
+                        </ul>
+                    </div>
+                    
+                    <div class="d-grid gap-3">
+                        <button id="fix-ports-button" class="btn btn-danger">Fix Port Configuration</button>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <div id="status-message" class="alert alert-secondary d-none"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fixPortsButton = document.getElementById('fix-ports-button');
+    const statusMessage = document.getElementById('status-message');
+    
+    fixPortsButton.addEventListener('click', function() {
+        // Update the status message
+        showStatus('Applying direct port fix...', 'info');
+        
+        // First update the server URL
+        fetch('/api/direct-port-fix', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showStatus(data.message, 'success');
+                
+                // Show restart information if needed
+                if (data.restart_required) {
+                    const message = statusMessage.innerHTML + '<hr><p>Application restart required to apply all changes. Please restart your application now.</p>';
+                    showStatusHTML(message, 'warning');
+                }
+            } else {
+                showStatus('Error: ' + data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            showStatus('Error: ' + error.message, 'danger');
+        });
+    });
+    
+    // Helper function to show status messages
+    function showStatus(message, type) {
+        statusMessage.textContent = message;
+        statusMessage.className = 'alert alert-' + type;
+    }
+    
+    function showStatusHTML(html, type) {
+        statusMessage.innerHTML = html;
+        statusMessage.className = 'alert alert-' + type;
+    }
+});
+</script>
+{% endblock %}

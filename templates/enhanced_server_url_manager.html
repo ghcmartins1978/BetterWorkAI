@@ -4,6 +4,23 @@
 Enhanced Server URL Manager
 {% endblock %}
 
+{% block head %}
+<style>
+    /* Ensure tabs are visible */
+    .nav-tabs .nav-link {
+        color: var(--bs-primary);
+        font-weight: 500;
+    }
+    .nav-tabs .nav-link.active {
+        font-weight: bold;
+        background-color: var(--bs-dark);
+        color: var(--bs-white);
+        border-color: var(--bs-primary);
+        border-bottom-color: var(--bs-dark);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
     <div class="row">
@@ -195,7 +212,47 @@ Enhanced Server URL Manager
 </div>
 
 <script>
+// Add event handler to enable tabs
+function initTabs() {
+    // Manual implementation of Bootstrap tabs
+    const tabs = document.querySelectorAll('[data-bs-toggle="tab"]');
+    
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function(event) {
+            event.preventDefault();
+            
+            // Get the target pane
+            const targetSelector = this.getAttribute('data-bs-target');
+            const targetPane = document.querySelector(targetSelector);
+            
+            // Remove active class from all tabs
+            tabs.forEach(t => {
+                t.classList.remove('active');
+                t.setAttribute('aria-selected', 'false');
+            });
+            
+            // Add active class to clicked tab
+            this.classList.add('active');
+            this.setAttribute('aria-selected', 'true');
+            
+            // Hide all tab panes
+            const tabPanes = document.querySelectorAll('.tab-pane');
+            tabPanes.forEach(pane => {
+                pane.classList.remove('show', 'active');
+            });
+            
+            // Show the target pane
+            if (targetPane) {
+                targetPane.classList.add('show', 'active');
+            }
+        });
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tabs
+    initTabs();
+    
     // Server URL Tab Elements
     const serverUrlInput = document.getElementById('server-url-input');
     const permanentCheck = document.getElementById('permanent-check');
@@ -221,232 +278,250 @@ document.addEventListener('DOMContentLoaded', function() {
     const portFilesResult = document.getElementById('port-files-result');
     
     // Test and update the URL
-    testButton.addEventListener('click', function() {
-        const serverUrl = serverUrlInput.value.trim();
-        const permanent = permanentCheck.checked;
-        
-        if (!serverUrl) {
-            showStatus('Please enter a server URL', 'danger');
-            return;
-        }
-        
-        if (!serverUrl.startsWith('http://') && !serverUrl.startsWith('https://')) {
-            showStatus('Server URL must start with http:// or https://', 'danger');
-            return;
-        }
-        
-        // Show the testing status
-        showStatus('Testing connection to ' + serverUrl, 'info');
-        progressBarContainer.classList.remove('d-none');
-        testResults.innerHTML = '<li class="list-group-item">Testing connection...</li>';
-        
-        // Simulate progress bar
-        let progress = 0;
-        const progressInterval = setInterval(function() {
-            progress += 5;
-            progressBar.style.width = Math.min(progress, 95) + '%';
-            if (progress >= 95) {
-                clearInterval(progressInterval);
-            }
-        }, 100);
-        
-        // Make the test request
-        fetch('/api/update-server-url', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                server_url: serverUrl,
-                permanent: permanent
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            clearInterval(progressInterval);
-            progressBar.style.width = '100%';
-            setTimeout(() => {
-                progressBarContainer.classList.add('d-none');
-            }, 500);
+    if (testButton) {
+        testButton.addEventListener('click', function() {
+            const serverUrl = serverUrlInput.value.trim();
+            const permanent = permanentCheck.checked;
             
-            if (data.status === 'success') {
-                showStatus(data.message, 'success');
-                document.getElementById('current-url').textContent = serverUrl;
-                displayTestResults(data.tests);
-                
-                // Update the helper port input based on the new URL
-                const urlParts = serverUrl.split(':');
-                if (urlParts.length >= 3) {
-                    const port = urlParts[2];
-                    helperPortInput.value = port;
-                }
-                
-                // Reload the page after a delay to reflect changes
-                if (permanent) {
-                    setTimeout(() => {
-                        location.reload();
-                    }, 3000);
-                }
-            } else {
-                showStatus(data.message, 'danger');
-                displayTestResults(data.tests || [
-                    {name: 'Connection Test', status: 'failed', message: data.message}
-                ]);
+            if (!serverUrl) {
+                showStatus('Please enter a server URL', 'danger');
+                return;
             }
-        })
-        .catch(error => {
-            clearInterval(progressInterval);
-            progressBarContainer.classList.add('d-none');
-            showStatus('Error: ' + error.message, 'danger');
-            testResults.innerHTML = `<li class="list-group-item list-group-item-danger">Error: ${error.message}</li>`;
+            
+            if (!serverUrl.startsWith('http://') && !serverUrl.startsWith('https://')) {
+                showStatus('Server URL must start with http:// or https://', 'danger');
+                return;
+            }
+            
+            // Show the testing status
+            showStatus('Testing connection to ' + serverUrl, 'info');
+            progressBarContainer.classList.remove('d-none');
+            testResults.innerHTML = '<li class="list-group-item">Testing connection...</li>';
+            
+            // Simulate progress bar
+            let progress = 0;
+            const progressInterval = setInterval(function() {
+                progress += 5;
+                progressBar.style.width = Math.min(progress, 95) + '%';
+                if (progress >= 95) {
+                    clearInterval(progressInterval);
+                }
+            }, 100);
+            
+            // Make the test request
+            fetch('/api/update-server-url', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    server_url: serverUrl,
+                    permanent: permanent
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                clearInterval(progressInterval);
+                progressBar.style.width = '100%';
+                setTimeout(() => {
+                    progressBarContainer.classList.add('d-none');
+                }, 500);
+                
+                if (data.status === 'success') {
+                    showStatus(data.message, 'success');
+                    document.getElementById('current-url').textContent = serverUrl;
+                    displayTestResults(data.tests);
+                    
+                    // Update the helper port input based on the new URL
+                    const urlParts = serverUrl.split(':');
+                    if (urlParts.length >= 3) {
+                        const port = urlParts[2];
+                        helperPortInput.value = port;
+                    }
+                    
+                    // Reload the page after a delay to reflect changes
+                    if (permanent) {
+                        setTimeout(() => {
+                            location.reload();
+                        }, 3000);
+                    }
+                } else {
+                    showStatus(data.message, 'danger');
+                    displayTestResults(data.tests || [
+                        {name: 'Connection Test', status: 'failed', message: data.message}
+                    ]);
+                }
+            })
+            .catch(error => {
+                clearInterval(progressInterval);
+                progressBarContainer.classList.add('d-none');
+                showStatus('Error: ' + error.message, 'danger');
+                testResults.innerHTML = `<li class="list-group-item list-group-item-danger">Error: ${error.message}</li>`;
+            });
         });
-    });
+    }
     
     // Update port configuration
-    updatePortsButton.addEventListener('click', function() {
-        const helperPort = helperPortInput.value.trim();
-        const mockHelperPort = mockHelperPortInput.value.trim();
-        
-        if (!helperPort || !mockHelperPort) {
-            showPortStatus('Please enter valid port numbers', 'danger');
-            return;
-        }
-        
-        showPortStatus('Updating port configuration...', 'info');
-        
-        fetch('/api/update-port-config', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                helper_port: helperPort,
-                mock_helper_port: mockHelperPort
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                showPortStatus(data.message, 'success');
-                
-                // Update the server URL input based on the new helper port
-                const currentUrl = serverUrlInput.value;
-                const urlParts = currentUrl.split(':');
-                if (urlParts.length >= 3) {
-                    const newUrl = urlParts[0] + ':' + urlParts[1] + ':' + helperPort;
-                    serverUrlInput.value = newUrl;
-                    document.getElementById('current-url').textContent = newUrl;
-                }
-                
-                // Show restart message if needed
-                if (data.restart_required) {
-                    showPortStatus(data.message + '. Application restart required to apply changes.', 'warning');
-                }
-            } else {
-                showPortStatus(data.message, 'danger');
+    if (updatePortsButton) {
+        updatePortsButton.addEventListener('click', function() {
+            const helperPort = helperPortInput.value.trim();
+            const mockHelperPort = mockHelperPortInput.value.trim();
+            
+            if (!helperPort || !mockHelperPort) {
+                showPortStatus('Please enter valid port numbers', 'danger');
+                return;
             }
-        })
-        .catch(error => {
-            showPortStatus('Error: ' + error.message, 'danger');
+            
+            showPortStatus('Updating port configuration...', 'info');
+            
+            fetch('/api/update-port-config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    helper_port: helperPort,
+                    mock_helper_port: mockHelperPort
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showPortStatus(data.message, 'success');
+                    
+                    // Update the server URL input based on the new helper port
+                    const currentUrl = serverUrlInput.value;
+                    const urlParts = currentUrl.split(':');
+                    if (urlParts.length >= 3) {
+                        const newUrl = urlParts[0] + ':' + urlParts[1] + ':' + helperPort;
+                        serverUrlInput.value = newUrl;
+                        document.getElementById('current-url').textContent = newUrl;
+                    }
+                    
+                    // Show restart message if needed
+                    if (data.restart_required) {
+                        showPortStatus(data.message + '. Application restart required to apply changes.', 'warning');
+                    }
+                } else {
+                    showPortStatus(data.message, 'danger');
+                }
+            })
+            .catch(error => {
+                showPortStatus('Error: ' + error.message, 'danger');
+            });
         });
-    });
+    }
     
     // Check port status
-    checkPortButton.addEventListener('click', function() {
-        const port = checkPortInput.value.trim();
-        
-        if (!port) {
-            portCheckResult.textContent = 'Please enter a valid port number';
-            portCheckResult.classList.remove('d-none', 'alert-success', 'alert-danger', 'alert-info');
-            portCheckResult.classList.add('alert-warning');
-            return;
-        }
-        
-        portCheckResult.textContent = 'Checking port ' + port + '...';
-        portCheckResult.classList.remove('d-none', 'alert-success', 'alert-danger', 'alert-warning');
-        portCheckResult.classList.add('alert-info');
-        
-        fetch('/api/check-port-status', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                port: port
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            portCheckResult.classList.remove('alert-info');
-            if (data.status === 'success') {
-                portCheckResult.classList.add('alert-success');
-                portCheckResult.innerHTML = `<strong>Port ${port} is available:</strong> ${data.message}`;
-            } else {
-                portCheckResult.classList.add('alert-danger');
-                portCheckResult.innerHTML = `<strong>Port ${port} is not available:</strong> ${data.message}`;
+    if (checkPortButton) {
+        checkPortButton.addEventListener('click', function() {
+            const port = checkPortInput.value.trim();
+            
+            if (!port) {
+                portCheckResult.textContent = 'Please enter a valid port number';
+                portCheckResult.classList.remove('d-none', 'alert-success', 'alert-danger', 'alert-info');
+                portCheckResult.classList.add('alert-warning');
+                return;
             }
-        })
-        .catch(error => {
-            portCheckResult.classList.remove('alert-info');
-            portCheckResult.classList.add('alert-danger');
-            portCheckResult.textContent = 'Error checking port: ' + error.message;
+            
+            portCheckResult.textContent = 'Checking port ' + port + '...';
+            portCheckResult.classList.remove('d-none', 'alert-success', 'alert-danger', 'alert-warning');
+            portCheckResult.classList.add('alert-info');
+            
+            fetch('/api/check-port-status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    port: port
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                portCheckResult.classList.remove('alert-info');
+                if (data.status === 'success') {
+                    portCheckResult.classList.add('alert-success');
+                    portCheckResult.innerHTML = `<strong>Port ${port} is available:</strong> ${data.message}`;
+                } else {
+                    portCheckResult.classList.add('alert-danger');
+                    portCheckResult.innerHTML = `<strong>Port ${port} is not available:</strong> ${data.message}`;
+                }
+            })
+            .catch(error => {
+                portCheckResult.classList.remove('alert-info');
+                portCheckResult.classList.add('alert-danger');
+                portCheckResult.textContent = 'Error checking port: ' + error.message;
+            });
         });
-    });
+    }
     
     // Check port configuration files
-    checkPortFilesButton.addEventListener('click', function() {
-        portFilesResult.textContent = 'Checking port configuration files...';
-        portFilesResult.classList.remove('d-none', 'alert-success', 'alert-danger', 'alert-warning');
-        portFilesResult.classList.add('alert-info');
-        
-        fetch('/api/check-port-files', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            portFilesResult.classList.remove('alert-info');
+    if (checkPortFilesButton) {
+        checkPortFilesButton.addEventListener('click', function() {
+            portFilesResult.textContent = 'Checking port configuration files...';
+            portFilesResult.classList.remove('d-none', 'alert-success', 'alert-danger', 'alert-warning');
+            portFilesResult.classList.add('alert-info');
             
-            if (data.status === 'success') {
-                portFilesResult.classList.add('alert-success');
-                let filesHtml = '<strong>Port Configuration Files:</strong><ul>';
-                
-                for (const file of data.files) {
-                    filesHtml += `<li><strong>${file.name}:</strong> ${file.exists ? 'Exists' : 'Missing'} ${file.exists ? '(' + file.content + ')' : ''}</li>`;
+            fetch('/api/check-port-files', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
                 }
+            })
+            .then(response => response.json())
+            .then(data => {
+                portFilesResult.classList.remove('alert-info');
                 
-                filesHtml += '</ul>';
-                portFilesResult.innerHTML = filesHtml;
-            } else {
-                portFilesResult.classList.add('alert-warning');
-                portFilesResult.textContent = data.message;
-            }
-        })
-        .catch(error => {
-            portFilesResult.classList.remove('alert-info');
-            portFilesResult.classList.add('alert-danger');
-            portFilesResult.textContent = 'Error checking port files: ' + error.message;
+                if (data.status === 'success') {
+                    portFilesResult.classList.add('alert-success');
+                    let filesHtml = '<strong>Port Configuration Files:</strong><ul>';
+                    
+                    for (const file of data.files) {
+                        filesHtml += `<li><strong>${file.name}:</strong> ${file.exists ? 'Exists' : 'Missing'} ${file.exists ? '(' + file.content + ')' : ''}</li>`;
+                    }
+                    
+                    filesHtml += '</ul>';
+                    portFilesResult.innerHTML = filesHtml;
+                } else {
+                    portFilesResult.classList.add('alert-warning');
+                    portFilesResult.textContent = data.message;
+                }
+            })
+            .catch(error => {
+                portFilesResult.classList.remove('alert-info');
+                portFilesResult.classList.add('alert-danger');
+                portFilesResult.textContent = 'Error checking port files: ' + error.message;
+            });
         });
-    });
+    }
     
     // Show a status message in the server URL tab
     function showStatus(message, type) {
-        statusAlert.classList.remove('d-none', 'alert-info', 'alert-success', 'alert-danger', 'alert-warning');
-        statusAlert.classList.add('alert-' + type);
-        statusMessage.innerHTML = message;
+        if (statusAlert) {
+            statusAlert.classList.remove('d-none', 'alert-info', 'alert-success', 'alert-danger', 'alert-warning');
+            statusAlert.classList.add('alert-' + type);
+            if (statusMessage) {
+                statusMessage.innerHTML = message;
+            }
+        }
     }
     
     // Show a status message in the port configuration tab
     function showPortStatus(message, type) {
-        portStatusAlert.classList.remove('d-none', 'alert-info', 'alert-success', 'alert-danger', 'alert-warning');
-        portStatusAlert.classList.add('alert-' + type);
-        portStatusMessage.innerHTML = message;
+        if (portStatusAlert) {
+            portStatusAlert.classList.remove('d-none', 'alert-info', 'alert-success', 'alert-danger', 'alert-warning');
+            portStatusAlert.classList.add('alert-' + type);
+            if (portStatusMessage) {
+                portStatusMessage.innerHTML = message;
+            }
+        }
     }
     
     // Display test results in the server URL tab
     function displayTestResults(tests) {
+        if (!testResults) return;
+        
         testResults.innerHTML = '';
         
         if (!tests || tests.length === 0) {

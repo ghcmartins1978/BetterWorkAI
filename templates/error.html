@@ -15,18 +15,64 @@
                         <p>{{ error_message }}</p>
                     </div>
                     
-                    {% if back_link %}
-                    <a href="{{ back_link }}" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left"></i> Back
-                    </a>
-                    {% else %}
-                    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
-                        <i class="fas fa-home"></i> Go to Dashboard
-                    </a>
-                    {% endif %}
+                    <div class="d-flex gap-2">
+                        {% if back_link %}
+                        <a href="{{ back_link }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Back
+                        </a>
+                        {% else %}
+                        <button onclick="goBack()" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Go Back
+                        </button>
+                        {% endif %}
+                        
+                        <a href="{{ url_for('index') }}" class="btn btn-primary">
+                            <i class="bi bi-house"></i> Dashboard
+                        </a>
+                        
+                        {% if is_electron %}
+                        <button id="reloadAppBtn" class="btn btn-warning">
+                            <i class="bi bi-arrow-clockwise"></i> Reload App
+                        </button>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
+            
+            {% if is_electron and error_title == "Database Connection Error" %}
+            <div class="card mt-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Troubleshooting</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li>Check if the database file exists in the <code>data</code> folder</li>
+                        <li>Make sure you have write permissions to the data folder</li>
+                        <li>Try restarting the application</li>
+                        <li>Run <code>check_app_status.bat</code> to verify the environment setup</li>
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
+
+<script>
+function goBack() {
+    window.history.back();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Add Electron-specific functionality if available
+    if (typeof window !== 'undefined' && typeof window.electron !== 'undefined') {
+        const reloadBtn = document.getElementById('reloadAppBtn');
+        if (reloadBtn) {
+            reloadBtn.addEventListener('click', function() {
+                window.location.href = '/';
+            });
+        }
+    }
+});
+</script>
 {% endblock %}

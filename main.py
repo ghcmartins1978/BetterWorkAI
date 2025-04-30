@@ -1869,7 +1869,7 @@ def apply_direct_port_fix():
         
         # Set environment variables
         os.environ['AUTOMATION_SERVER_URL'] = f"http://127.0.0.1:{correct_port}"
-        os.environ['MOCK_HELPER_PORT'] = correct_port
+        os.environ['PYTHON_HELPER_PORT'] = correct_port
         
         # Update settings in database if available
         try:
@@ -1882,10 +1882,10 @@ def apply_direct_port_fix():
         port_file_written = False
         
         possible_paths = [
-            os.path.join(os.path.dirname(__file__), 'data', 'mock_helper_port.txt'),
-            os.path.join(os.path.dirname(__file__), '..', 'data', 'mock_helper_port.txt'),
-            os.path.join('data', 'mock_helper_port.txt'),
-            'mock_helper_port.txt'
+            os.path.join(os.path.dirname(__file__), 'data', 'python_helper_port.txt'),
+            os.path.join(os.path.dirname(__file__), '..', 'data', 'python_helper_port.txt'),
+            os.path.join('data', 'python_helper_port.txt'),
+            'python_helper_port.txt'
         ]
         
         # Try to write to an existing file first
@@ -1907,7 +1907,7 @@ def apply_direct_port_fix():
                 data_dir = os.path.join(os.path.dirname(__file__), 'data')
                 if not os.path.exists(data_dir):
                     os.makedirs(data_dir)
-                port_file_path = os.path.join(data_dir, 'mock_helper_port.txt')
+                port_file_path = os.path.join(data_dir, 'python_helper_port.txt')
                 
                 with open(port_file_path, 'w') as f:
                     f.write(correct_port)
@@ -1918,16 +1918,16 @@ def apply_direct_port_fix():
                 
                 # Fall back to current directory
                 try:
-                    with open('mock_helper_port.txt', 'w') as f:
+                    with open('python_helper_port.txt', 'w') as f:
                         f.write(correct_port)
-                    updated_files.append('mock_helper_port.txt')
+                    updated_files.append('python_helper_port.txt')
                     port_file_written = True
                 except Exception as e:
                     logger.warning(f"Could not create fallback port file: {e}")
         
         return jsonify({
             'status': 'success',
-            'message': f"Port configuration fixed to use port {correct_port}. Server URL set to http://127.0.0.1:{correct_port}, Mock Helper Port set to {correct_port}.",
+            'message': f"Port configuration fixed to use port {correct_port}. Server URL set to http://127.0.0.1:{correct_port}, Python Helper Port set to {correct_port}.",
             'updated_files': updated_files,
             'restart_required': True,
             'port': correct_port
@@ -2044,20 +2044,20 @@ def update_port_config():
     try:
         data = request.json
         helper_port = data.get('helper_port', '')
-        mock_helper_port = data.get('mock_helper_port', '')
+        python_helper_port = data.get('python_helper_port', '')
         
-        if not helper_port or not mock_helper_port:
+        if not helper_port or not python_helper_port:
             return jsonify({
                 'status': 'error',
-                'message': 'Both helper port and mock helper port must be provided'
+                'message': 'Both helper port and Python helper port must be provided'
             })
         
         # Validate port numbers
         try:
             helper_port = int(helper_port)
-            mock_helper_port = int(mock_helper_port)
+            python_helper_port = int(python_helper_port)
             
-            if helper_port < 1024 or helper_port > 65535 or mock_helper_port < 1024 or mock_helper_port > 65535:
+            if helper_port < 1024 or helper_port > 65535 or python_helper_port < 1024 or python_helper_port > 65535:
                 return jsonify({
                     'status': 'error',
                     'message': 'Port numbers must be between 1024 and 65535'
@@ -2069,11 +2069,11 @@ def update_port_config():
             })
         
         # In some cases, both ports can be the same (especially for testing)
-        # Allow same ports for helper and mock helper
-        # if helper_port == mock_helper_port:
+        # Allow same ports for helper and Python helper
+        # if helper_port == python_helper_port:
         #     return jsonify({
         #         'status': 'error',
-        #         'message': 'Helper port and mock helper port cannot be the same'
+        #         'message': 'Helper port and Python helper port cannot be the same'
         #     })
             
         result = {
@@ -2096,22 +2096,22 @@ def update_port_config():
                 'new_value': new_url
             })
         
-        # Set mock helper port in environment
-        os.environ['MOCK_HELPER_PORT'] = str(mock_helper_port)
+        # Set Python helper port in environment
+        os.environ['PYTHON_HELPER_PORT'] = str(python_helper_port)
         result['updated_files'].append({
-            'name': 'MOCK_HELPER_PORT',
-            'old_value': os.environ.get('MOCK_HELPER_PORT', '17402'),
-            'new_value': str(mock_helper_port)
+            'name': 'PYTHON_HELPER_PORT',
+            'old_value': os.environ.get('PYTHON_HELPER_PORT', '17402'),
+            'new_value': str(python_helper_port)
         })
         
-        # Try to create or update mock_helper_port.txt
+        # Try to create or update python_helper_port.txt
         try:
             # Check multiple possible locations
             possible_paths = [
-                os.path.join(os.path.dirname(__file__), 'data', 'mock_helper_port.txt'),
-                os.path.join(os.path.dirname(__file__), '..', 'data', 'mock_helper_port.txt'),
-                os.path.join('data', 'mock_helper_port.txt'),
-                'mock_helper_port.txt'
+                os.path.join(os.path.dirname(__file__), 'data', 'python_helper_port.txt'),
+                os.path.join(os.path.dirname(__file__), '..', 'data', 'python_helper_port.txt'),
+                os.path.join('data', 'python_helper_port.txt'),
+                'python_helper_port.txt'
             ]
             
             # First check if any of these exist
@@ -2127,16 +2127,16 @@ def update_port_config():
                 data_dir = os.path.join(os.path.dirname(__file__), 'data')
                 if not os.path.exists(data_dir):
                     os.makedirs(data_dir)
-                port_file_path = os.path.join(data_dir, 'mock_helper_port.txt')
+                port_file_path = os.path.join(data_dir, 'python_helper_port.txt')
             
             # Write to the file
             with open(port_file_path, 'w') as f:
-                f.write(str(mock_helper_port))
+                f.write(str(python_helper_port))
                 
             result['updated_files'].append({
                 'name': 'Port File',
                 'path': port_file_path,
-                'value': str(mock_helper_port)
+                'value': str(python_helper_port)
             })
             
             # Indicate restart required
@@ -2144,8 +2144,8 @@ def update_port_config():
             result['message'] += '. Application restart required to apply changes.'
             
         except Exception as e:
-            logger.warning(f"Could not update mock helper port file: {e}")
-            result['warnings'] = f"Could not update mock helper port file: {e}"
+            logger.warning(f"Could not update Python helper port file: {e}")
+            result['warnings'] = f"Could not update Python helper port file: {e}"
         
         return jsonify(result)
     except Exception as e:
@@ -2212,10 +2212,10 @@ def check_port_files():
     """API endpoint to check port configuration files"""
     try:
         possible_paths = [
-            os.path.join(os.path.dirname(__file__), 'data', 'mock_helper_port.txt'),
-            os.path.join(os.path.dirname(__file__), '..', 'data', 'mock_helper_port.txt'),
-            os.path.join('data', 'mock_helper_port.txt'),
-            'mock_helper_port.txt'
+            os.path.join(os.path.dirname(__file__), 'data', 'python_helper_port.txt'),
+            os.path.join(os.path.dirname(__file__), '..', 'data', 'python_helper_port.txt'),
+            os.path.join('data', 'python_helper_port.txt'),
+            'python_helper_port.txt'
         ]
         
         files = []
@@ -2244,9 +2244,9 @@ def check_port_files():
                 'content': os.environ.get('AUTOMATION_SERVER_URL', 'Not set')
             },
             {
-                'name': 'MOCK_HELPER_PORT',
-                'exists': 'MOCK_HELPER_PORT' in os.environ,
-                'content': os.environ.get('MOCK_HELPER_PORT', 'Not set')
+                'name': 'PYTHON_HELPER_PORT',
+                'exists': 'PYTHON_HELPER_PORT' in os.environ,
+                'content': os.environ.get('PYTHON_HELPER_PORT', 'Not set')
             }
         ]
         

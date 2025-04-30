@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """
-BettermanAI Helper Emulator
+BettermanAI Helper - Python Implementation
 This is a Python implementation of the Helper API to allow the application
-to run without requiring the actual Rust implementation.
+to run without requiring the Rust implementation.
 """
 
 import argparse
@@ -36,8 +36,8 @@ last_events = []
 connected_clients = 0
 started_at = time.time()
 
-# Mock window list
-MOCK_WINDOWS = [
+# Sample window list
+SAMPLE_WINDOWS = [
     {'id': 1, 'title': 'BettermanAI - Workflow Automation', 'app': 'Electron'},
     {'id': 2, 'title': 'Visual Studio Code - project.py', 'app': 'Code'},
     {'id': 3, 'title': 'Terminal - bash', 'app': 'Terminal'},
@@ -85,7 +85,7 @@ class HelperHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             # Window list endpoint
             self._send_json_response({
                 'status': 'success',
-                'windows': MOCK_WINDOWS
+                'windows': SAMPLE_WINDOWS
             })
             
         elif path == '/api/events':
@@ -203,7 +203,7 @@ class HelperHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         elif path == '/api/keyboard/press':
             # Keyboard press endpoint
             key = data.get('key', '')
-            logger.info(f"Mock keyboard press: {key}")
+            logger.info(f"Python Helper: keyboard press: {key}")
             
             self._send_json_response({
                 'status': 'success',
@@ -214,7 +214,7 @@ class HelperHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             # Keyboard hotkey endpoint
             keys = data.get('keys', [])
             key_str = '+'.join(keys)
-            logger.info(f"Mock keyboard hotkey: {key_str}")
+            logger.info(f"Python Helper: keyboard hotkey: {key_str}")
             
             self._send_json_response({
                 'status': 'success',
@@ -224,7 +224,7 @@ class HelperHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         elif path == '/api/monitoring/start':
             # Start monitoring endpoint
             monitoring_enabled = True
-            logger.info("Mock monitoring started")
+            logger.info("Python Helper: monitoring started")
             
             self._send_json_response({
                 'status': 'success',
@@ -234,7 +234,7 @@ class HelperHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         elif path == '/api/monitoring/stop':
             # Stop monitoring endpoint
             monitoring_enabled = False
-            logger.info("Mock monitoring stopped")
+            logger.info("Python Helper: monitoring stopped")
             
             self._send_json_response({
                 'status': 'success',
@@ -244,7 +244,7 @@ class HelperHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         elif path == '/api/execute':
             # Execute macro endpoint
             steps = data.get('steps', [])
-            logger.info(f"Mock execute macro with {len(steps)} steps")
+            logger.info(f"Python Helper: execute macro with {len(steps)} steps")
             
             # Log each step
             for i, step in enumerate(steps):

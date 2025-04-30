@@ -2753,8 +2753,16 @@ def stop_monitoring():
     """Stop monitoring on the local server"""
     from monitor_controller import MonitorController
     
-    # Force using localhost URL to avoid environment variable issues
-    controller = MonitorController(server_url="http://127.0.0.1:17400")
+    # Use automatic port detection
+    controller = MonitorController()
+    
+    # Check connection first
+    if not controller.is_connected():
+        return jsonify({
+            'success': False, 
+            'error': 'Helper not connected. Please check your connection settings.'
+        })
+    
     result = controller.stop_monitoring()
     
     return jsonify(result)

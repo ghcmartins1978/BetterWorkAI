@@ -76,8 +76,16 @@ class MonitorController:
             else:
                 return {'monitoring': False, 'error': f'Status code: {response.status_code}'}
         except Exception as e:
-            logger.error(f"Failed to get monitoring status: {e}")
-            return {'monitoring': False, 'error': str(e)}
+            error_msg = str(e)
+            if "Connection refused" in error_msg:
+                logger.error(f"Failed to get monitoring status - Connection refused: Rust helper is not running or port {self.server_url.split(':')[-1]} is not accessible")
+                return {'monitoring': False, 'connected': False, 'error': 'Helper connection refused'}
+            elif "ConnectTimeout" in error_msg or "ReadTimeout" in error_msg:
+                logger.error(f"Failed to get monitoring status - Connection timeout: Rust helper not responding in time")
+                return {'monitoring': False, 'connected': False, 'error': 'Helper connection timeout'}
+            else:
+                logger.error(f"Failed to get monitoring status: {error_msg}")
+                return {'monitoring': False, 'connected': False, 'error': error_msg}
     
     def start_monitoring(self):
         """Start monitoring on the helper"""
@@ -111,8 +119,16 @@ class MonitorController:
             else:
                 return {'success': False, 'error': f'Status code: {response.status_code}'}
         except Exception as e:
-            logger.error(f"Failed to start monitoring: {e}")
-            return {'success': False, 'error': str(e)}
+            error_msg = str(e)
+            if "Connection refused" in error_msg:
+                logger.error(f"Failed to start monitoring - Connection refused: Rust helper is not running or port {self.server_url.split(':')[-1]} is not accessible")
+                return {'success': False, 'error': 'Helper connection refused. Please check if the Rust helper is running.'}
+            elif "ConnectTimeout" in error_msg or "ReadTimeout" in error_msg:
+                logger.error(f"Failed to start monitoring - Connection timeout: Rust helper not responding in time")
+                return {'success': False, 'error': 'Helper connection timeout. The helper may be busy or unresponsive.'}
+            else:
+                logger.error(f"Failed to start monitoring: {error_msg}")
+                return {'success': False, 'error': error_msg}
     
     def stop_monitoring(self):
         """Stop monitoring on the helper"""
@@ -146,8 +162,16 @@ class MonitorController:
             else:
                 return {'success': False, 'error': f'Status code: {response.status_code}'}
         except Exception as e:
-            logger.error(f"Failed to stop monitoring: {e}")
-            return {'success': False, 'error': str(e)}
+            error_msg = str(e)
+            if "Connection refused" in error_msg:
+                logger.error(f"Failed to stop monitoring - Connection refused: Rust helper is not running or port {self.server_url.split(':')[-1]} is not accessible")
+                return {'success': False, 'error': 'Helper connection refused. Please check if the Rust helper is running.'}
+            elif "ConnectTimeout" in error_msg or "ReadTimeout" in error_msg:
+                logger.error(f"Failed to stop monitoring - Connection timeout: Rust helper not responding in time")
+                return {'success': False, 'error': 'Helper connection timeout. The helper may be busy or unresponsive.'}
+            else:
+                logger.error(f"Failed to stop monitoring: {error_msg}")
+                return {'success': False, 'error': error_msg}
     
     def get_events(self, count=100, event_type=None):
         """Get events from the helper"""
@@ -184,5 +208,11 @@ class MonitorController:
                 logger.error(f"Failed to get events: Status code {response.status_code}")
                 return []
         except Exception as e:
-            logger.error(f"Failed to get events: {e}")
+            error_msg = str(e)
+            if "Connection refused" in error_msg:
+                logger.error(f"Failed to get events - Connection refused: Rust helper is not running or port {self.server_url.split(':')[-1]} is not accessible")
+            elif "ConnectTimeout" in error_msg or "ReadTimeout" in error_msg:
+                logger.error(f"Failed to get events - Connection timeout: Rust helper not responding in time")
+            else:
+                logger.error(f"Failed to get events: {error_msg}")
             return []

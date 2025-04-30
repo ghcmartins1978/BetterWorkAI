@@ -2638,6 +2638,37 @@ def monitor_dashboard():
                           server_url=server_url,
                           connection_status=connection_status,
                           monitoring_active=connection_status.get('monitoring', False))
+
+@app.route('/integrated_monitoring')
+def integrated_monitoring():
+    """Integrated monitoring and helper API connection dashboard"""
+    from monitor_controller import MonitorController
+    
+    # Create controller
+    controller = MonitorController()
+    
+    # Get server URL
+    server_url = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17400')
+    
+    # Check connection status
+    connection_status = {
+        'connected': False,
+        'screen_size': {'width': 0, 'height': 0},
+        'monitoring': False
+    }
+    
+    if controller.is_connected():
+        status = controller.get_status()
+        connection_status = {
+            'connected': True,
+            'screen_size': status.get('screen_size', {'width': 1920, 'height': 1080}),
+            'monitoring': status.get('monitoring', False)
+        }
+    
+    return render_template('integrated_monitoring.html',
+                          server_url=server_url,
+                          connection_status=connection_status,
+                          monitoring_active=connection_status.get('monitoring', False))
     
 @app.route('/api/context')
 def api_context():

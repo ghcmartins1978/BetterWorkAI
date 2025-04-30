@@ -82,8 +82,8 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="/monitor">
-                                    <i class="bi bi-display me-2"></i>Monitoring
+                                <a class="nav-link" href="/integrated_monitoring">
+                                    <i class="bi bi-display me-2"></i>Monitoring & Connection
                                 </a>
                             </li>
                         </ul>
@@ -210,8 +210,8 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="/server-url-manager">
-                                    <i class="bi bi-link-45deg me-2"></i>Helper API URL
+                                <a class="nav-link" href="/integrated_monitoring">
+                                    <i class="bi bi-link-45deg me-2"></i>Helper Connection
                                 </a>
                             </li>
                             <li class="nav-item">
@@ -390,14 +390,19 @@
     <script>
         // Define the function first before using it
         function checkHelperConnectionStatus() {
-                const $indicator = $('#connectionStatusIndicator');
-                const serverUrl = $('#serverUrl').val().trim() || $('#currentServerUrl').text() || 'http://127.0.0.1:17400';
+                const indicator = document.getElementById('connectionStatusIndicator');
+                const serverUrlInput = document.getElementById('serverUrl');
+                const currentServerUrl = document.getElementById('currentServerUrl');
+                const serverUrl = (serverUrlInput && serverUrlInput.value.trim()) || 
+                                 (currentServerUrl && currentServerUrl.textContent) || 
+                                 'http://127.0.0.1:17400';
                 
-                $.ajax({
-                    url: '/api/test_connection',
+                fetch('/api/test_connection', {
                     method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ 
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
                         server_url: serverUrl,
                         update_env: false // just testing, not updating
                     }),

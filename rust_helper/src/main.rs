@@ -4,6 +4,7 @@ use chrono::{DateTime, Utc};
 use enigo::{Enigo, Key, KeyboardControllable, MouseButton, MouseControllable};
 use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 
@@ -486,6 +487,64 @@ async fn stop_monitoring(data: web::Data<Arc<AppState>>) -> impl Responder {
     }
 }
 
+// General endpoint to handle both monitoring operations
+#[post("/api/monitoring")]
+async fn toggle_monitoring(req: web::Json<Value>, data: web::Data<Arc<AppState>>) -> impl Responder {
+    let action = req.get("action").and_then(|a| a.as_str()).unwrap_or("status");
+    
+    match action {
+        "start" => {
+            if let Ok(mut monitoring) = data.monitoring_enabled.lock() {
+                *monitoring = true;
+                info!("Monitoring started via general endpoint");
+                
+                HttpResponse::Ok().json(StandardResponse {
+                    status: "success".to_string(),
+                    message: "Monitoring started".to_string(),
+                })
+            } else {
+                error!("Failed to acquire lock on monitoring state");
+                HttpResponse::InternalServerError().json(StandardResponse {
+                    status: "error".to_string(),
+                    message: "Internal server error".to_string(),
+                })
+            }
+        },
+        "stop" => {
+            if let Ok(mut monitoring) = data.monitoring_enabled.lock() {
+                *monitoring = false;
+                info!("Monitoring stopped via general endpoint");
+                
+                HttpResponse::Ok().json(StandardResponse {
+                    status: "success".to_string(),
+                    message: "Monitoring stopped".to_string(),
+                })
+            } else {
+                error!("Failed to acquire lock on monitoring state");
+                HttpResponse::InternalServerError().json(StandardResponse {
+                    status: "error".to_string(),
+                    message: "Internal server error".to_string(),
+                })
+            }
+        },
+        _ => {
+            // Return current monitoring status
+            if let Ok(monitoring) = data.monitoring_enabled.lock() {
+                HttpResponse::Ok().json(serde_json::json!({
+                    "status": "success",
+                    "monitoring": *monitoring,
+                }))
+            } else {
+                error!("Failed to acquire lock on monitoring state");
+                HttpResponse::InternalServerError().json(StandardResponse {
+                    status: "error".to_string(),
+                    message: "Internal server error".to_string(),
+                })
+            }
+        }
+    }
+}
+
 #[get("/api/events")]
 async fn get_events(data: web::Data<Arc<AppState>>) -> impl Responder {
     if let (Ok(events), Ok(monitoring)) = (data.events.lock(), data.monitoring_enabled.lock()) {
@@ -583,6 +642,7 @@ async fn main() -> std::io::Result<()> {
             .service(keyboard_hotkey)
             .service(start_monitoring)
             .service(stop_monitoring)
+            .service(toggle_monitoring)
             .service(get_events)
             .service(docs)
     })

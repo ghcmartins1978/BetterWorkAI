@@ -1816,24 +1816,24 @@ def server_url_manager():
     """Enhanced Server URL Manager page with port configuration"""
     server_url = os.environ.get('AUTOMATION_SERVER_URL', 'http://127.0.0.1:17403')
     
-    # Check for current mock helper port
-    mock_helper_port = None
+    # Check for current Python helper port
+    python_helper_port = None
     possible_port_paths = [
-        os.path.join(os.path.dirname(__file__), 'data', 'mock_helper_port.txt'),
-        os.path.join(os.path.dirname(__file__), '..', 'data', 'mock_helper_port.txt'), 
-        os.path.join('data', 'mock_helper_port.txt'),
-        'mock_helper_port.txt'
+        os.path.join(os.path.dirname(__file__), 'data', 'python_helper_port.txt'),
+        os.path.join(os.path.dirname(__file__), '..', 'data', 'python_helper_port.txt'), 
+        os.path.join('data', 'python_helper_port.txt'),
+        'python_helper_port.txt'
     ]
     
     for path in possible_port_paths:
         if os.path.exists(path):
             try:
                 with open(path, 'r') as f:
-                    mock_helper_port = f.read().strip()
-                    logger.info(f"Found mock helper port in file: {mock_helper_port} (path: {path})")
+                    python_helper_port = f.read().strip()
+                    logger.info(f"Found Python helper port in file: {python_helper_port} (path: {path})")
                     break
             except Exception as e:
-                logger.warning(f"Error reading mock helper port file: {e}")
+                logger.warning(f"Error reading Python helper port file: {e}")
     
     # Get URL parts
     url_parts = server_url.split(':')
@@ -1841,13 +1841,13 @@ def server_url_manager():
     if len(url_parts) >= 3:
         current_port = url_parts[2]
     
-    # Get current mock helper port from environment
-    env_mock_port = os.environ.get('MOCK_HELPER_PORT', '')
+    # Get current Python helper port from environment
+    env_python_port = os.environ.get('PYTHON_HELPER_PORT', '')
     
     return render_template('enhanced_server_url_manager.html', 
                           server_url=server_url,
                           current_port=current_port,
-                          mock_helper_port=mock_helper_port or env_mock_port or "17402")
+                          python_helper_port=python_helper_port or env_python_port or "17402")
 
 @app.route('/simple-server-config')
 def simple_server_config():

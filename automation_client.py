@@ -311,17 +311,17 @@ class AutomationClient:
             logger.warning("Cannot get window list: No helper URL")
             return []
             
-        # In development mode, return mock window list
+        # In development mode, return sample window list
         if IS_DEVELOPMENT:
-            mock_windows = [
-                {'id': 1, 'title': 'Mock Chrome - Google', 'app': 'Chrome'},
-                {'id': 2, 'title': 'Mock Visual Studio Code', 'app': 'Code'},
-                {'id': 3, 'title': 'Mock Terminal', 'app': 'Terminal'},
-                {'id': 4, 'title': 'Mock Slack', 'app': 'Slack'},
-                {'id': 5, 'title': 'Mock Outlook - Inbox', 'app': 'Outlook'}
+            SAMPLE_WINDOWS = [
+                {'id': 1, 'title': 'Sample Chrome - Google', 'app': 'Chrome'},
+                {'id': 2, 'title': 'Sample Visual Studio Code', 'app': 'Code'},
+                {'id': 3, 'title': 'Sample Terminal', 'app': 'Terminal'},
+                {'id': 4, 'title': 'Sample Slack', 'app': 'Slack'},
+                {'id': 5, 'title': 'Sample Outlook - Inbox', 'app': 'Outlook'}
             ]
-            logger.info("Development mode: Returning mock window list")
-            return mock_windows
+            logger.info("Development mode: Returning sample window list")
+            return SAMPLE_WINDOWS
             
         try:
             response = requests.get(
@@ -334,13 +334,13 @@ class AutomationClient:
             
             # If we didn't get a proper response but we're in development mode
             if IS_DEVELOPMENT:
-                mock_windows = [
-                    {'id': 1, 'title': 'Mock Chrome - Google', 'app': 'Chrome'},
-                    {'id': 2, 'title': 'Mock Visual Studio Code', 'app': 'Code'},
-                    {'id': 3, 'title': 'Mock Terminal', 'app': 'Terminal'}
+                SAMPLE_WINDOWS = [
+                    {'id': 1, 'title': 'Sample Chrome - Google', 'app': 'Chrome'},
+                    {'id': 2, 'title': 'Sample Visual Studio Code', 'app': 'Code'},
+                    {'id': 3, 'title': 'Sample Terminal', 'app': 'Terminal'}
                 ]
-                logger.info("Development mode: Returning mock window list (error fallback)")
-                return mock_windows
+                logger.info("Development mode: Returning sample window list (error fallback)")
+                return SAMPLE_WINDOWS
                 
             return []
         except Exception as e:
@@ -348,13 +348,13 @@ class AutomationClient:
             
             # If we had an error but we're in development mode
             if IS_DEVELOPMENT:
-                mock_windows = [
-                    {'id': 1, 'title': 'Mock Chrome - Google', 'app': 'Chrome'},
-                    {'id': 2, 'title': 'Mock Visual Studio Code', 'app': 'Code'},
-                    {'id': 3, 'title': 'Mock Terminal', 'app': 'Terminal'}
+                SAMPLE_WINDOWS = [
+                    {'id': 1, 'title': 'Sample Chrome - Google', 'app': 'Chrome'},
+                    {'id': 2, 'title': 'Sample Visual Studio Code', 'app': 'Code'},
+                    {'id': 3, 'title': 'Sample Terminal', 'app': 'Terminal'}
                 ]
-                logger.info("Development mode: Returning mock window list (exception fallback)")
-                return mock_windows
+                logger.info("Development mode: Returning sample window list (exception fallback)")
+                return SAMPLE_WINDOWS
                 
             return []
     
@@ -364,10 +364,10 @@ class AutomationClient:
             logger.warning("Cannot focus window: No helper URL")
             return {'status': 'error', 'message': 'No helper URL provided'}
             
-        # In development mode, return mock success
+        # In development mode, return sample success
         if IS_DEVELOPMENT:
-            logger.info(f"Development mode: Mock window focus: {title}")
-            return {'status': 'success', 'message': f'Mock window focus: {title}'}
+            logger.info(f"Development mode: Sample window focus: {title}")
+            return {'status': 'success', 'message': f'Sample window focus: {title}'}
             
         try:
             response = requests.post(
@@ -379,5 +379,5 @@ class AutomationClient:
         except Exception as e:
             logger.error(f"Failed to focus window: {e}")
             if IS_DEVELOPMENT:
-                return {'status': 'success', 'message': f'Mock window focus: {title} (error handled)'}
+                return {'status': 'success', 'message': f'Sample window focus: {title} (error handled)'}
             return {'status': 'error', 'message': str(e)}

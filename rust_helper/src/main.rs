@@ -6,7 +6,19 @@ use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
-use window_titles::*;
+
+// Platform-specific window handling
+#[cfg(target_os = "windows")]
+use windows::{
+    Win32::Foundation::{BOOL, HWND, LPARAM},
+    Win32::UI::WindowsAndMessaging::{EnumWindows, GetWindowTextW},
+};
+
+// Cross-platform window handling with winit
+use winit::{
+    event_loop::EventLoop,
+    window::WindowId,
+};
 
 // Default port for the helper
 const DEFAULT_PORT: u16 = 17400;

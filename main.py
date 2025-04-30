@@ -2701,17 +2701,32 @@ def api_context():
             'message': str(e)
         })
                           
-@app.route('/api/monitoring', methods=['POST'])
+@app.route('/api/monitoring', methods=['GET', 'POST'])
 def monitoring_action():
-    """Handle monitoring actions (start/stop) on the local server"""
+    """Handle monitoring actions (start/stop) on the local server and return status"""
     from monitor_controller import MonitorController
-    
-    # Get action from request data
-    data = request.get_json()
-    action = data.get('action') if data else None
     
     # Use automatic port detection
     controller = MonitorController()
+    
+    # For GET requests, just return the current status
+    if request.method == 'GET':
+        if not controller.is_connected():
+            return jsonify({
+                'connected': False,
+                'monitoring': False,
+                'error': 'Helper not connected. Please check your connection settings.'
+            })
+        
+        status = controller.get_status()
+        # Add connected status
+        status['connected'] = True
+        return jsonify(status)
+    
+    # Handle POST requests (start/stop actions)
+    # Get action from request data
+    data = request.get_json()
+    action = data.get('action') if data else None
     
     # Check connection first
     if not controller.is_connected():
@@ -2798,6 +2813,10 @@ def get_events():
             monitoring_active = status.get('monitoring', False)
             logging.info(f"Monitoring active: {monitoring_active}")
             
+            # Also check privacy settings
+            privacy = controller.get_privacy_settings()
+            logging.info(f"Privacy settings: {privacy}")
+            
         # Apply offset if provided
         if offset > 0 and offset < len(events):
             events = events[offset:]
@@ -2806,6 +2825,26 @@ def get_events():
     except Exception as e:
         logging.error(f"Error getting events: {e}")
         return jsonify({'events': [], 'error': str(e)})
+
+@app.route('/api/test/events', methods=['POST'])
+def test_event_generation():
+    """Test event generation on the helper if supported"""
+    from monitor_controller import MonitorController
+    import logging
+    
+    controller = MonitorController()
+    
+    # First check if the helper is connected
+    if not controller.is_connected():
+        return jsonify({
+            'success': False, 
+            'error': 'Helper not connected. Please check your connection settings.'
+        })
+        
+    # Try to generate a test event
+    result = controller.test_event_generation()
+    
+    return jsonify(result)
 
 # Handle graceful shutdown
 def signal_handler(sig, frame):

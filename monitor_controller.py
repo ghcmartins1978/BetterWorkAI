@@ -183,13 +183,24 @@ class MonitorController:
             if event_type:
                 params['type'] = event_type
                 
+            # Debug: Log full details about the request
+            logger.info(f"Requesting events from: {self.server_url}/api/events with params: {params}")
+                
             response = requests.get(
                 f"{self.server_url}/api/events",
                 params=params,
                 timeout=3
             )
+            
+            # Debug: Log full response details
+            logger.info(f"Response status: {response.status_code}")
+            
             if response.status_code == 200:
                 data = response.json()
+                
+                # Debug: Log raw response data
+                logger.info(f"Response data: {data}")
+                
                 events = data.get('events', [])
                 
                 # Log the number of events retrieved
@@ -198,14 +209,23 @@ class MonitorController:
                 # If we got a response but no events, check if monitoring is active
                 if len(events) == 0:
                     status = self.get_status()
+                    logger.info(f"Helper status: {status}")
+                    
                     if status.get('monitoring', False):
                         logger.info("Monitoring is active but no events received yet. This is normal if monitoring just started.")
+                        # Debug: Check helper privacy settings
+                        logger.info(f"Checking helper privacy settings - Mouse tracking: {status.get('mouse_tracking', 'unknown')}, Keyboard tracking: {status.get('keyboard_tracking', 'unknown')}, Window tracking: {status.get('window_tracking', 'unknown')}")
                     else:
                         logger.warning("No events received and monitoring is not active. Try starting monitoring.")
                         
                 return events
             else:
-                logger.error(f"Failed to get events: Status code {response.status_code}")
+                # Debug: Try to get error message from response body
+                try:
+                    error_body = response.json()
+                    logger.error(f"Failed to get events: Status code {response.status_code}, details: {error_body}")
+                except:
+                    logger.error(f"Failed to get events: Status code {response.status_code}")
                 return []
         except Exception as e:
             error_msg = str(e)
@@ -216,3 +236,69 @@ class MonitorController:
             else:
                 logger.error(f"Failed to get events: {error_msg}")
             return []
+            
+    def get_privacy_settings(self):
+        """Get the privacy settings from the helper"""
+        if not self.server_url:
+            return {}
+            
+        try:
+            # Try to get privacy settings endpoint if it exists
+            response = requests.get(
+                f"{self.server_url}/api/settings/privacy",
+                timeout=3
+            )
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                # Fallback to status if privacy endpoint doesn't exist
+                status_response = requests.get(
+                    f"{self.server_url}/api/status",
+                    timeout=3
+                )
+                if status_response.status_code == 200:
+                    status_data = status_response.json()
+                    # Extract privacy-related fields if they exist
+                    privacy_settings = {
+                        'mouse_tracking': status_data.get('mouse_tracking', True),
+                        'keyboard_tracking': status_data.get('keyboard_tracking', True),
+                        'window_tracking': status_data.get('window_tracking', True)
+                    }
+                    return privacy_settings
+                else:
+                    logger.error(f"Failed to get privacy settings or status: Status code {status_response.status_code}")
+                    return {}
+        except Exception as e:
+            logger.error(f"Failed to get privacy settings: {e}")
+            return {}
+            
+    def test_event_generation(self):
+        """Test event generation through the helper API if supported"""
+        if not self.server_url:
+            return {'success': False, 'error': 'No helper URL provided'}
+            
+        try:
+            # Try to use test event generation endpoint if available
+            response = requests.post(
+                f"{self.server_url}/api/test/event",
+                json={
+                    'type': 'mouse_move', 
+                    'x': 100, 
+                    'y': 100
+                },
+                timeout=3
+            )
+            
+            if response.status_code == 200:
+                logger.info("Successfully generated test event")
+                return {'success': True, 'message': 'Test event generated'}
+            else:
+                logger.warning(f"Helper does not support test event generation: Status code {response.status_code}")
+                return {
+                    'success': False, 
+                    'error': 'Test event generation not supported by this helper'
+                }
+        except Exception as e:
+            logger.error(f"Failed to generate test event: {e}")
+            return {'success': False, 'error': str(e)}

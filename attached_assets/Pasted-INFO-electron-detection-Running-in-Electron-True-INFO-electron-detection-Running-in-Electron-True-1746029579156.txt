@@ -1,0 +1,226 @@
+INFO:electron_detection:Running in Electron: True
+INFO:electron_detection:Running in Electron: True
+INFO:electron_detection:Configuring application for Electron environment
+INFO:main:Application configured for Electron environment
+INFO:database:Initializing database
+INFO:database:Database initialization complete
+INFO:database:Checking database schema for updates...
+DEBUG:database:Database connection checked out from pool
+DEBUG:database:Database connection checked out from pool
+DEBUG:database:Database connection checked out from pool
+DEBUG:database:Database connection checked out from pool
+DEBUG:database:Database connection checked out from pool
+DEBUG:database:Database connection checked out from pool
+INFO:database:Database schema update complete
+INFO:database:Starting async database writer
+INFO:database:Database writer worker loop started
+DEBUG:database:Database connection checked out from pool
+INFO:main:Calling seed_demo_data()
+INFO:main:seed_demo_data() call completed
+DEBUG:main:CSRF exempted: /api/jobs/<int:job_id>/result
+DEBUG:main:CSRF exempted: /api/jobs/<int:job_id>/toggle
+DEBUG:main:CSRF exempted: /api/jobs/<int:job_id>/run-now
+DEBUG:main:CSRF exempted: /api/update_settings
+DEBUG:main:CSRF exempted: /api/direct-port-fix
+DEBUG:main:CSRF exempted: /api/update-server-url
+DEBUG:main:CSRF exempted: /api/update-port-config
+DEBUG:main:CSRF exempted: /api/check-port-status
+DEBUG:main:CSRF exempted: /api/check-port-files
+DEBUG:main:CSRF exempted: /api/audio/start_capture
+DEBUG:main:CSRF exempted: /api/audio/stop_capture
+DEBUG:main:CSRF exempted: /api/audio/transcribe
+DEBUG:main:CSRF exempted: /api/settings/openai_api_key
+DEBUG:main:CSRF exempted: /api/webcam/start_capture
+DEBUG:main:CSRF exempted: /api/webcam/stop_capture
+DEBUG:main:CSRF exempted: /api/webcam/frame
+DEBUG:main:CSRF exempted: /api/webcam/snapshot
+DEBUG:main:CSRF exempted: /api/webcam/detect_faces
+DEBUG:main:CSRF exempted: /api/stats
+DEBUG:main:CSRF exempted: /api/test_connection
+DEBUG:main:CSRF exempted: /api/context
+DEBUG:main:CSRF exempted: /api/monitoring
+DEBUG:main:CSRF exempted: /api/monitoring/start
+DEBUG:main:CSRF exempted: /api/monitoring/stop
+DEBUG:main:CSRF exempted: /api/events
+DEBUG:main:CSRF exempted: /api/automation/macros
+DEBUG:main:CSRF exempted: /api/automation/macros/<macro_id>
+DEBUG:main:CSRF exempted: /api/automation/macros
+DEBUG:main:CSRF exempted: /api/automation/macros/<macro_id>
+DEBUG:main:CSRF exempted: /api/automation/macros/<macro_id>/execute
+DEBUG:main:CSRF exempted: /api/automation/macros/<macro_id>/status
+DEBUG:main:CSRF exempted: /api/automation/macros/<macro_id>/stop
+DEBUG:main:CSRF exempted: /api/automation/logs/<path:log_path>
+DEBUG:main:CSRF exempted: /api/logs
+DEBUG:main:CSRF exempted: /healthz
+DEBUG:main:CSRF exempted: /api/automation/sample
+DEBUG:main:CSRF exempted: /api/automation/yaml-compile
+DEBUG:main:CSRF exempted: /api/automation/macros/<macro_id>/export
+DEBUG:main:CSRF exempted: /api/automation/macros/import
+DEBUG:main:CSRF exempted: /api/automation/macros/<macro_id>/detect-variables
+DEBUG:main:CSRF exempted: /api/automation/macros/<macro_id>/register-variables
+DEBUG:main:CSRF exempted: /api/automation/macros/<macro_id>/variables
+DEBUG:main:CSRF exempted: /api/automation/variables/<variable_id>
+DEBUG:main:CSRF exempted: /api/metrics
+DEBUG:main:CSRF exempted: /api/kpi-metrics
+DEBUG:main:CSRF exempted: /api/metrics/macros
+ * Serving Flask app 'main.py'
+ * Debug mode: off
+INFO:werkzeug:WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.0.47:5000
+INFO:werkzeug:Press CTRL+C to quit
+DEBUG:database:Database connection created
+DEBUG:database:Database connection checked out from pool
+INFO:electron_detection:Running in Electron: True
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:40] "GET / HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:40] "GET /static/css/style.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:40] "GET /static/js/sidebar.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:40] "GET /static/css/electron.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:40] "GET /static/js/electron-navigation.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:40] "GET /static/js/kpi-cards.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:41] "GET /static/js/script.js HTTP/1.1" 304 -
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:41] "GET /healthz HTTP/1.1" 200 -
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:41] "GET /api/kpi-metrics HTTP/1.1" 200 -
+INFO:monitor_controller:Found Rust helper port in file: 17400 (path: C:\Users\ghcma/AppData/Roaming/bettermanai/helper_port.txt)
+INFO:monitor_controller:Using helper port: 17400 (Rust helper)
+INFO:monitor_controller:Monitor controller initialized with helper URL: http://127.0.0.1:17400
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/status HTTP/1.1" 200 98
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/status HTTP/1.1" 200 98
+INFO:electron_detection:Running in Electron: True
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:50] "GET /integrated_monitoring HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:50] "GET /static/css/electron.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:50] "GET /static/js/electron-navigation.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:50] "GET /static/css/style.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:50] "GET /static/js/script.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:50] "GET /static/js/sidebar.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:50] "GET /static/js/kpi-cards.js HTTP/1.1" 304 -
+DEBUG:database:Database connection created
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:50] "GET /healthz HTTP/1.1" 200 -
+DEBUG:database:Database connection created
+DEBUG:database:Database connection checked out from pool
+INFO:monitor_controller:Found Rust helper port in file: 17400 (path: C:\Users\ghcma/AppData/Roaming/bettermanai/helper_port.txt)
+INFO:monitor_controller:Using helper port: 17400 (Rust helper)
+INFO:monitor_controller:Monitor controller initialized with helper URL: http://127.0.0.1:17400
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:50] "GET /api/kpi-metrics HTTP/1.1" 200 -
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/status HTTP/1.1" 200 98
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/events?count=100 HTTP/1.1" 200 51
+INFO:monitor_controller:Retrieved 0 events from helper
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/status HTTP/1.1" 200 98
+WARNING:monitor_controller:No events received and monitoring is not active. Try starting monitoring.
+INFO:root:Retrieved 0 events from helper
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/status HTTP/1.1" 200 98
+INFO:root:Monitoring active: False
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:50] "GET /api/events?count=100 HTTP/1.1" 200 -
+ERROR:main:Unhandled exception: 405 Method Not Allowed: The method is not allowed for the requested URL.
+INFO:electron_detection:Running in Electron: True
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:51] "GET /api/monitoring HTTP/1.1" 500 -
+INFO:monitor_controller:Found Rust helper port in file: 17400 (path: C:\Users\ghcma/AppData/Roaming/bettermanai/helper_port.txt)
+INFO:monitor_controller:Using helper port: 17400 (Rust helper)
+INFO:monitor_controller:Monitor controller initialized with helper URL: http://127.0.0.1:17400
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/status HTTP/1.1" 200 98
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "POST /api/monitoring HTTP/1.1" 200 51
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:53] "POST /api/monitoring/start HTTP/1.1" 200 -
+INFO:monitor_controller:Found Rust helper port in file: 17400 (path: C:\Users\ghcma/AppData/Roaming/bettermanai/helper_port.txt)
+INFO:monitor_controller:Using helper port: 17400 (Rust helper)
+INFO:monitor_controller:Monitor controller initialized with helper URL: http://127.0.0.1:17400
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/status HTTP/1.1" 200 97
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/status HTTP/1.1" 200 96
+INFO:electron_detection:Running in Electron: True
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:54] "GET /integrated_monitoring HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:54] "GET /static/css/style.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:54] "GET /static/css/electron.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:54] "GET /static/js/electron-navigation.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:54] "GET /static/js/script.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:54] "GET /static/js/sidebar.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:54] "GET /static/js/kpi-cards.js HTTP/1.1" 304 -
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:54] "GET /healthz HTTP/1.1" 200 -
+DEBUG:database:Database connection checked out from pool
+INFO:monitor_controller:Found Rust helper port in file: 17400 (path: C:\Users\ghcma/AppData/Roaming/bettermanai/helper_port.txt)
+INFO:monitor_controller:Using helper port: 17400 (Rust helper)
+INFO:monitor_controller:Monitor controller initialized with helper URL: http://127.0.0.1:17400
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:54] "GET /api/kpi-metrics HTTP/1.1" 200 -
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/status HTTP/1.1" 200 97
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/events?count=100 HTTP/1.1" 200 50
+INFO:monitor_controller:Retrieved 0 events from helper
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/status HTTP/1.1" 200 97
+INFO:monitor_controller:Monitoring is active but no events received yet. This is normal if monitoring just started.
+INFO:root:Retrieved 0 events from helper
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/status HTTP/1.1" 200 97
+INFO:root:Monitoring active: True
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:54] "GET /api/events?count=100 HTTP/1.1" 200 -
+ERROR:main:Unhandled exception: 405 Method Not Allowed: The method is not allowed for the requested URL.
+INFO:electron_detection:Running in Electron: True
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:54] "GET /api/monitoring HTTP/1.1" 500 -
+DEBUG:database:Database connection created
+DEBUG:database:Database connection checked out from pool
+INFO:electron_detection:Running in Electron: True
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:08:59] "GET / HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:09:00] "GET /static/css/electron.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:09:00] "GET /static/css/style.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:09:00] "GET /static/js/electron-navigation.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:09:00] "GET /static/js/script.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:09:00] "GET /static/js/sidebar.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:09:00] "GET /static/js/kpi-cards.js HTTP/1.1" 304 -
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:09:00] "GET /healthz HTTP/1.1" 200 -
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:09:00] "GET /api/kpi-metrics HTTP/1.1" 200 -
+INFO:monitor_controller:Found Rust helper port in file: 17400 (path: C:\Users\ghcma/AppData/Roaming/bettermanai/helper_port.txt)
+INFO:monitor_controller:Using helper port: 17400 (Rust helper)
+INFO:monitor_controller:Monitor controller initialized with helper URL: http://127.0.0.1:17400
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/status HTTP/1.1" 200 97
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/status HTTP/1.1" 200 97
+INFO:electron_detection:Running in Electron: True
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:09:03] "GET /integrated_monitoring HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:09:04] "GET /static/css/style.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:09:04] "GET /static/css/electron.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:09:04] "GET /static/js/electron-navigation.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:09:04] "GET /static/js/script.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:09:04] "GET /static/js/sidebar.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:09:04] "GET /static/js/kpi-cards.js HTTP/1.1" 304 -
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:09:04] "GET /healthz HTTP/1.1" 200 -
+DEBUG:database:Database connection checked out from pool
+INFO:monitor_controller:Found Rust helper port in file: 17400 (path: C:\Users\ghcma/AppData/Roaming/bettermanai/helper_port.txt)
+INFO:monitor_controller:Using helper port: 17400 (Rust helper)
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:09:04] "GET /api/kpi-metrics HTTP/1.1" 200 -
+INFO:monitor_controller:Monitor controller initialized with helper URL: http://127.0.0.1:17400
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/status HTTP/1.1" 200 97
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/events?count=100 HTTP/1.1" 200 50
+INFO:monitor_controller:Retrieved 0 events from helper
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/status HTTP/1.1" 200 97
+INFO:monitor_controller:Monitoring is active but no events received yet. This is normal if monitoring just started.
+INFO:root:Retrieved 0 events from helper
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/status HTTP/1.1" 200 97
+INFO:root:Monitoring active: True
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:09:04] "GET /api/events?count=100 HTTP/1.1" 200 -
+ERROR:main:Unhandled exception: 405 Method Not Allowed: The method is not allowed for the requested URL.
+INFO:electron_detection:Running in Electron: True
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 13:09:04] "GET /api/monitoring HTTP/1.1" 500 -
+DEBUG:database:Database connection created
+DEBUG:database:Database connection checked out from pool

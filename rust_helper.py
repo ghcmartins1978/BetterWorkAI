@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """
-BettermanAI Rust Helper Emulator
-This is a Python implementation of the Rust helper API to allow the application
-to run without requiring the actual Rust binary.
+BettermanAI Helper Emulator
+This is a Python implementation of the Helper API to allow the application
+to run without requiring the actual Rust implementation.
 """
 
 import argparse
@@ -46,7 +46,7 @@ MOCK_WINDOWS = [
 ]
 
 # Endpoint handlers
-class RustHelperHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
+class HelperHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
     def _set_headers(self, status_code=200, content_type='application/json'):
         self.send_response(status_code)
         self.send_header('Content-Type', content_type)
@@ -290,7 +290,7 @@ def main():
     logger.info(f"Port written to file: {port_file_path}")
     
     # Start the HTTP server
-    with socketserver.ThreadingTCPServer((args.host, args.port), RustHelperHTTPRequestHandler) as httpd:
+    with socketserver.ThreadingTCPServer((args.host, args.port), HelperHTTPRequestHandler) as httpd:
         try:
             logger.info(f"Server running at http://{args.host}:{args.port}")
             httpd.serve_forever()

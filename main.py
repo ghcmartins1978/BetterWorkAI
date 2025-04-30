@@ -3278,20 +3278,20 @@ def execute_macro(macro_id, mode='normal'):
             'started_at': datetime.now().isoformat(),
         }
         
-        # For normal execution, connect to the local Rust helper
+        # For normal execution, connect to the local Helper
         # For dry-run, just simulate the execution in the browser
         if mode == 'normal':
-            # Get the Rust helper URL from environment
+            # Get the Helper URL from environment
             server_url = os.environ.get('AUTOMATION_SERVER_URL')
             if not server_url:
                 return {
                     'status': 'error',
-                    'message': 'Rust helper URL not configured. Please configure it in the Server URL Manager.',
+                    'message': 'Helper URL not configured. Please configure it in the Server URL Manager.',
                     'macro_id': macro_id
                 }
                 
             # Log the attempt to connect to the server
-            logger.info(f"Connecting to Rust helper at {server_url}")
+            logger.info(f"Connecting to Helper at {server_url}")
             result['server_url'] = server_url
             
             # Create a temporary directory for execution logs
@@ -3524,7 +3524,7 @@ def stop_macro(macro_id):
                 'status': macro.status
             }
             
-            # In a real implementation, this would send a stop signal to the Rust helper
+            # In a real implementation, this would send a stop signal to the Helper
             # Here we just update the status
             if macro.status == 'running':
                 macro.status = 'stopped'

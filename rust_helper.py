@@ -108,7 +108,7 @@ class HelperHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             # Screenshot endpoint
             self._send_json_response({
                 'status': 'success',
-                'message': 'Screenshot feature not available in Python helper',
+                'message': 'Screenshot feature not available in Python implementation of Helper',
                 'screenshot': None
             })
             
@@ -116,7 +116,7 @@ class HelperHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             # API documentation endpoint
             self._send_json_response({
                 'api_version': '1.0.0',
-                'description': 'BettermanAI Helper API',
+                'description': 'BettermanAI Helper API (Python Implementation)',
                 'endpoints': [
                     {'path': '/api/status', 'method': 'GET', 'description': 'Get current status'},
                     {'path': '/api/window/list', 'method': 'GET', 'description': 'Get window list'},
@@ -159,7 +159,7 @@ class HelperHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         if path == '/api/window/focus':
             # Focus window endpoint
             title = data.get('title', '')
-            logger.info(f"Mock focusing window: {title}")
+            logger.info(f"Python Helper: focusing window: {title}")
             
             self._send_json_response({
                 'status': 'success',
@@ -170,7 +170,7 @@ class HelperHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             # Mouse move endpoint
             x = data.get('x', 0)
             y = data.get('y', 0)
-            logger.info(f"Mock mouse move to ({x}, {y})")
+            logger.info(f"Python Helper: mouse move to ({x}, {y})")
             
             self._send_json_response({
                 'status': 'success',
@@ -183,7 +183,7 @@ class HelperHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             y = data.get('y', 0)
             button = data.get('button', 'left')
             clicks = data.get('clicks', 1)
-            logger.info(f"Mock mouse click at ({x}, {y}) with {button} button, {clicks} clicks")
+            logger.info(f"Python Helper: mouse click at ({x}, {y}) with {button} button, {clicks} clicks")
             
             self._send_json_response({
                 'status': 'success',
@@ -193,7 +193,7 @@ class HelperHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         elif path == '/api/keyboard/type':
             # Keyboard type endpoint
             text = data.get('text', '')
-            logger.info(f"Mock keyboard type: '{text[:20]}...' (truncated)")
+            logger.info(f"Python Helper: keyboard type: '{text[:20]}...' (truncated)")
             
             self._send_json_response({
                 'status': 'success',
@@ -271,7 +271,7 @@ class HelperHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
 def main():
     """Main entry point"""
-    parser = argparse.ArgumentParser(description='BettermanAI Helper Emulator')
+    parser = argparse.ArgumentParser(description='BettermanAI Helper - Python Implementation')
     parser.add_argument('--port', type=int, default=DEFAULT_PORT, help=f'Port to listen on (default: {DEFAULT_PORT})')
     parser.add_argument('--host', type=str, default='127.0.0.1', help='Host to bind to (default: 127.0.0.1)')
     parser.add_argument('--debug', action='store_true', help='Enable debug mode')
@@ -281,12 +281,12 @@ def main():
         logger.setLevel(logging.DEBUG)
     
     # Write the port to a file so the main app can discover it
-    port_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'rust_helper_port.txt')
+    port_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'helper_port.txt')
     os.makedirs(os.path.dirname(port_file_path), exist_ok=True)
     with open(port_file_path, 'w') as f:
         f.write(str(args.port))
     
-    logger.info(f"BettermanAI Helper Emulator starting on http://{args.host}:{args.port}")
+    logger.info(f"BettermanAI Helper (Python Implementation) starting on http://{args.host}:{args.port}")
     logger.info(f"Port written to file: {port_file_path}")
     
     # Start the HTTP server

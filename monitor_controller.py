@@ -20,31 +20,52 @@ class MonitorController:
         if server_url:
             self.server_url = server_url
         else:
-            # Use the mock helper port
+            # First try to use the Rust helper, then fall back to Python helper
             try:
-                # Try to read from the port file
-                mock_helper_port = '17403'  # Default fallback
+                # Default helper port (Rust helper)
+                helper_port = '17400'  
                 
-                possible_paths = [
+                # Check for Rust helper port file first
+                rust_helper_possible_paths = [
+                    os.path.expanduser('~/AppData/Roaming/bettermanai/helper_port.txt'),
+                    os.path.join(os.path.dirname(__file__), 'data', 'helper_port.txt'),
+                    os.path.join('data', 'helper_port.txt'),
+                    'helper_port.txt'
+                ]
+                
+                # Then check for Python helper port files
+                python_helper_possible_paths = [
                     os.path.join(os.path.dirname(__file__), 'data', 'mock_helper_port.txt'),
                     os.path.join(os.path.dirname(__file__), '..', 'data', 'mock_helper_port.txt'),
                     os.path.join('data', 'mock_helper_port.txt'),
                     'mock_helper_port.txt'
                 ]
                 
-                for path in possible_paths:
+                # Try Rust helper first
+                for path in rust_helper_possible_paths:
                     if os.path.exists(path):
                         with open(path, 'r') as f:
                             port = f.read().strip()
                             if port:
-                                mock_helper_port = port
-                                logger.info(f"Found mock helper port in file: {port} (path: {path})")
+                                helper_port = port
+                                logger.info(f"Found Rust helper port in file: {port} (path: {path})")
                                 break
                 
-                self.server_url = f'http://127.0.0.1:{mock_helper_port}'
+                # If no Rust helper found, try Python helper
+                if helper_port == '17400':
+                    for path in python_helper_possible_paths:
+                        if os.path.exists(path):
+                            with open(path, 'r') as f:
+                                port = f.read().strip()
+                                if port:
+                                    helper_port = port
+                                    logger.info(f"Found Python helper port in file: {port} (path: {path})")
+                                    break
+                
+                self.server_url = f'http://127.0.0.1:{helper_port}'
             except Exception as e:
-                logger.warning(f"Error reading mock helper port file, using default: {e}")
-                self.server_url = 'http://127.0.0.1:17403'
+                logger.warning(f"Error reading helper port file, using default Rust helper port: {e}")
+                self.server_url = 'http://127.0.0.1:17400'
         logger.info(f"Monitor controller initialized with helper URL: {self.server_url}")
     
     def is_connected(self):
@@ -80,14 +101,29 @@ class MonitorController:
             return {'success': False, 'error': 'No helper URL provided'}
             
         try:
+            # First try the most specific endpoint - Rust helper has both
+            # Try with action parameter for general endpoint
+            try:
+                response = requests.post(
+                    f"{self.server_url}/api/monitoring", 
+                    json={'action': 'start'},
+                    timeout=3
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    return {'success': True, 'message': data.get('message', 'Monitoring started')}
+            except Exception as e:
+                logger.warning(f"Failed with general endpoint, trying specific endpoint: {e}")
+                
+            # If that fails, try the specific endpoint
             response = requests.post(
-                f"{self.server_url}/api/monitoring", 
-                json={'enable': True},
+                f"{self.server_url}/api/monitoring/start",
                 timeout=3
             )
+            
             if response.status_code == 200:
                 data = response.json()
-                return {'success': data.get('monitoring', False), 'message': data.get('message', '')}
+                return {'success': True, 'message': data.get('message', 'Monitoring started')}
             else:
                 return {'success': False, 'error': f'Status code: {response.status_code}'}
         except Exception as e:
@@ -100,14 +136,29 @@ class MonitorController:
             return {'success': False, 'error': 'No helper URL provided'}
             
         try:
+            # First try the most specific endpoint - Rust helper has both
+            # Try with action parameter for general endpoint
+            try:
+                response = requests.post(
+                    f"{self.server_url}/api/monitoring", 
+                    json={'action': 'stop'},
+                    timeout=3
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    return {'success': True, 'message': data.get('message', 'Monitoring stopped')}
+            except Exception as e:
+                logger.warning(f"Failed with general endpoint, trying specific endpoint: {e}")
+                
+            # If that fails, try the specific endpoint
             response = requests.post(
-                f"{self.server_url}/api/monitoring", 
-                json={'enable': False},
+                f"{self.server_url}/api/monitoring/stop",
                 timeout=3
             )
+            
             if response.status_code == 200:
                 data = response.json()
-                return {'success': not data.get('monitoring', True), 'message': data.get('message', '')}
+                return {'success': True, 'message': data.get('message', 'Monitoring stopped')}
             else:
                 return {'success': False, 'error': f'Status code: {response.status_code}'}
         except Exception as e:

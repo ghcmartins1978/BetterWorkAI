@@ -1,201 +1,260 @@
-{% extends "layout.html" %}
+{% extends 'layout.html' %}
 
-{% block title %}Integrated Monitoring Dashboard{% endblock %}
+{% block title %}Integrated Monitoring & Connection{% endblock %}
 
 {% block content %}
-<div class="card shadow-sm border-0 mb-4">
-    <div class="card-body p-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>
-                <i class="bi bi-activity me-2"></i>
-                Monitoring & Connection Dashboard
-            </h2>
-            
-            <div>
-                {% if monitoring_active %}
-                    <button id="stopMonitoringBtn" class="btn btn-danger">
-                        <i class="bi bi-stop-circle me-2"></i>
-                        Stop Monitoring
-                    </button>
-                {% else %}
-                    <button id="startMonitoringBtn" class="btn btn-success">
-                        <i class="bi bi-play-circle me-2"></i>
-                        Start Monitoring
-                    </button>
-                {% endif %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="bi bi-display me-2"></i>
+            Integrated Monitoring & Connection
+        </h1>
+        <p class="lead">Monitor your activity and manage your connection to the Rust Helper</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Connection Status Card -->
+    <div class="col-md-6 mb-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-plugin me-2"></i>
+                    Helper Connection Status
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="connectionStatusIndicator" class="alert {% if connection_status.connected %}alert-success{% else %}alert-warning{% endif %}">
+                    {% if connection_status.connected %}
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        <strong>Connected to Rust Helper</strong>
+                        <p class="mb-0">Connection successful. Automation features are ready to use.</p>
+                        {% if connection_status.monitoring %}
+                            <span class="badge bg-primary mt-2">Monitoring Active</span>
+                        {% endif %}
+                    {% else %}
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <strong>Not Connected to Rust Helper</strong>
+                        <p class="mb-0">The Rust helper isn't running on your local machine. This means automation features will not work properly.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Helper API URL Configuration -->
+                <form id="serverConnectionForm" class="mt-4">
+                    <div class="mb-3">
+                        <label for="serverUrl" class="form-label">Helper API URL</label>
+                        <input type="text" class="form-control" id="serverUrl" placeholder="http://127.0.0.1:17400" 
+                               value="{{ server_url }}">
+                        <div class="form-text">Current URL: <code id="currentServerUrl">{{ server_url }}</code></div>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="updateEnv" checked>
+                        <label class="form-check-label" for="updateEnv">
+                            Update environment variable permanently
+                        </label>
+                    </div>
+                    <div id="connectionStatus" class="alert alert-info d-none">
+                        Testing connection...
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-primary" id="testConnectionBtn">
+                            <i class="bi bi-lightning-charge-fill me-1"></i> Test & Save Connection
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
-        
-        <div class="row mb-4">
-            <!-- Connection Manager Card -->
-            <div class="col-md-6 mb-4">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-header bg-light border-0">
-                        <h5 class="mb-0">Helper API Connection</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="alert alert-info bg-info bg-opacity-10 mb-3" role="alert">
-                            <div class="d-flex">
-                                <div class="me-3">
-                                    <i class="bi bi-info-circle-fill fs-4"></i>
-                                </div>
-                                <div>
-                                    <p class="mb-0" id="connectionStatusMessage">
-                                        {% if connection_status.connected %}
-                                            <span class="badge bg-success mb-2">Connected</span>
-                                            Connected to Rust helper at <code>{{ server_url }}</code>.
-                                        {% else %}
-                                            <span class="badge bg-danger mb-2">Disconnected</span>
-                                            Not connected to local Rust helper. Please update your connection settings.
-                                        {% endif %}
-                                    </p>
-                                </div>
-                            </div>
+    </div>
+
+    <!-- Monitoring Control Card -->
+    <div class="col-md-6 mb-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-activity me-2"></i>
+                    Monitoring Control
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert {% if monitoring_active %}alert-success{% else %}alert-secondary{% endif %} mb-4" id="monitoringStatus">
+                    {% if monitoring_active %}
+                        <i class="bi bi-record-circle-fill text-danger me-2"></i>
+                        <strong>Monitoring Active</strong>
+                        <p class="mb-0">Currently recording your actions to detect patterns and automate workflows.</p>
+                    {% else %}
+                        <i class="bi bi-stop-circle me-2"></i>
+                        <strong>Monitoring Inactive</strong>
+                        <p class="mb-0">Monitoring is currently disabled. No events are being recorded.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Screen Size Info -->
+                <div class="mb-4">
+                    <h6>Screen Resolution:</h6>
+                    <div class="d-flex align-items-center">
+                        <div class="bg-light p-2 rounded">
+                            <i class="bi bi-display me-2"></i>
+                            <span id="screenSizeDisplay">
+                                {% if connection_status.connected %}
+                                    {{ connection_status.screen_size.width }} x {{ connection_status.screen_size.height }}
+                                {% else %}
+                                    Unknown
+                                {% endif %}
+                            </span>
                         </div>
-                        
-                        <form id="server-url-form">
-                            <div class="mb-3">
-                                <label for="server-url-input" class="form-label">Helper API URL</label>
-                                <input type="text" class="form-control" id="server-url-input" placeholder="http://127.0.0.1:17400" value="{{ server_url }}">
-                                <div class="form-text">Default is <code>http://127.0.0.1:17400</code> for local connections.</div>
-                            </div>
-                            
-                            <div class="mb-3 form-check">
-                                <input type="checkbox" class="form-check-input" id="permanent-check" checked>
-                                <label class="form-check-label" for="permanent-check">Update environment variable permanently</label>
-                            </div>
-                            
-                            <div class="d-grid">
-                                <button type="button" class="btn btn-primary" id="test-button">
-                                    <i class="bi bi-hdd-network me-1"></i>
-                                    Test and Update Connection
+                    </div>
+                </div>
+
+                <!-- Monitoring Controls -->
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn {% if monitoring_active %}btn-danger{% else %}btn-success{% endif %}" id="toggleMonitoringBtn">
+                        {% if monitoring_active %}
+                            <i class="bi bi-stop-circle me-1"></i> Stop Monitoring
+                        {% else %}
+                            <i class="bi bi-record-circle me-1"></i> Start Monitoring
+                        {% endif %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Events Display with Pagination -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-list-ul me-2"></i>
+                    Recent Events
+                </h5>
+                <div>
+                    <button class="btn btn-sm btn-outline-light" id="refreshEventsBtn">
+                        <i class="bi bi-arrow-clockwise"></i>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="row g-2">
+                        <div class="col-md-3">
+                            <select class="form-select" id="eventTypeFilter">
+                                <option value="" selected>All Event Types</option>
+                                <option value="mouse_click">Mouse Click</option>
+                                <option value="mouse_move">Mouse Move</option>
+                                <option value="key_press">Key Press</option>
+                                <option value="window_change">Window Change</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select" id="eventCountSelector">
+                                <option value="50">50 events</option>
+                                <option value="100" selected>100 events</option>
+                                <option value="200">200 events</option>
+                                <option value="500">500 events</option>
+                            </select>
+                        </div>
+                        <div class="col-md-7">
+                            <div class="pagination-controls float-end" id="paginationControls">
+                                <button class="btn btn-sm btn-outline-secondary" id="previousPageBtn" disabled>
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+                                <span class="mx-2" id="pageIndicator">Page 1</span>
+                                <button class="btn btn-sm btn-outline-secondary" id="nextPageBtn">
+                                    <i class="bi bi-chevron-right"></i>
                                 </button>
                             </div>
-                        </form>
-                        
-                        <div class="mt-3">
-                            <div class="alert alert-secondary d-none" id="status-alert">
-                                <div id="status-message">Testing connection...</div>
-                                <div class="progress mt-2 d-none" id="progress-bar-container">
-                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" id="progress-bar" style="width: 0%"></div>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Activity Stats Card -->
-            <div class="col-md-6 mb-4">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-header bg-light border-0">
-                        <h5 class="mb-0">Activity Stats</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row text-center">
-                            <div class="col-4 mb-3">
-                                <h3 id="mouseEventsCount">0</h3>
-                                <div class="text-muted small">Mouse Events</div>
-                            </div>
-                            <div class="col-4 mb-3">
-                                <h3 id="keyboardEventsCount">0</h3>
-                                <div class="text-muted small">Keyboard Events</div>
-                            </div>
-                            <div class="col-4 mb-3">
-                                <h3 id="windowEventsCount">0</h3>
-                                <div class="text-muted small">Window Events</div>
-                            </div>
-                        </div>
-                        
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div>
-                                <div class="text-muted">Session duration:</div>
-                                <div id="sessionDuration">00:00:00</div>
-                            </div>
-                            
-                            <button id="refreshStatsBtn" class="btn btn-sm btn-outline-secondary">
-                                <i class="bi bi-arrow-clockwise me-1"></i>
-                                Refresh
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Connection Test Results -->
-            <div class="col-md-12 mb-4">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-light border-0">
-                        <h5 class="mb-0">Connection Test Results</h5>
-                    </div>
-                    <div class="card-body">
-                        <ul class="list-group" id="test-results">
-                            <li class="list-group-item text-muted">No tests run yet</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <h4 class="mb-3">
-            <i class="bi bi-list-ul me-2"></i>
-            Recent Events
-            <span class="ms-2 badge bg-secondary" id="eventCount">0</span>
-        </h4>
-        
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header bg-light border-0 d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Event Timeline</h5>
-                <div>
-                    <button id="clearEventsBtn" class="btn btn-sm btn-outline-danger">
-                        <i class="bi bi-trash me-1"></i>
-                        Clear
-                    </button>
-                    <button id="limitEventsToggleBtn" class="btn btn-sm btn-outline-primary ms-2">
-                        <i class="bi bi-sliders me-1"></i>
-                        Show All
-                    </button>
-                </div>
-            </div>
-            <div class="card-body p-0">
+
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
+                    <table class="table table-hover">
+                        <thead>
                             <tr>
                                 <th>Time</th>
                                 <th>Type</th>
-                                <th>Window</th>
                                 <th>Details</th>
                             </tr>
                         </thead>
                         <tbody id="eventsTableBody">
                             <tr>
-                                <td colspan="4" class="text-center py-4">
-                                    <i class="bi bi-inbox fs-3 d-block mb-2 text-muted"></i>
-                                    <p class="text-muted" id="noEventsMessage">
-                                        {% if monitoring_active %}
-                                            No events recorded yet. Interact with your computer to generate events.
-                                        {% else %}
-                                            Monitoring is not active. Start monitoring to record events.
-                                        {% endif %}
-                                    </p>
+                                <td colspan="3" class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
+                
+                <div id="eventsLoadingMessage" class="text-center d-none">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Loading events...</p>
+                </div>
+                
+                <div id="noEventsMessage" class="alert alert-info text-center d-none">
+                    <i class="bi bi-info-circle me-2"></i>
+                    No events found. Start monitoring to record events.
+                </div>
             </div>
-            <div class="card-footer bg-light">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <span class="text-muted">Showing <span id="eventsShown">0</span> of <span id="totalEvents">0</span> events</span>
-                    </div>
-                    <div class="mt-2 text-center" id="loadMoreContainer" style="display: none;">
-                        <button id="loadMoreBtn" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-arrow-down-circle me-1"></i>
-                            Load More Events
-                        </button>
-                    </div>
+        </div>
+    </div>
+</div>
+
+<!-- Installation Guide Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Rust Helper Installation Guide
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    <strong>About the Rust Helper</strong>
+                    <p>The Rust helper application runs on your local machine and allows BettermanAI to interact with your desktop. It enables mouse and keyboard automation, window management, and screen monitoring.</p>
+                </div>
+                
+                <h6 class="mb-3">Installation Steps</h6>
+                <ol class="list-group list-group-numbered mb-4">
+                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold">Download the Rust Helper</div>
+                            Download the appropriate version for your operating system from our <a href="#" class="text-primary">download page</a>.
+                        </div>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold">Run the Application</div>
+                            Launch the helper application. It should start a local web server on port 17400.
+                        </div>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold">Grant Permissions</div>
+                            Grant the necessary permissions when prompted (accessibility, screen recording, etc.)
+                        </div>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold">Test Connection</div>
+                            Return to this page and click "Test & Save Connection" to verify everything is working.
+                        </div>
+                    </li>
+                </ol>
+                
+                <div class="alert alert-secondary">
+                    <h6><i class="bi bi-question-circle-fill me-2"></i>Why do I need this?</h6>
+                    <p class="mb-0">BettermanAI is a hybrid application. The web interface runs on Replit's servers, while the automation capabilities require a local application to access your desktop. For privacy and security, automation code runs locally on your computer.</p>
                 </div>
             </div>
         </div>
@@ -205,390 +264,291 @@
 
 {% block scripts %}
 <script>
-let sessionStartTime = null;
-let eventCounts = {
-    mouse_move: 0,
-    mouse_click: 0,
-    mouse_scroll: 0,
-    key_press: 0,
-    key_release: 0,
-    window_change: 0
-};
-let maxEventsToShow = 50; // Default limit
-let limitEvents = true;
+// Global variables
+let currentPage = 1;
+let totalPages = 1;
+let eventsPerPage = 100;
 let allEvents = [];
+let currentEventType = '';
 
-// Update session duration
-function updateSessionDuration() {
-    if (!sessionStartTime) return;
-    
-    const now = new Date();
-    const diff = Math.floor((now - sessionStartTime) / 1000);
-    
-    const hours = Math.floor(diff / 3600).toString().padStart(2, '0');
-    const minutes = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
-    const seconds = Math.floor(diff % 60).toString().padStart(2, '0');
-    
-    document.getElementById('sessionDuration').textContent = `${hours}:${minutes}:${seconds}`;
+// Utility function to format a timestamp
+function formatTimestamp(timestamp) {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString();
 }
 
-// Start monitoring
-document.getElementById('startMonitoringBtn')?.addEventListener('click', function() {
-    // Try the general endpoint first with action parameter
-    fetch('/api/monitoring', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ action: 'start' })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            document.getElementById('noEventsMessage').innerHTML = 'Monitoring is <strong>active</strong>. Interact with your computer to generate events.';
-            this.classList.add('d-none');
-            document.getElementById('stopMonitoringBtn').classList.remove('d-none');
-            sessionStartTime = new Date();
-            
-            // Start interval to update duration
-            setInterval(updateSessionDuration, 1000);
-            
-            // Fetch events after a short delay to give time for some events to be recorded
-            setTimeout(fetchEvents, 3000);
-        } else {
-            alert('Failed to start monitoring: ' + (data.error || 'Unknown error'));
-        }
-    })
-    .catch(error => {
-        alert('Error: ' + error.message);
-    });
-});
-
-// Stop monitoring
-document.getElementById('stopMonitoringBtn')?.addEventListener('click', function() {
-    fetch('/api/monitoring/stop', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            document.getElementById('noEventsMessage').innerHTML = 'Monitoring is <strong>inactive</strong>. Start monitoring to record events.';
-            this.classList.add('d-none');
-            document.getElementById('startMonitoringBtn').classList.remove('d-none');
-            sessionStartTime = null;
-        } else {
-            alert('Failed to stop monitoring: ' + (data.error || 'Unknown error'));
-        }
-    })
-    .catch(error => {
-        alert('Error: ' + error.message);
-    });
-});
-
-// Toggle event limit
-document.getElementById('limitEventsToggleBtn').addEventListener('click', function() {
-    limitEvents = !limitEvents;
-    this.innerHTML = limitEvents 
-        ? '<i class="bi bi-sliders me-1"></i> Show All' 
-        : '<i class="bi bi-sliders me-1"></i> Limit Events';
-    
-    renderEvents();
-});
-
-// Clear events
-document.getElementById('clearEventsBtn').addEventListener('click', function() {
-    if (confirm('Are you sure you want to clear all displayed events?')) {
-        allEvents = [];
-        renderEvents();
+// Function to format event details
+function formatEventDetails(event) {
+    switch (event.type) {
+        case 'mouse_click':
+            return `Position: (${event.x}, ${event.y}) Button: ${event.button}`;
+        case 'mouse_move':
+            return `Position: (${event.x}, ${event.y})`;
+        case 'key_press':
+            return `Key: ${event.key} Code: ${event.key_code}`;
+        case 'window_change':
+            return `Window: ${event.window_title || 'Unknown'} App: ${event.app_name || 'Unknown'}`;
+        default:
+            return JSON.stringify(event);
     }
-});
+}
 
-// Fetch events
-function fetchEvents() {
-    if (!document.getElementById('stopMonitoringBtn') || document.getElementById('stopMonitoringBtn').classList.contains('d-none')) {
-        return; // Don't fetch if monitoring is inactive
+// Function to refresh events table
+function refreshEvents() {
+    const eventsLoadingMessage = document.getElementById('eventsLoadingMessage');
+    const noEventsMessage = document.getElementById('noEventsMessage');
+    const eventsTableBody = document.getElementById('eventsTableBody');
+    
+    // Show loading
+    eventsLoadingMessage.classList.remove('d-none');
+    noEventsMessage.classList.add('d-none');
+    
+    // Get selected count
+    eventsPerPage = parseInt(document.getElementById('eventCountSelector').value);
+    
+    // Get filter
+    currentEventType = document.getElementById('eventTypeFilter').value;
+    
+    // API URL with parameters
+    let apiUrl = `/api/events?count=${eventsPerPage}`;
+    if (currentEventType) {
+        apiUrl += `&type=${currentEventType}`;
     }
     
-    fetch('/api/events?count=50')
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok: ' + response.status);
-        }
-        return response.json();
-    })
-    .then(data => {
-        console.log('Received events data:', data);
-        
-        if (data.events && data.events.length > 0) {
-            // Add new events to our collection, avoiding duplicates
-            const existingIds = new Set(allEvents.map(e => e.id));
-            const newEvents = data.events.filter(e => !existingIds.has(e.id));
+    // Fetch events
+    fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+            // Hide loading
+            eventsLoadingMessage.classList.add('d-none');
             
-            if (newEvents.length > 0) {
-                allEvents = [...newEvents, ...allEvents]; // Add new events at the beginning
-                updateEventCounts(newEvents);
-                renderEvents();
+            // Store all events
+            allEvents = data.events || [];
+            
+            // Calculate total pages
+            totalPages = Math.max(1, Math.ceil(allEvents.length / eventsPerPage));
+            
+            // Reset to first page
+            currentPage = 1;
+            
+            // Update UI
+            updatePagination();
+            updateEventsTable();
+            
+            // Show no events message if needed
+            if (allEvents.length === 0) {
+                noEventsMessage.classList.remove('d-none');
+                eventsTableBody.innerHTML = '';
             }
-            
-            // Show load more button if we have events
-            document.getElementById('loadMoreContainer').style.display = 'block';
-        } else {
-            console.log('No events found in response');
-        }
-    })
-    .catch(error => {
-        console.error('Error fetching events:', error);
-    });
+        })
+        .catch(error => {
+            console.error('Error fetching events:', error);
+            eventsLoadingMessage.classList.add('d-none');
+            noEventsMessage.classList.remove('d-none');
+            noEventsMessage.textContent = 'Error loading events. Make sure the helper is connected.';
+        });
 }
 
-// Render events to the table
-function renderEvents() {
-    const tbody = document.getElementById('eventsTableBody');
-    const eventsToRender = limitEvents ? allEvents.slice(0, maxEventsToShow) : allEvents;
+// Function to update the events table
+function updateEventsTable() {
+    const eventsTableBody = document.getElementById('eventsTableBody');
+    const startIndex = (currentPage - 1) * eventsPerPage;
+    const endIndex = Math.min(startIndex + eventsPerPage, allEvents.length);
+    const eventsToShow = allEvents.slice(startIndex, endIndex);
     
-    // Update counts
-    document.getElementById('eventsShown').textContent = eventsToRender.length;
-    document.getElementById('totalEvents').textContent = allEvents.length;
-    document.getElementById('eventCount').textContent = allEvents.length;
-    
-    // Clear the table
-    tbody.innerHTML = '';
-    
-    if (eventsToRender.length === 0) {
-        const emptyRow = document.createElement('tr');
-        emptyRow.innerHTML = `
-            <td colspan="4" class="text-center py-4">
-                <i class="bi bi-inbox fs-3 d-block mb-2 text-muted"></i>
-                <p class="text-muted" id="noEventsMessage">
-                    ${sessionStartTime ? 'No events recorded yet. Interact with your computer to generate events.' : 'Monitoring is not active. Start monitoring to record events.'}
-                </p>
-            </td>
-        `;
-        tbody.appendChild(emptyRow);
-        return;
-    }
+    // Clear table
+    eventsTableBody.innerHTML = '';
     
     // Add events to table
-    eventsToRender.forEach(event => {
+    if (eventsToShow.length > 0) {
+        eventsToShow.forEach(event => {
+            const row = document.createElement('tr');
+            
+            // Time column
+            const timeCell = document.createElement('td');
+            timeCell.textContent = formatTimestamp(event.timestamp);
+            row.appendChild(timeCell);
+            
+            // Type column
+            const typeCell = document.createElement('td');
+            typeCell.innerHTML = `<span class="badge bg-secondary">${event.type}</span>`;
+            row.appendChild(typeCell);
+            
+            // Details column
+            const detailsCell = document.createElement('td');
+            detailsCell.textContent = formatEventDetails(event);
+            row.appendChild(detailsCell);
+            
+            eventsTableBody.appendChild(row);
+        });
+    } else {
+        // No events to show
         const row = document.createElement('tr');
-        
-        // Extract time from timestamp
-        const timestamp = new Date(event.timestamp);
-        const time = timestamp.toLocaleTimeString();
-        
-        // Create cells
-        const timeCell = document.createElement('td');
-        timeCell.textContent = time;
-        
-        const typeCell = document.createElement('td');
-        const typeSpan = document.createElement('span');
-        typeSpan.classList.add('badge');
-        
-        // Colorize based on event type
-        if (event.type.startsWith('mouse')) {
-            typeSpan.classList.add('bg-primary');
-        } else if (event.type.startsWith('key')) {
-            typeSpan.classList.add('bg-info');
-        } else if (event.type === 'window_change') {
-            typeSpan.classList.add('bg-success');
-        } else {
-            typeSpan.classList.add('bg-secondary');
-        }
-        
-        typeSpan.textContent = event.type;
-        typeCell.appendChild(typeSpan);
-        
-        const windowCell = document.createElement('td');
-        windowCell.textContent = event.window || '';
-        
-        const detailsCell = document.createElement('td');
-        
-        if (event.type === 'mouse_move' || event.type === 'mouse_click') {
-            detailsCell.textContent = `x: ${event.x}, y: ${event.y}`;
-            if (event.type === 'mouse_click') {
-                detailsCell.textContent += `, button: ${event.button}`;
-            }
-        } else if (event.type === 'key_press' || event.type === 'key_release') {
-            detailsCell.textContent = `key: ${event.key}`;
-        }
-        
-        // Add cells to row
-        row.appendChild(timeCell);
-        row.appendChild(typeCell);
-        row.appendChild(windowCell);
-        row.appendChild(detailsCell);
-        
-        // Add row to table
-        tbody.appendChild(row);
-    });
-    
-    // Show/hide load more button based on whether we have more events
-    document.getElementById('loadMoreContainer').style.display = 
-        (limitEvents && allEvents.length > maxEventsToShow) ? 'block' : 'none';
+        const cell = document.createElement('td');
+        cell.colSpan = 3;
+        cell.textContent = 'No events found';
+        cell.classList.add('text-center');
+        row.appendChild(cell);
+        eventsTableBody.appendChild(row);
+    }
 }
 
-// Update event counts
-function updateEventCounts(events) {
-    events.forEach(event => {
-        if (event.type.startsWith('mouse')) {
-            eventCounts[event.type] = (eventCounts[event.type] || 0) + 1;
-        } else if (event.type.startsWith('key')) {
-            eventCounts[event.type] = (eventCounts[event.type] || 0) + 1;
-        } else if (event.type === 'window_change') {
-            eventCounts.window_change = (eventCounts.window_change || 0) + 1;
-        }
-    });
+// Function to update pagination controls
+function updatePagination() {
+    const pageIndicator = document.getElementById('pageIndicator');
+    const previousPageBtn = document.getElementById('previousPageBtn');
+    const nextPageBtn = document.getElementById('nextPageBtn');
     
-    // Update UI
-    const mouseEvents = (eventCounts.mouse_move || 0) + (eventCounts.mouse_click || 0) + (eventCounts.mouse_scroll || 0);
-    const keyboardEvents = (eventCounts.key_press || 0) + (eventCounts.key_release || 0);
-    const windowEvents = eventCounts.window_change || 0;
+    // Update page indicator
+    pageIndicator.textContent = `Page ${currentPage} of ${totalPages}`;
     
-    document.getElementById('mouseEventsCount').textContent = mouseEvents;
-    document.getElementById('keyboardEventsCount').textContent = keyboardEvents;
-    document.getElementById('windowEventsCount').textContent = windowEvents;
+    // Update button states
+    previousPageBtn.disabled = currentPage <= 1;
+    nextPageBtn.disabled = currentPage >= totalPages;
 }
 
-// Load more events
-document.getElementById('loadMoreBtn')?.addEventListener('click', function() {
-    maxEventsToShow += 50;
-    renderEvents();
-});
-
-// Refresh stats button
-document.getElementById('refreshStatsBtn')?.addEventListener('click', function() {
-    fetchEvents();
-});
-
-// Test and update the URL
-document.getElementById('test-button').addEventListener('click', function() {
-    const serverUrl = document.getElementById('server-url-input').value.trim();
-    const permanent = document.getElementById('permanent-check').checked;
+// Function to test connection
+function testConnection() {
+    const serverUrl = document.getElementById('serverUrl').value.trim();
+    const updateEnv = document.getElementById('updateEnv').checked;
+    const statusDiv = document.getElementById('connectionStatus');
     
     if (!serverUrl) {
-        showStatus('Please enter a server URL', 'danger');
+        statusDiv.classList.remove('d-none', 'alert-info', 'alert-success');
+        statusDiv.classList.add('alert-danger');
+        statusDiv.textContent = 'Please enter a server URL';
         return;
     }
     
-    if (!serverUrl.startsWith('http://') && !serverUrl.startsWith('https://')) {
-        showStatus('Server URL must start with http:// or https://', 'danger');
-        return;
-    }
+    // Show status
+    statusDiv.classList.remove('d-none', 'alert-danger', 'alert-success');
+    statusDiv.classList.add('alert-info');
+    statusDiv.textContent = 'Testing connection...';
     
-    // Show the testing status
-    showStatus('Testing connection to ' + serverUrl, 'info');
-    document.getElementById('progress-bar-container').classList.remove('d-none');
-    document.getElementById('test-results').innerHTML = '<li class="list-group-item">Testing connection...</li>';
-    
-    // Simulate progress bar
-    let progress = 0;
-    const progressBar = document.getElementById('progress-bar');
-    const progressInterval = setInterval(function() {
-        progress += 5;
-        progressBar.style.width = Math.min(progress, 95) + '%';
-        if (progress >= 95) {
-            clearInterval(progressInterval);
-        }
-    }, 100);
-    
-    // Make the test request
-    fetch('/api/update-server-url', {
+    // Test connection to the Rust helper
+    fetch('/api/test_connection', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
+        body: JSON.stringify({ 
             server_url: serverUrl,
-            permanent: permanent
+            update_env: updateEnv
         })
     })
     .then(response => response.json())
     .then(data => {
-        clearInterval(progressInterval);
-        progressBar.style.width = '100%';
-        setTimeout(() => {
-            document.getElementById('progress-bar-container').classList.add('d-none');
-        }, 500);
-        
-        if (data.status === 'success') {
-            showStatus(data.message, 'success');
-            document.getElementById('connectionStatusMessage').innerHTML = 
-                `<span class="badge bg-success mb-2">Connected</span> Connected to Rust helper at <code>${serverUrl}</code>.`;
-            displayTestResults(data.tests);
+        if (data.success) {
+            statusDiv.classList.remove('alert-info', 'alert-danger');
+            statusDiv.classList.add('alert-success');
+            statusDiv.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i> ${data.message || 'Connected to Rust helper successfully!'}`;
             
-            // Reload the page after a delay to reflect changes
-            if (permanent) {
-                setTimeout(() => {
-                    location.reload();
-                }, 3000);
-            }
+            // Update the current URL display
+            document.getElementById('currentServerUrl').textContent = serverUrl;
+            
+            // Reload the page after a delay
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
         } else {
-            showStatus(data.message, 'danger');
-            document.getElementById('connectionStatusMessage').innerHTML = 
-                `<span class="badge bg-danger mb-2">Disconnected</span> Not connected to Rust helper: ${data.message}`;
-            displayTestResults(data.tests || [
-                {name: 'Connection Test', status: 'failed', message: data.message}
-            ]);
+            let errorMessage = data.error || 'Connection failed';
+            if (errorMessage.includes('timeout') || errorMessage.includes('network error') || 
+                errorMessage.includes('Connection refused')) {
+                errorMessage += '. Please check if the Rust helper is running on your local machine.';
+            }
+            statusDiv.classList.remove('alert-info', 'alert-success');
+            statusDiv.classList.add('alert-danger');
+            statusDiv.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2"></i> ${errorMessage}`;
         }
     })
     .catch(error => {
-        clearInterval(progressInterval);
-        document.getElementById('progress-bar-container').classList.add('d-none');
-        showStatus('Error: ' + error.message, 'danger');
-        document.getElementById('test-results').innerHTML = 
-            `<li class="list-group-item list-group-item-danger">Error: ${error.message}</li>`;
+        statusDiv.classList.remove('alert-info', 'alert-success');
+        statusDiv.classList.add('alert-danger');
+        statusDiv.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> Error testing connection. Please verify the Rust helper is running on your local machine.';
     });
-});
-
-// Show a status message
-function showStatus(message, type) {
-    const statusAlert = document.getElementById('status-alert');
-    statusAlert.classList.remove('d-none', 'alert-info', 'alert-success', 'alert-danger', 'alert-warning');
-    statusAlert.classList.add('alert-' + type);
-    document.getElementById('status-message').innerHTML = message;
 }
 
-// Display test results
-function displayTestResults(tests) {
-    const testResults = document.getElementById('test-results');
-    testResults.innerHTML = '';
+// Function to toggle monitoring
+function toggleMonitoring() {
+    const toggleBtn = document.getElementById('toggleMonitoringBtn');
+    const statusDiv = document.getElementById('monitoringStatus');
+    const isMonitoring = statusDiv.classList.contains('alert-success');
     
-    if (!tests || tests.length === 0) {
-        testResults.innerHTML = '<li class="list-group-item text-muted">No test results available</li>';
-        return;
-    }
+    // Disable button during request
+    toggleBtn.disabled = true;
     
-    tests.forEach(test => {
-        const item = document.createElement('li');
-        item.className = 'list-group-item';
-        
-        if (test.status === 'success') {
-            item.classList.add('list-group-item-success');
-            item.innerHTML = `<strong>${test.name}</strong>: <i class="bi bi-check-circle-fill text-success"></i> ${test.message}`;
-        } else {
-            item.classList.add('list-group-item-danger');
-            item.innerHTML = `<strong>${test.name}</strong>: <i class="bi bi-x-circle-fill text-danger"></i> ${test.message}`;
+    // API endpoint
+    const endpoint = isMonitoring ? '/api/monitoring/stop' : '/api/monitoring/start';
+    
+    // Make request
+    fetch(endpoint, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
         }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Reload the page to reflect changes
+            location.reload();
+        } else {
+            // Show error in status
+            statusDiv.classList.remove('alert-success', 'alert-secondary');
+            statusDiv.classList.add('alert-danger');
+            statusDiv.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2"></i> <strong>Error</strong><p class="mb-0">${data.error || 'Failed to toggle monitoring'}</p>`;
+            
+            // Re-enable button
+            toggleBtn.disabled = false;
+        }
+    })
+    .catch(error => {
+        // Show error in status
+        statusDiv.classList.remove('alert-success', 'alert-secondary');
+        statusDiv.classList.add('alert-danger');
+        statusDiv.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2"></i> <strong>Error</strong><p class="mb-0">Failed to toggle monitoring. Check connection to helper.</p>`;
         
-        testResults.appendChild(item);
+        // Re-enable button
+        toggleBtn.disabled = false;
     });
 }
 
-// Check if monitoring is active on page load
-window.addEventListener('DOMContentLoaded', function() {
-    // If monitoring active, start session timer
-    if (document.getElementById('stopMonitoringBtn') && 
-        !document.getElementById('stopMonitoringBtn').classList.contains('d-none')) {
-        sessionStartTime = new Date();
-        setInterval(updateSessionDuration, 1000);
-        fetchEvents();
-        
-        // Set up interval to fetch new events periodically
-        setInterval(fetchEvents, 10000); // Fetch every 10 seconds
-    }
+// Wait for DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Refresh events on load
+    refreshEvents();
+    
+    // Set up event listeners
+    document.getElementById('testConnectionBtn').addEventListener('click', testConnection);
+    document.getElementById('toggleMonitoringBtn').addEventListener('click', toggleMonitoring);
+    document.getElementById('refreshEventsBtn').addEventListener('click', refreshEvents);
+    document.getElementById('eventTypeFilter').addEventListener('change', refreshEvents);
+    document.getElementById('eventCountSelector').addEventListener('change', refreshEvents);
+    
+    // Pagination buttons
+    document.getElementById('previousPageBtn').addEventListener('click', function() {
+        if (currentPage > 1) {
+            currentPage--;
+            updatePagination();
+            updateEventsTable();
+        }
+    });
+    
+    document.getElementById('nextPageBtn').addEventListener('click', function() {
+        if (currentPage < totalPages) {
+            currentPage++;
+            updatePagination();
+            updateEventsTable();
+        }
+    });
+    
+    // Enter key in server URL field
+    document.getElementById('serverUrl').addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            testConnection();
+        }
+    });
 });
 </script>
 {% endblock %}

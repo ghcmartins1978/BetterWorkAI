@@ -2,7 +2,7 @@ use actix_cors::Cors;
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
 use chrono::{DateTime, Utc};
 use enigo::{Enigo, Key, KeyboardControllable, MouseButton, MouseControllable};
-use log::{debug, error, info, warn};
+use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
@@ -12,12 +12,6 @@ use std::time::{Duration, SystemTime};
 use windows::{
     Win32::Foundation::{BOOL, HWND, LPARAM},
     Win32::UI::WindowsAndMessaging::{EnumWindows, GetWindowTextW},
-};
-
-// Cross-platform window handling with winit
-use winit::{
-    event_loop::EventLoop,
-    window::WindowId,
 };
 
 // Default port for the helper
@@ -151,7 +145,8 @@ fn get_window_titles() -> Result<Vec<String>, String> {
                 LPARAM(data as isize)
             );
             
-            if result.is_ok() {
+            // Check if the result is non-zero (success)
+            if result.0 != 0 {
                 Ok(titles)
             } else {
                 Err("Failed to enumerate windows".to_string())
@@ -162,24 +157,18 @@ fn get_window_titles() -> Result<Vec<String>, String> {
     #[cfg(not(target_os = "windows"))]
     {
         // Non-Windows fallback implementation
-        // This is a simple implementation that returns some placeholder data
+        // This is a simple implementation that returns basic window info
         // In a real implementation, we would use platform-specific APIs
         info!("Using cross-platform window listing (limited functionality)");
         
-        // Create an event loop to get window info
-        match EventLoop::new() {
-            Ok(_) => {
-                // Return a basic list of windows for demo purposes
-                // In a real implementation, we would query the system
-                let titles = vec![
-                    "Current Application".to_string(),
-                    "BettermanAI".to_string(),
-                    "Web Browser".to_string(),
-                ];
-                Ok(titles)
-            },
-            Err(e) => Err(format!("Failed to create event loop: {}", e))
-        }
+        // Return a basic list of windows for demo purposes
+        // In a real implementation, we would query the system
+        let titles = vec![
+            "Current Application".to_string(),
+            "BettermanAI".to_string(),
+            "Web Browser".to_string(),
+        ];
+        Ok(titles)
     }
 }
 

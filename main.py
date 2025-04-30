@@ -2670,6 +2670,27 @@ def api_context():
             'message': str(e)
         })
                           
+@app.route('/api/monitoring', methods=['POST'])
+def monitoring_action():
+    """Handle monitoring actions (start/stop) on the local server"""
+    from monitor_controller import MonitorController
+    
+    # Get action from request data
+    data = request.get_json()
+    action = data.get('action') if data else None
+    
+    # Force using localhost URL to avoid environment variable issues
+    controller = MonitorController(server_url="http://127.0.0.1:17400")
+    
+    if action == 'start':
+        result = controller.start_monitoring()
+    elif action == 'stop':
+        result = controller.stop_monitoring()
+    else:
+        result = {'success': False, 'error': 'Invalid action. Use "start" or "stop"'}
+    
+    return jsonify(result)
+
 @app.route('/api/monitoring/start', methods=['POST'])
 def start_monitoring():
     """Start monitoring on the local server"""

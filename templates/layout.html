@@ -388,12 +388,8 @@
     <script src="{{ url_for('static', filename='js/kpi-cards.js') }}"></script>
     
     <script>
-        $(document).ready(function() {
-            // Check connection status on page load
-            checkHelperConnectionStatus();
-            
-            // Function to check connection status with the Rust helper
-            function checkHelperConnectionStatus() {
+        // Define the function first before using it
+        function checkHelperConnectionStatus() {
                 const $indicator = $('#connectionStatusIndicator');
                 const serverUrl = $('#serverUrl').val().trim() || $('#currentServerUrl').text() || 'http://127.0.0.1:17400';
                 
@@ -542,6 +538,13 @@
                     $('#testConnectionBtn').click();
                 }
             });
+            
+        // On document ready, check connection status
+        $(document).ready(function() {
+            // Wait a moment for DOM to be fully ready
+            setTimeout(function() {
+                checkHelperConnectionStatus();
+            }, 500);
         });
     </script>
     

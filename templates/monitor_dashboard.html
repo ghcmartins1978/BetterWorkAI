@@ -202,11 +202,13 @@ function updateSessionDuration() {
 
 // Start monitoring
 document.getElementById('startMonitoringBtn')?.addEventListener('click', function() {
-    fetch('/api/monitoring/start', {
+    // Try the general endpoint first with action parameter
+    fetch('/api/monitoring', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({ action: 'start' })
     })
     .then(response => response.json())
     .then(data => {

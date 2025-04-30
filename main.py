@@ -2710,8 +2710,15 @@ def monitoring_action():
     data = request.get_json()
     action = data.get('action') if data else None
     
-    # Force using localhost URL to avoid environment variable issues
-    controller = MonitorController(server_url="http://127.0.0.1:17400")
+    # Use automatic port detection
+    controller = MonitorController()
+    
+    # Check connection first
+    if not controller.is_connected():
+        return jsonify({
+            'success': False, 
+            'error': 'Helper not connected. Please check your connection settings.'
+        })
     
     if action == 'start':
         result = controller.start_monitoring()
@@ -2727,8 +2734,16 @@ def start_monitoring():
     """Start monitoring on the local server"""
     from monitor_controller import MonitorController
     
-    # Force using localhost URL to avoid environment variable issues
-    controller = MonitorController(server_url="http://127.0.0.1:17400")
+    # Use automatic port detection
+    controller = MonitorController()
+    
+    # Check connection first
+    if not controller.is_connected():
+        return jsonify({
+            'success': False, 
+            'error': 'Helper not connected. Please check your connection settings.'
+        })
+    
     result = controller.start_monitoring()
     
     return jsonify(result)
@@ -2750,16 +2765,31 @@ def get_events():
     from monitor_controller import MonitorController
     import logging
     
-    # Force using localhost URL to avoid environment variable issues
-    controller = MonitorController(server_url="http://127.0.0.1:17400")
+    # Use the MonitorController with automatic port detection
+    controller = MonitorController()
     count = request.args.get('count', default=100, type=int)
     offset = request.args.get('offset', default=0, type=int)
     event_type = request.args.get('type')
     
     try:
+        # First check if the helper is connected
+        if not controller.is_connected():
+            logging.warning("Cannot get events: Helper is not connected")
+            return jsonify({
+                'events': [], 
+                'error': 'Helper not connected. Please check your connection settings.'
+            })
+        
+        # Get events from the helper
         events = controller.get_events(count=count, event_type=event_type)
         logging.info(f"Retrieved {len(events)} events from helper")
         
+        # Check if monitoring is active when no events are found
+        if len(events) == 0:
+            status = controller.get_status()
+            monitoring_active = status.get('monitoring', False)
+            logging.info(f"Monitoring active: {monitoring_active}")
+            
         # Apply offset if provided
         if offset > 0 and offset < len(events):
             events = events[offset:]

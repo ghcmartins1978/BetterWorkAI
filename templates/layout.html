@@ -405,60 +405,74 @@
                     body: JSON.stringify({ 
                         server_url: serverUrl,
                         update_env: false // just testing, not updating
-                    }),
-                    success: function(response) {
-                        if (response.success) {
-                            // Update connection indicator to show connected
-                            $indicator.removeClass('alert-warning alert-danger').addClass('alert-success')
-                                      .html(`
-                                        <i class="bi bi-check-circle-fill me-2"></i>
-                                        <strong>Connected to Rust Helper</strong>
-                                        <p class="mb-0">Connection successful. Automation features are ready to use.</p>
-                                        ${response.monitoring ? '<span class="badge bg-primary mt-2">Monitoring Active</span>' : ''}
-                                      `);
-                            
-                            // Update connection button in navbar to show connected state
-                            updateNavConnectionButton(true);
-                        } else {
-                            // Update connection indicator to show disconnected with error
-                            $indicator.removeClass('alert-success').addClass('alert-danger')
-                                      .html(`
-                                        <i class="bi bi-x-circle-fill me-2"></i>
-                                        <strong>Connection Failed</strong>
-                                        <p class="mb-0">Could not connect to the Rust helper. ${response.error}</p>
-                                        <p class="mt-2 mb-0">Please check if the helper application is running on your local machine.</p>
-                                      `);
-                            
-                            // Update connection button in navbar to show disconnected state
-                            updateNavConnectionButton(false);
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update connection indicator to show connected
+                        if (indicator) {
+                            indicator.classList.remove('alert-warning', 'alert-danger');
+                            indicator.classList.add('alert-success');
+                            indicator.innerHTML = `
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>Connected to Rust Helper</strong>
+                                <p class="mb-0">Connection successful. Automation features are ready to use.</p>
+                                ${data.monitoring ? '<span class="badge bg-primary mt-2">Monitoring Active</span>' : ''}
+                            `;
                         }
-                    },
-                    error: function() {
-                        // Update connection indicator to show disconnected
-                        $indicator.removeClass('alert-success').addClass('alert-warning')
-                                  .html(`
-                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                                    <strong>Not Connected to Rust Helper</strong>
-                                    <p class="mb-0">The Rust helper isn't running on your local machine. This means automation features will not work properly.</p>
-                                    <a href="#" class="btn btn-sm btn-outline-secondary mt-2" data-bs-toggle="tab" data-bs-target="#installation-tab-pane">View Installation Guide</a>
-                                  `);
+                        
+                        // Update connection button in navbar to show connected state
+                        updateNavConnectionButton(true);
+                    } else {
+                        // Update connection indicator to show disconnected with error
+                        if (indicator) {
+                            indicator.classList.remove('alert-success');
+                            indicator.classList.add('alert-danger');
+                            indicator.innerHTML = `
+                                <i class="bi bi-x-circle-fill me-2"></i>
+                                <strong>Connection Failed</strong>
+                                <p class="mb-0">Could not connect to the Rust helper. ${data.error}</p>
+                                <p class="mt-2 mb-0">Please check if the helper application is running on your local machine.</p>
+                            `;
+                        }
                         
                         // Update connection button in navbar to show disconnected state
                         updateNavConnectionButton(false);
                     }
+                })
+                .catch(() => {
+                    // Update connection indicator to show disconnected
+                    if (indicator) {
+                        indicator.classList.remove('alert-success');
+                        indicator.classList.add('alert-warning');
+                        indicator.innerHTML = `
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <strong>Not Connected to Rust Helper</strong>
+                            <p class="mb-0">The Rust helper isn't running on your local machine. This means automation features will not work properly.</p>
+                            <a href="#" class="btn btn-sm btn-outline-secondary mt-2" data-bs-toggle="tab" data-bs-target="#installation-tab-pane">View Installation Guide</a>
+                        `;
+                    }
+                    
+                    // Update connection button in navbar to show disconnected state
+                    updateNavConnectionButton(false);
                 });
             }
             
             // Update the navbar connection button based on connection status
             function updateNavConnectionButton(isConnected) {
-                const $button = $('button[data-bs-target="#serverConnectionModal"]');
+                const button = document.querySelector('button[data-bs-target="#serverConnectionModal"]');
                 
-                if (isConnected) {
-                    $button.removeClass('btn-outline-primary btn-outline-danger').addClass('btn-outline-success')
-                           .html('<i class="bi bi-plugin"></i> Helper Connected');
-                } else {
-                    $button.removeClass('btn-outline-primary btn-outline-success').addClass('btn-outline-danger')
-                           .html('<i class="bi bi-plugin"></i> Helper Disconnected');
+                if (button) {
+                    if (isConnected) {
+                        button.classList.remove('btn-outline-primary', 'btn-outline-danger');
+                        button.classList.add('btn-outline-success');
+                        button.innerHTML = '<i class="bi bi-plugin"></i> Helper Connected';
+                    } else {
+                        button.classList.remove('btn-outline-primary', 'btn-outline-success');
+                        button.classList.add('btn-outline-danger');
+                        button.innerHTML = '<i class="bi bi-plugin"></i> Helper Disconnected';
+                    }
                 }
             }
             

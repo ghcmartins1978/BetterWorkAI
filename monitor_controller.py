@@ -20,7 +20,7 @@ class MonitorController:
         if server_url:
             self.server_url = server_url
         else:
-            # First try to use the Rust helper, then fall back to Python helper
+            # Use the Rust helper only
             try:
                 # Default helper port (Rust helper)
                 helper_port = '17400'  
@@ -33,15 +33,7 @@ class MonitorController:
                     'helper_port.txt'
                 ]
                 
-                # Then check for Python helper port files
-                python_helper_possible_paths = [
-                    os.path.join(os.path.dirname(__file__), 'data', 'mock_helper_port.txt'),
-                    os.path.join(os.path.dirname(__file__), '..', 'data', 'mock_helper_port.txt'),
-                    os.path.join('data', 'mock_helper_port.txt'),
-                    'mock_helper_port.txt'
-                ]
-                
-                # Try Rust helper first
+                # Try Rust helper paths
                 for path in rust_helper_possible_paths:
                     if os.path.exists(path):
                         with open(path, 'r') as f:
@@ -51,16 +43,8 @@ class MonitorController:
                                 logger.info(f"Found Rust helper port in file: {port} (path: {path})")
                                 break
                 
-                # If no Rust helper found, try Python helper
-                if helper_port == '17400':
-                    for path in python_helper_possible_paths:
-                        if os.path.exists(path):
-                            with open(path, 'r') as f:
-                                port = f.read().strip()
-                                if port:
-                                    helper_port = port
-                                    logger.info(f"Found Python helper port in file: {port} (path: {path})")
-                                    break
+                # Always use Rust helper port - no fallback to Python mock helper
+                logger.info(f"Using helper port: {helper_port} (Rust helper)")
                 
                 self.server_url = f'http://127.0.0.1:{helper_port}'
             except Exception as e:
@@ -182,7 +166,20 @@ class MonitorController:
             )
             if response.status_code == 200:
                 data = response.json()
-                return data.get('events', [])
+                events = data.get('events', [])
+                
+                # Log the number of events retrieved
+                logger.info(f"Retrieved {len(events)} events from helper")
+                
+                # If we got a response but no events, check if monitoring is active
+                if len(events) == 0:
+                    status = self.get_status()
+                    if status.get('monitoring', False):
+                        logger.info("Monitoring is active but no events received yet. This is normal if monitoring just started.")
+                    else:
+                        logger.warning("No events received and monitoring is not active. Try starting monitoring.")
+                        
+                return events
             else:
                 logger.error(f"Failed to get events: Status code {response.status_code}")
                 return []

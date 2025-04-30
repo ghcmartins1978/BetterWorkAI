@@ -1,0 +1,32 @@
+INFO:electron_detection:Running in Electron: True
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 12:45:42] "GET /integrated_monitoring HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 12:45:42] "GET /static/js/electron-navigation.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 12:45:42] "GET /static/css/style.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 12:45:42] "GET /static/css/electron.css HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 12:45:42] "GET /static/js/script.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 12:45:42] "GET /static/js/sidebar.js HTTP/1.1" 304 -
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 12:45:42] "GET /static/js/kpi-cards.js HTTP/1.1" 304 -
+DEBUG:database:Database connection checked out from pool
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 12:45:42] "GET /healthz HTTP/1.1" 200 -
+DEBUG:database:Database connection checked out from pool
+INFO:monitor_controller:Monitor controller initialized with helper URL: http://127.0.0.1:17400
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 12:45:42] "GET /api/kpi-metrics HTTP/1.1" 200 -
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/events?count=100 HTTP/1.1" 200 50
+INFO:root:Retrieved 0 events from helper
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 12:45:42] "GET /api/events?count=100 HTTP/1.1" 200 -
+INFO:monitor_controller:Monitor controller initialized with helper URL: http://127.0.0.1:17400
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "POST /api/monitoring HTTP/1.1" 200 51
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 12:45:45] "POST /api/monitoring/start HTTP/1.1" 200 -
+INFO:monitor_controller:Found Rust helper port in file: 17400 (path: C:\Users\ghcma/AppData/Roaming/bettermanai/helper_port.txt)
+INFO:monitor_controller:Found Python helper port in file: 17403 (path: C:\Users\ghcma\BetterWorkAI\data\mock_helper_port.txt)
+INFO:monitor_controller:Monitor controller initialized with helper URL: http://127.0.0.1:17403
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17403
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:17400
+DEBUG:urllib3.connectionpool:http://127.0.0.1:17400 "GET /api/status HTTP/1.1" 200 98
+DEBUG:database:Database connection checked out from pool
+INFO:main:Updated AUTOMATION_SERVER_URL to: http://127.0.0.1:17400
+INFO:werkzeug:127.0.0.1 - - [30/Apr/2025 12:45:48] "POST /api/test_connection HTTP/1.1" 200 -
+ERROR:monitor_controller:Failed to connect to helper: HTTPConnectionPool(host='127.0.0.1', port=17403): Max retries exceeded with url: /api/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x0000025EEAD2F1D0>: Failed to establish a new connection: [WinError 10061] Nenhuma conexão pôde ser feita porque a máquina de destino as recusou ativamente'))
+INFO:electron_detection:Running in Electron: True
